@@ -122,4 +122,61 @@ router.post('/:id/comments', async (req, res) => {
   }
 });
 
+// POST /api/forums/:id/like - toggle like
+router.post('/:id/like', async (req, res) => {
+  try {
+    const exists = await pool.query(
+      'SELECT id FROM forum_likes WHERE user_id = $1 AND post_id = $2',
+      [req.user.id, req.params.id]
+    );
+
+    if (exists.rows.length > 0) {
+      await pool.query('DELETE FROM forum_likes WHERE user_id = $1 AND post_id = $2', [req.user.id, req.params.id]);
+      res.json({ liked: false });
+    } else {
+      await pool.query(
+        'INSERT INTO forum_likes (user_id, post_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+        [req.user.id, req.params.id]
+      );
+      res.json({ liked: true });
+    }
+  } catch (err) {
+    console.error('Forums like error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/forums/leaderboard - top community members
+router.get('/leaderboard', async (req, res) => {
+  try {
+    // Bypass authMiddleware for leaderboard list view
+    const result = await pool.query(`
+      SELECT 
+        u.id, u.username, u.display_name, u.avatar_url,
+        COUNT(DISTINCT f.id) as post_count,
+        COUNT(DISTINCT fc.id) as comment_count,
+        COALESCE(SUM(
+          (SELECT COUNT(*) FROM forum_likes fl WHERE fl.post_id = f.id)
+        ), 0) as total_likes,
+        COUNT(DISTINCT f.id) * 5 + COUNT(DISTINCT fc.id) * 2 + 
+        COALESCE((SELECT COUNT(*) FROM forum_likes fl2 
+          JOIN forums f2 ON fl2.post_id = f2.id 
+          WHERE f2.author_id = u.id), 0) * 3 as reputation_score
+      FROM users u
+      LEFT JOIN forums f ON f.author_id = u.id
+      LEFT JOIN forum_comments fc ON fc.author_id = u.id
+      WHERE u.is_active = true
+      GROUP BY u.id, u.username, u.display_name, u.avatar_url
+      HAVING COUNT(DISTINCT f.id) > 0 OR COUNT(DISTINCT fc.id) > 0
+      ORDER BY reputation_score DESC
+      LIMIT 10
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Leaderboard error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;
+

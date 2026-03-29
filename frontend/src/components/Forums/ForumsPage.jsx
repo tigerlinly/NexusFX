@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
-import { MessageSquare, Users, TrendingUp, Search, PlusCircle, User, MessageCircle, Heart, ChevronRight, Hash, Clock } from 'lucide-react';
+import { MessageSquare, Users, TrendingUp, Search, PlusCircle, User, MessageCircle, Heart, ChevronRight, Hash, Clock, Eye, ThumbsUp, Trophy, Star, Award, Crown, ArrowUp } from 'lucide-react';
 
 export default function ForumsPage() {
   const { user } = useAuth();
@@ -10,6 +10,7 @@ export default function ForumsPage() {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedPost, setSelectedPost] = useState(null);
+  const [leaderboard, setLeaderboard] = useState([]);
   
   // Post Form
   const [showNewPost, setShowNewPost] = useState(false);
@@ -32,9 +33,22 @@ export default function ForumsPage() {
     }
   };
 
+  const fetchLeaderboard = async () => {
+    try {
+      const data = await api.getLeaderboard();
+      setLeaderboard(data || []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     fetchPosts();
   }, [activeCategory, search]);
+
+  useEffect(() => {
+    fetchLeaderboard();
+  }, []);
 
   const handleCreatePost = async (e) => {
     e.preventDefault();
@@ -69,6 +83,18 @@ export default function ForumsPage() {
     }
   };
 
+  const handleLikePost = async (postId) => {
+    try {
+      await api.likeForumPost(postId);
+      if (selectedPost && selectedPost.post.id === postId) {
+        handleViewPost(postId);
+      }
+      fetchPosts();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const categories = [
     { id: '', label: 'ทุกหมวดหมู่', icon: Hash },
     { id: 'general', label: 'พูดคุยทั่วไป', icon: MessageSquare },
@@ -84,6 +110,13 @@ export default function ForumsPage() {
       case 'master': return 'badge-open';
       default: return 'badge-closed';
     }
+  };
+
+  const getRankBadge = (index) => {
+    if (index === 0) return { icon: Crown, color: '#FFD700', bg: 'linear-gradient(135deg, #FFD700, #FFA500)', label: '🥇' };
+    if (index === 1) return { icon: Award, color: '#C0C0C0', bg: 'linear-gradient(135deg, #C0C0C0, #A0A0A0)', label: '🥈' };
+    if (index === 2) return { icon: Star, color: '#CD7F32', bg: 'linear-gradient(135deg, #CD7F32, #B8860B)', label: '🥉' };
+    return { icon: ArrowUp, color: 'var(--accent-primary)', bg: 'var(--bg-primary)', label: `#${index + 1}` };
   };
 
   if (selectedPost) {
@@ -122,9 +155,23 @@ export default function ForumsPage() {
               {post.content.split('\n').map((para, i) => <p key={i} style={{ marginBottom: 12 }}>{para}</p>)}
             </div>
 
-            <div style={{ marginTop: 24, display: 'flex', gap: 24, color: 'var(--text-tertiary)' }}>
+            <div style={{ marginTop: 24, display: 'flex', gap: 24, color: 'var(--text-tertiary)', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Eye size={18} /> {post.views} Views</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><MessageCircle size={18} /> {comments.length} Comments</div>
+              <button 
+                onClick={() => handleLikePost(post.id)}
+                style={{ 
+                  display: 'flex', alignItems: 'center', gap: 8, 
+                  background: post.is_liked ? 'rgba(239,68,68,0.1)' : 'transparent', 
+                  border: post.is_liked ? '1px solid rgba(239,68,68,0.3)' : '1px solid var(--border-primary)',
+                  borderRadius: 8, padding: '6px 16px', cursor: 'pointer',
+                  color: post.is_liked ? '#ef4444' : 'var(--text-tertiary)',
+                  transition: 'all 0.2s', fontWeight: post.is_liked ? 600 : 400,
+                  fontSize: 14
+                }}
+              >
+                <Heart size={16} fill={post.is_liked ? '#ef4444' : 'none'} /> {post.like_count} Like{post.like_count > 1 ? 's' : ''}
+              </button>
             </div>
 
             <h3 style={{ marginTop: 40, fontSize: 18, fontWeight: 600, marginBottom: 24 }}>คอมเมนต์ ({comments.length})</h3>
@@ -150,7 +197,7 @@ export default function ForumsPage() {
 
             <form onSubmit={handleCreateComment} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--bg-primary)', border: '1px solid var(--border-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: 'var(--accent-primary)', flexShrink: 0 }}>
-                  {user.username[0].toUpperCase()}
+                 {user.username[0].toUpperCase()}
                </div>
                <div style={{ flex: 1 }}>
                  <textarea 
@@ -220,7 +267,7 @@ export default function ForumsPage() {
       )}
 
       <div className="content-area">
-        <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 'var(--space-xl)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr 280px', gap: 'var(--space-xl)' }}>
           {/* Sidebar Navigation for forums */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div style={{ position: 'relative', marginBottom: 16 }}>
@@ -272,7 +319,7 @@ export default function ForumsPage() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {posts.map(post => (
-                  <div key={post.id} className="card hover-glow" onClick={() => handleViewPost(post.id)} style={{ cursor: 'pointer', background: 'var(--bg-tertiary)', border: '1px solid var(--border-primary)', padding: 24, transition: 'transform 0.2s', display: 'flex', gap: 20 }}>
+                  <div key={post.id} className="card hover-glow" onClick={() => handleViewPost(post.id)} style={{ cursor: 'pointer', background: 'var(--bg-tertiary)', border: '1px solid var(--border-primary)', padding: 24, transition: 'transform 0.2s, box-shadow 0.2s', display: 'flex', gap: 20 }}>
                     <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, color: 'var(--accent-primary)', flexShrink: 0, border: '1px solid var(--border-primary)' }}>
                       {post.avatar_url ? <img src={post.avatar_url} alt="" style={{ width:'100%', height:'100%', borderRadius:'50%', objectFit:'cover' }} /> : post.username[0].toUpperCase()}
                     </div>
@@ -303,6 +350,91 @@ export default function ForumsPage() {
                 ))}
               </div>
             )}
+          </div>
+
+          {/* Leaderboard Sidebar */}
+          <div>
+            <div className="card" style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-primary)', padding: 0, overflow: 'hidden' }}>
+              <div style={{ 
+                padding: '20px 24px', 
+                background: 'linear-gradient(135deg, rgba(0,210,165,0.1), rgba(0,180,220,0.1))',
+                borderBottom: '1px solid var(--border-primary)',
+                display: 'flex', alignItems: 'center', gap: 10
+              }}>
+                <Trophy size={20} style={{ color: '#FFD700' }} />
+                <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>🏆 Leaderboard</h3>
+              </div>
+              
+              <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {leaderboard.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: 24, color: 'var(--text-tertiary)', fontSize: 13 }}>
+                    ยังไม่มีข้อมูล
+                  </div>
+                ) : leaderboard.map((member, idx) => {
+                  const rank = getRankBadge(idx);
+                  return (
+                    <div key={member.id} style={{
+                      display: 'flex', alignItems: 'center', gap: 12, padding: '10px 8px',
+                      borderRadius: 10, transition: 'background 0.2s',
+                      background: idx < 3 ? `${rank.bg}10` : 'transparent'
+                    }}>
+                      <div style={{ 
+                        width: 28, height: 28, borderRadius: '50%', 
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: idx < 3 ? 16 : 12, fontWeight: 700,
+                        color: idx < 3 ? rank.color : 'var(--text-muted)',
+                        flexShrink: 0
+                      }}>
+                        {rank.label}
+                      </div>
+                      <div style={{ 
+                        width: 32, height: 32, borderRadius: '50%', 
+                        background: 'var(--bg-primary)', border: `2px solid ${idx < 3 ? rank.color : 'var(--border-primary)'}`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 13, fontWeight: 700, color: 'var(--accent-primary)', flexShrink: 0
+                      }}>
+                        {member.avatar_url ? 
+                          <img src={member.avatar_url} alt="" style={{ width:'100%', height:'100%', borderRadius:'50%', objectFit:'cover' }} /> : 
+                          member.username[0].toUpperCase()
+                        }
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {member.display_name || member.username}
+                        </div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', gap: 8, marginTop: 2 }}>
+                          <span>{member.post_count}p</span>
+                          <span>{member.comment_count}c</span>
+                        </div>
+                      </div>
+                      <div style={{ 
+                        fontSize: 11, fontWeight: 700, 
+                        color: idx < 3 ? rank.color : 'var(--accent-primary)',
+                        background: idx < 3 ? `${rank.color}15` : 'rgba(0,210,165,0.1)',
+                        padding: '3px 8px', borderRadius: 6
+                      }}>
+                        {member.reputation_score}pt
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Stats Card */}
+            <div className="card" style={{ marginTop: 16, background: 'var(--bg-tertiary)', padding: 20, border: '1px solid var(--border-primary)' }}>
+              <h3 style={{ fontSize: 13, fontWeight: 700, marginBottom: 16, color: 'var(--text-primary)' }}>📊 สถิติคอมมูนิตี้</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div style={{ textAlign: 'center', padding: 12, background: 'var(--bg-primary)', borderRadius: 10 }}>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--accent-primary)' }}>{posts.length}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>กระทู้ทั้งหมด</div>
+                </div>
+                <div style={{ textAlign: 'center', padding: 12, background: 'var(--bg-primary)', borderRadius: 10 }}>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: '#FFD700' }}>{leaderboard.length}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>สมาชิกแอคทีฟ</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
