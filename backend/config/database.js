@@ -527,6 +527,81 @@ async function initDatabase() {
     `);
 
     // =============================================
+    // MEMBERSHIP PLANS (Level 2 — DB-driven billing)
+    // =============================================
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS membership_plans (
+        id SERIAL PRIMARY KEY,
+        plan_key VARCHAR(50) UNIQUE NOT NULL,
+        plan_name VARCHAR(100) NOT NULL,
+        description TEXT,
+        monthly_price DECIMAL(18,2) NOT NULL DEFAULT 0,
+        max_bots INTEGER DEFAULT 2,
+        max_accounts INTEGER DEFAULT 3,
+        features JSONB DEFAULT '[]',
+        is_popular BOOLEAN DEFAULT false,
+        is_active BOOLEAN DEFAULT true,
+        sort_order INTEGER DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    // =============================================
+    // SUBSCRIPTION HISTORY
+    // =============================================
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS subscription_history (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        plan_id INTEGER NOT NULL REFERENCES membership_plans(id),
+        amount DECIMAL(18,2) NOT NULL,
+        payment_status VARCHAR(20) DEFAULT 'COMPLETED',
+        payment_method VARCHAR(50) DEFAULT 'WALLET',
+        period_start TIMESTAMPTZ DEFAULT NOW(),
+        period_end TIMESTAMPTZ DEFAULT NOW() + INTERVAL '30 days',
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    // =============================================
+    // PROFIT SHARING LOGS (Level 2 — Profit Sharing Calculator)
+    // =============================================
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS profit_sharing_logs (
+        id SERIAL PRIMARY KEY,
+        group_id INTEGER NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+        leader_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        member_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        period_start DATE NOT NULL,
+        period_end DATE NOT NULL,
+        member_pnl DECIMAL(18,2) NOT NULL DEFAULT 0,
+        share_percentage DECIMAL(5,2) NOT NULL DEFAULT 20,
+        leader_share DECIMAL(18,2) NOT NULL DEFAULT 0,
+        member_net DECIMAL(18,2) NOT NULL DEFAULT 0,
+        status VARCHAR(20) DEFAULT 'CALCULATED',
+        settled_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    // Seed default membership plans
+    await client.query(`
+      INSERT INTO membership_plans (plan_key, plan_name, description, monthly_price, max_bots, max_accounts, features, is_popular, sort_order)
+      VALUES 
+        ('basic', 'Starter Trader', 'เหมาะสำหรับเทรดเดอร์มือใหม่', 29, 2, 3, 
+         '["รันบอทสูงสุด 2 ตัว", "อัปเดตราคาแบบ Real-time", "อีเมลแจ้งเตือนเมื่อออเดอร์เข้า", "ประวัติย้อนหลัง 30 วัน"]', 
+         false, 1),
+        ('pro', 'Pro Algo', 'สำหรับเทรดเดอร์มืออาชีพ', 99, 10, 10,
+         '["รันบอทสูงสุด 10 ตัว", "รวมฟีเจอร์ Starter Trader", "ดึงสัญญาณ TradingView Webhook", "Line Notify เรียลไทม์", "ประวัติเข้าใช้งานไม่จำกัด (Archive)"]',
+         true, 2),
+        ('enterprise', 'White-label / B2B', 'สำหรับองค์กรและพาร์ทเนอร์', 199, -1, -1,
+         '["รันบอทไม่จำกัด", "ตั้งค่าทีมและหัวหน้างาน (RBAC)", "เชื่อม API Key หลายพอร์ต", "ปรับแต่งสีธีม-โลโก้ของตัวเอง", "ทีมซัพพอร์ตระดับ Priority"]',
+         false, 3)
+      ON CONFLICT (plan_key) DO NOTHING;
+    `);
+
+    // =============================================
     // INDEXES
     // =============================================
     await client.query(`

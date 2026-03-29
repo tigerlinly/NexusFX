@@ -1,7 +1,9 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 const http = require('http');
 const { Server } = require('socket.io');
+const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
 const { initDatabase } = require('./config/database');
@@ -14,15 +16,79 @@ const RiskEngine = require('./services/riskEngine');
 
 const app = express();
 const server = http.createServer(app);
+
+// =============================================
+// 🔒 SECURITY: CORS Whitelist
+// =============================================
+const ALLOWED_ORIGINS = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(',').map(s => s.trim())
+  : ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:4173'];
+
 const io = new Server(server, {
-  cors: { origin: '*', methods: ['GET', 'POST'] },
+  cors: {
+    origin: ALLOWED_ORIGINS,
+    methods: ['GET', 'POST'],
+    credentials: true,
+  },
 });
 
-// Middleware
-app.use(cors());
+// =============================================
+// 🔒 SECURITY: Helmet (Security Headers)
+// =============================================
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  contentSecurityPolicy: false, // Disable CSP for API server
+}));
+
+// =============================================
+// 🔒 SECURITY: CORS
+// =============================================
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    if (ALLOWED_ORIGINS.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+}));
+
+// =============================================
+// 🔒 SECURITY: Rate Limiting
+// =============================================
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 300, // 300 requests per 15 min per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later.' },
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20, // 20 login/register attempts per 15 min
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many auth attempts, please try again later.' },
+});
+
+const tradeLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 30, // 30 trade actions per minute
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many trade requests, please slow down.' },
+});
+
+app.use('/api', generalLimiter);
+
 app.use(express.json({ limit: '10mb' }));
 
+// =============================================
 // Routes
+// =============================================
 const authRoutes = require('./routes/auth');
 const dashboardRoutes = require('./routes/dashboard');
 const accountsRoutes = require('./routes/accounts');
@@ -39,14 +105,16 @@ const storeRoutes = require('./routes/store');
 const brokersRoutes = require('./routes/brokers');
 const billingRoutes = require('./routes/billing');
 
-app.use('/api/auth', authRoutes);
+// Apply stricter rate limits to sensitive routes
+app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/trades', tradeLimiter, tradesRoutes);
+
 app.use('/api/brokers', brokersRoutes);
 app.use('/api/billing', billingRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/accounts', accountsRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/bots', botsRoutes);
-app.use('/api/trades', tradesRoutes);
 app.use('/api/groups', groupsRoutes);
 app.use('/api/targets', targetsRoutes);
 app.use('/api/webhooks', webhookRoutes);
@@ -55,9 +123,48 @@ app.use('/api/reports', reportsRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/store', storeRoutes);
 
+// =============================================
+// Swagger API Docs (Level 3)
+// =============================================
+try {
+  const swaggerJsDoc = require('swagger-jsdoc');
+  const swaggerUi = require('swagger-ui-express');
+
+  const swaggerOptions = {
+    definition: {
+      openapi: '3.0.0',
+      info: {
+        title: 'NexusFX Trading Platform API',
+        version: '1.0.0',
+        description: 'API documentation for NexusFX — a multi-broker trading platform with group management, automated bots, and analytics.',
+        contact: { name: 'NexusFX Dev Team' },
+      },
+      servers: [
+        { url: `http://localhost:${process.env.PORT || 4000}/api`, description: 'Development' },
+      ],
+      components: {
+        securitySchemes: {
+          bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
+        },
+      },
+      security: [{ bearerAuth: [] }],
+    },
+    apis: ['./routes/*.js'],
+  };
+
+  const swaggerDocs = swaggerJsDoc(swaggerOptions);
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs, {
+    customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: 'NexusFX API Docs',
+  }));
+  console.log('📖 Swagger API docs available at /api-docs');
+} catch (err) {
+  console.warn('⚠️ Swagger not available:', err.message);
+}
+
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({ status: 'ok', timestamp: new Date().toISOString(), version: '1.0.0' });
 });
 
 // Socket.io
@@ -80,10 +187,9 @@ const profitTracker = new ProfitTracker(io);
 const aggregationService = new AggregationService();
 const FeeTracker = require('./services/feeTracker');
 const feeTracker = new FeeTracker();
-const beeTracker = new FeeTracker();
 const binanceFeed = new BinanceFeed(io);
 const executionEngine = new ExecutionEngine();
-const riskEngine = new RiskEngine();
+const riskEngine = new RiskEngine(io);
 const mockBotEngine = require('./services/mockBotEngine');
 
 // Store services for route access
@@ -108,7 +214,10 @@ async function start() {
     server.listen(PORT, () => {
       console.log(`\n🚀 NexusFX Backend running on http://localhost:${PORT}`);
       console.log(`   API: http://localhost:${PORT}/api`);
-      console.log(`   Socket.io: ws://localhost:${PORT}\n`);
+      console.log(`   Docs: http://localhost:${PORT}/api-docs`);
+      console.log(`   Socket.io: ws://localhost:${PORT}`);
+      console.log(`   CORS: ${ALLOWED_ORIGINS.join(', ')}`);
+      console.log(`   Security: Helmet ✅ | Rate Limit ✅ | Encryption ✅\n`);
     });
   } catch (err) {
     console.error('❌ Failed to start server:', err);
@@ -117,9 +226,3 @@ async function start() {
 }
 
 start();
-// bump 
-// bump2 
-// bump3  
-// bump4  
-// bump5
-// bump6

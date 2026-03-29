@@ -1,6 +1,7 @@
 const express = require('express');
 const { pool } = require('../config/database');
-const { authMiddleware } = require('../middleware/auth');
+const { authMiddleware, auditLog } = require('../middleware/auth');
+const LineNotify = require('../services/lineNotify');
 const router = express.Router();
 
 router.use(authMiddleware);
@@ -207,8 +208,30 @@ router.get('/symbols', async (req, res) => {
   }
 });
 
-// POST /api/trades — place a manual trade
-router.post('/', async (req, res) => {
+/**
+ * @swagger
+ * /trades:
+ *   post:
+ *     summary: Place a manual trade order
+ *     tags: [Trades]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [account_id, symbol, side, lot_size]
+ *             properties:
+ *               account_id: { type: integer }
+ *               symbol: { type: string }
+ *               side: { type: string, enum: [BUY, SELL] }
+ *               lot_size: { type: number }
+ *               order_type: { type: string, enum: [MARKET, LIMIT, STOP] }
+ *     responses:
+ *       201:
+ *         description: Order placed successfully
+ */
+router.post('/', auditLog('PLACE_TRADE', 'ORDER'), async (req, res) => {
   try {
     const { account_id, symbol, side, lot_size, order_type = 'MARKET', entry_price = null, sl = null, tp = null } = req.body;
     
@@ -228,6 +251,16 @@ router.post('/', async (req, res) => {
        VALUES ($1, $2, $3, $4, $5, $6, 'PENDING') RETURNING *`,
       [account_id, symbol.toUpperCase(), side.toUpperCase(), order_type.toUpperCase(), lot_size, entry_price]
     );
+
+    // 🔔 Auto-trigger Line Notify (Level 2)
+    LineNotify.notifyTradeOpened(req.user.id, {
+      symbol: symbol.toUpperCase(),
+      side: side.toUpperCase(),
+      lot_size,
+      entry_price,
+      stop_loss: sl,
+      take_profit: tp
+    }).catch(err => console.warn('[LineNotify] Trade notify failed:', err.message));
 
     res.status(201).json({ success: true, order: { ...orderResult.rows[0], lot_size }, message: 'Order submitted successfully' });
   } catch (err) {

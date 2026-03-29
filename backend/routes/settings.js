@@ -1,11 +1,21 @@
 const express = require('express');
 const { pool } = require('../config/database');
-const { authMiddleware } = require('../middleware/auth');
+const { authMiddleware, auditLog } = require('../middleware/auth');
+const { encrypt, decrypt, mask } = require('../utils/encryption');
 const router = express.Router();
 
 router.use(authMiddleware);
 
-// GET /api/settings
+/**
+ * @swagger
+ * /settings:
+ *   get:
+ *     summary: Get user settings
+ *     tags: [Settings]
+ *     responses:
+ *       200:
+ *         description: User settings object
+ */
 router.get('/', async (req, res) => {
   try {
     const result = await pool.query(
@@ -13,24 +23,47 @@ router.get('/', async (req, res) => {
       [req.user.id]
     );
     if (result.rows.length === 0) {
-      // Create default settings
       const newSettings = await pool.query(
         'INSERT INTO user_settings (user_id) VALUES ($1) RETURNING *',
         [req.user.id]
       );
       return res.json(newSettings.rows[0]);
     }
-    res.json(result.rows[0]);
+
+    // Decrypt sensitive fields for display (masked)
+    const settings = result.rows[0];
+    const decrypted = { ...settings };
+
+    // Return masked versions for display, not raw keys
+    if (settings.metaapi_token) decrypted.metaapi_token_masked = mask(decrypt(settings.metaapi_token));
+    if (settings.binance_api_key) decrypted.binance_api_key_masked = mask(decrypt(settings.binance_api_key));
+    if (settings.binance_api_secret) decrypted.binance_api_secret_masked = mask(decrypt(settings.binance_api_secret));
+    if (settings.twelvedata_api_key) decrypted.twelvedata_api_key_masked = mask(decrypt(settings.twelvedata_api_key));
+    if (settings.line_notify_token) decrypted.line_notify_token_masked = mask(decrypt(settings.line_notify_token));
+
+    res.json(decrypted);
   } catch (err) {
     console.error('Get settings error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-const { auditLogger } = require('../middleware/audit');
-
-// PUT /api/settings
-router.put('/', auditLogger('UPDATE_SETTINGS', 'SETTING'), async (req, res) => {
+/**
+ * @swagger
+ * /settings:
+ *   put:
+ *     summary: Update user settings
+ *     tags: [Settings]
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Updated settings
+ */
+router.put('/', auditLog('UPDATE_SETTINGS', 'SETTING'), async (req, res) => {
   try {
     const {
       theme_id, custom_colors, dashboard_layout,
@@ -39,11 +72,13 @@ router.put('/', auditLogger('UPDATE_SETTINGS', 'SETTING'), async (req, res) => {
       binance_api_key, binance_api_secret, twelvedata_api_key, line_notify_token
     } = req.body;
 
-    console.log('--- PUT /api/settings ---');
-    console.log('User ID:', req.user.id);
-    console.log('Payload:', JSON.stringify(req.body, null, 2));
+    // 🔒 Encrypt sensitive API keys before storing
+    const encMetaapi = metaapi_token !== undefined ? (metaapi_token ? encrypt(metaapi_token) : '') : null;
+    const encBinanceKey = binance_api_key !== undefined ? (binance_api_key ? encrypt(binance_api_key) : '') : null;
+    const encBinanceSecret = binance_api_secret !== undefined ? (binance_api_secret ? encrypt(binance_api_secret) : '') : null;
+    const encTwelvedata = twelvedata_api_key !== undefined ? (twelvedata_api_key ? encrypt(twelvedata_api_key) : '') : null;
+    const encLineToken = line_notify_token !== undefined ? (line_notify_token ? encrypt(line_notify_token) : '') : null;
 
-    // Use simple UPDATE since GET already ensures the row exists
     const result = await pool.query(
       `UPDATE user_settings SET
         theme_id = COALESCE($2, theme_id),
@@ -73,32 +108,28 @@ router.put('/', auditLogger('UPDATE_SETTINGS', 'SETTING'), async (req, res) => {
         language || null,
         timezone || null,
         notify_new_trade !== undefined ? notify_new_trade : null,
-        metaapi_token !== undefined ? metaapi_token : null,
+        encMetaapi,
         auto_sync !== undefined ? auto_sync : null,
-        binance_api_key !== undefined ? binance_api_key : null,
-        binance_api_secret !== undefined ? binance_api_secret : null,
-        twelvedata_api_key !== undefined ? twelvedata_api_key : null,
-        line_notify_token !== undefined ? line_notify_token : null
+        encBinanceKey,
+        encBinanceSecret,
+        encTwelvedata,
+        encLineToken
       ]
     );
 
     if (result.rows.length === 0) {
-      console.log('No row found, inserting new...');
       const insertResult = await pool.query(
         `INSERT INTO user_settings (user_id, theme_id, notifications_enabled, sound_enabled, language, timezone, notify_new_trade, metaapi_token, auto_sync, binance_api_key, binance_api_secret, twelvedata_api_key, line_notify_token)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
          RETURNING *`,
-        [req.user.id, theme_id || 'dark-trading', notifications_enabled ?? true, sound_enabled ?? true, language || 'th', timezone || 'Asia/Bangkok', notify_new_trade ?? false, metaapi_token || '', auto_sync ?? true, binance_api_key || '', binance_api_secret || '', twelvedata_api_key || '', line_notify_token || '']
+        [req.user.id, theme_id || 'dark-trading', notifications_enabled ?? true, sound_enabled ?? true, language || 'th', timezone || 'Asia/Bangkok', notify_new_trade ?? false, encMetaapi || '', auto_sync ?? true, encBinanceKey || '', encBinanceSecret || '', encTwelvedata || '', encLineToken || '']
       );
-      console.log('Insert result:', insertResult.rows[0]);
       return res.json(insertResult.rows[0]);
     }
 
-    console.log('Update success! theme_id:', result.rows[0].theme_id, 'metaapi_token:', result.rows[0].metaapi_token);
     res.json(result.rows[0]);
   } catch (err) {
     console.error('Update settings error:', err.message);
-    console.error('Full error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

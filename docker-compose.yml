@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  # =============================================
+  # PostgreSQL Database
+  # =============================================
+  db:
+    image: postgres:16-alpine
+    container_name: nexusfx-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: nexusfx_secure_password
+      POSTGRES_DB: nexusfx
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # =============================================
+  # NexusFX Backend API
+  # =============================================
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: nexusfx-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://postgres:nexusfx_secure_password@db:5432/nexusfx
+      JWT_SECRET: ${JWT_SECRET:-nexusfx-production-secret-change-this}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
+      PORT: 4000
+      NODE_ENV: production
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:3000}
+    ports:
+      - "4000:4000"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  pgdata:
+    driver: local

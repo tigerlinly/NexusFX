@@ -321,13 +321,14 @@ router.post('/:id/emergency-close', requirePermission('group.manage'), async (re
 
     await pool.query('BEGIN');
 
-    // Get all member accounts
+    // Get all member accounts + user IDs
     const members = await pool.query(
-      `SELECT a.id FROM accounts a JOIN group_members gm ON gm.user_id = a.user_id WHERE gm.group_id = $1`,
+      `SELECT a.id, a.user_id FROM accounts a JOIN group_members gm ON gm.user_id = a.user_id WHERE gm.group_id = $1`,
       [req.params.id]
     );
 
     const accountIds = members.rows.map(m => m.id);
+    const memberUserIds = [...new Set(members.rows.map(m => m.user_id))];
 
     let cancelledOrders = 0;
     let stoppedBots = 0;
@@ -357,6 +358,13 @@ router.post('/:id/emergency-close', requirePermission('group.manage'), async (re
     );
 
     await pool.query('COMMIT');
+
+    // 4. 🔔 Notify all members via Line Notify
+    const LineNotify = require('../services/lineNotify');
+    for (const userId of memberUserIds) {
+      LineNotify.notifyEmergencyClose(userId, group.rows[0].group_name, reason)
+        .catch(err => console.warn('[LineNotify] Emergency notify failed:', err.message));
+    }
 
     res.json({ success: true, cancelled_orders: cancelledOrders, stopped_bots: stoppedBots, message: 'Emergency close executed' });
   } catch (err) {

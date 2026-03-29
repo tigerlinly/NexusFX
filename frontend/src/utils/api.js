@@ -75,7 +75,12 @@ export const api = {
   // Store & Billing
   getStoreBots: () => request('/store/bots'),
   purchaseBot: (body) => request('/store/purchase', { method: 'POST', body: JSON.stringify(body) }),
+  getPlans: () => request('/billing/plans'),
   upgradeSubscription: (body) => request('/billing/upgrade', { method: 'POST', body: JSON.stringify(body) }),
+  getSubscriptionHistory: () => request('/billing/history'),
+  calculateProfitSharing: (body) => request('/billing/profit-sharing/calculate', { method: 'POST', body: JSON.stringify(body) }),
+  settleProfitSharing: (body) => request('/billing/profit-sharing/settle', { method: 'POST', body: JSON.stringify(body) }),
+  getProfitSharingHistory: () => request('/billing/profit-sharing/history'),
 
   // Targets
   getTargets: () => request('/targets'),

@@ -5,6 +5,58 @@ const { pool } = require('../config/database');
 const { authMiddleware, auditLog } = require('../middleware/auth');
 const router = express.Router();
 
+/**
+ * @swagger
+ * tags:
+ *   - name: Auth
+ *     description: Authentication & user management
+ *   - name: Dashboard
+ *     description: Dashboard data & widgets
+ *   - name: Trades
+ *     description: Trade execution & history
+ *   - name: Accounts
+ *     description: Trading account management
+ *   - name: Groups
+ *     description: Team/group management
+ *   - name: Wallet
+ *     description: Wallet & financial transactions 
+ *   - name: Bots
+ *     description: Trading bot management
+ *   - name: Reports
+ *     description: Reports & analytics
+ *   - name: Billing
+ *     description: Subscription & billing
+ *   - name: Settings
+ *     description: User settings & configuration
+ *   - name: Admin
+ *     description: Admin panel operations
+ */
+
+/**
+ * @swagger
+ * /auth/register:
+ *   post:
+ *     summary: Register a new user account
+ *     tags: [Auth]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [username, email, password]
+ *             properties:
+ *               username: { type: string }
+ *               email: { type: string }
+ *               password: { type: string }
+ *               display_name: { type: string }
+ *     responses:
+ *       201:
+ *         description: User registered successfully
+ *       409:
+ *         description: Username or email already exists
+ */
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
   try {
@@ -63,7 +115,29 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// POST /api/auth/login
+/**
+ * @swagger
+ * /auth/login:
+ *   post:
+ *     summary: Login with username/email and password
+ *     tags: [Auth]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [username, password]
+ *             properties:
+ *               username: { type: string, description: 'Username or email' }
+ *               password: { type: string }
+ *     responses:
+ *       200:
+ *         description: Login successful, returns JWT token
+ *       401:
+ *         description: Invalid credentials
+ */
 router.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -121,7 +195,16 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// GET /api/auth/me
+/**
+ * @swagger
+ * /auth/me:
+ *   get:
+ *     summary: Get current authenticated user profile
+ *     tags: [Auth]
+ *     responses:
+ *       200:
+ *         description: User profile data
+ */
 router.get('/me', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(

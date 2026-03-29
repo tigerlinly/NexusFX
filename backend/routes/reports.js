@@ -145,10 +145,125 @@ router.get('/analytics', requirePermission('report.view'), async (req, res) => {
 });
 
 // =============================================
-// REPORT EXPORT
+// REPORT EXPORT (CSV + PDF)
 // =============================================
 
-// POST /api/reports/export — request export
+// Helper: Generate PDF buffer from trade data
+async function generateTradePDF(trades, title, userId) {
+  const PDFDocument = require('pdfkit');
+
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ margin: 40, size: 'A4', layout: 'landscape' });
+    const chunks = [];
+
+    doc.on('data', chunk => chunks.push(chunk));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+
+    // Header
+    doc.fontSize(20).font('Helvetica-Bold').text('NexusFX Trading Report', { align: 'center' });
+    doc.moveDown(0.3);
+    doc.fontSize(10).font('Helvetica').fillColor('#666666')
+      .text(`${title} | Generated: ${new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })} | User ID: ${userId}`, { align: 'center' });
+    doc.moveDown(1);
+
+    // Summary
+    const totalPnl = trades.reduce((s, t) => s + parseFloat(t.pnl || 0), 0);
+    const wins = trades.filter(t => parseFloat(t.pnl || 0) > 0).length;
+    const winRate = trades.length > 0 ? ((wins / trades.length) * 100).toFixed(1) : '0.0';
+
+    doc.fontSize(11).font('Helvetica-Bold').fillColor('#000000');
+    doc.text(`Total Trades: ${trades.length}   |   Total PnL: $${totalPnl.toFixed(2)}   |   Win Rate: ${winRate}%   |   Wins: ${wins}   |   Losses: ${trades.length - wins}`);
+    doc.moveDown(1);
+
+    // Table Header
+    const cols = [
+      { label: 'Ticket', width: 60 }, { label: 'Symbol', width: 70 }, { label: 'Side', width: 40 },
+      { label: 'Lots', width: 45 }, { label: 'Entry', width: 70 }, { label: 'Exit', width: 70 },
+      { label: 'PnL', width: 65 }, { label: 'Status', width: 55 }, { label: 'Account', width: 80 },
+      { label: 'Closed At', width: 100 }
+    ];
+
+    let y = doc.y;
+    let x = 40;
+
+    // Draw header row
+    doc.fontSize(8).font('Helvetica-Bold').fillColor('#FFFFFF');
+    doc.rect(x, y, cols.reduce((s, c) => s + c.width, 0), 18).fill('#1a1a2e');
+    doc.fillColor('#FFFFFF');
+    cols.forEach(col => {
+      doc.text(col.label, x + 3, y + 5, { width: col.width - 6 });
+      x += col.width;
+    });
+    y += 18;
+
+    // Draw data rows (limit to 200 for PDF perf)
+    const maxRows = Math.min(trades.length, 200);
+    doc.font('Helvetica').fontSize(7).fillColor('#333333');
+
+    for (let i = 0; i < maxRows; i++) {
+      if (y > 540) {
+        doc.addPage();
+        y = 40;
+      }
+
+      const t = trades[i];
+      const pnl = parseFloat(t.pnl || 0);
+      const bgColor = i % 2 === 0 ? '#f8f9fa' : '#ffffff';
+
+      x = 40;
+      doc.rect(x, y, cols.reduce((s, c) => s + c.width, 0), 16).fill(bgColor);
+      doc.fillColor('#333333');
+
+      const vals = [
+        t.ticket || '-', t.symbol, t.side, t.lot_size,
+        t.entry_price || '-', t.exit_price || '-',
+        `${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}`,
+        t.status, t.account_name || '-',
+        t.closed_at ? new Date(t.closed_at).toLocaleDateString('th-TH') : '-'
+      ];
+
+      vals.forEach((val, ci) => {
+        if (ci === 6) {
+          doc.fillColor(pnl >= 0 ? '#00c896' : '#ff4757');
+        } else {
+          doc.fillColor('#333333');
+        }
+        doc.text(String(val), x + 3, y + 4, { width: cols[ci].width - 6 });
+        x += cols[ci].width;
+      });
+
+      y += 16;
+    }
+
+    if (trades.length > maxRows) {
+      doc.moveDown(1);
+      doc.fontSize(9).fillColor('#999').text(`... and ${trades.length - maxRows} more rows (exported in CSV for full data)`);
+    }
+
+    doc.end();
+  });
+}
+
+/**
+ * @swagger
+ * /reports/export:
+ *   post:
+ *     summary: Export report as CSV or PDF
+ *     tags: [Reports]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               report_type: { type: string, enum: [TRADES, DAILY] }
+ *               format: { type: string, enum: [CSV, PDF] }
+ *     responses:
+ *       201:
+ *         description: Export completed
+ */
 router.post('/export', requirePermission('report.export'), async (req, res) => {
   try {
     const { report_type, format = 'CSV', params = {} } = req.body;
@@ -159,13 +274,13 @@ router.post('/export', requirePermission('report.export'), async (req, res) => {
     const result = await pool.query(
       `INSERT INTO report_exports (requested_by, report_type, format, params, status)
        VALUES ($1, $2, $3, $4, 'PROCESSING') RETURNING *`,
-      [req.user.id, report_type, format, JSON.stringify(params)]
+      [req.user.id, report_type, format.toUpperCase(), JSON.stringify(params)]
     );
 
-    // Generate the CSV data immediately (simplified)
-    let csvData = '';
     const exportId = result.rows[0].id;
+    let fileUrl = '';
 
+    // Fetch data based on report type
     if (report_type === 'TRADES') {
       const trades = await pool.query(
         `SELECT t.ticket, t.symbol, t.side, t.lot_size, t.entry_price, t.exit_price,
@@ -179,10 +294,17 @@ router.post('/export', requirePermission('report.export'), async (req, res) => {
         [req.user.id]
       );
 
-      csvData = 'Ticket,Symbol,Side,Lots,Entry,Exit,PnL,Commission,Swap,Opened,Closed,Status,Account,Broker\n';
-      trades.rows.forEach(t => {
-        csvData += `${t.ticket},${t.symbol},${t.side},${t.lot_size},${t.entry_price},${t.exit_price},${t.pnl},${t.commission},${t.swap},${t.opened_at},${t.closed_at},${t.status},${t.account_name},${t.broker_name}\n`;
-      });
+      if (format.toUpperCase() === 'PDF') {
+        const pdfBuffer = await generateTradePDF(trades.rows, 'Trade History Report', req.user.id);
+        fileUrl = `data:application/pdf;base64,${pdfBuffer.toString('base64')}`;
+      } else {
+        let csvData = 'Ticket,Symbol,Side,Lots,Entry,Exit,PnL,Commission,Swap,Opened,Closed,Status,Account,Broker\n';
+        trades.rows.forEach(t => {
+          csvData += `${t.ticket},${t.symbol},${t.side},${t.lot_size},${t.entry_price},${t.exit_price},${t.pnl},${t.commission},${t.swap},${t.opened_at},${t.closed_at},${t.status},${t.account_name},${t.broker_name}\n`;
+        });
+        fileUrl = `data:text/csv;base64,${Buffer.from(csvData).toString('base64')}`;
+      }
+
     } else if (report_type === 'DAILY') {
       const daily = await pool.query(
         `SELECT da.report_date, da.total_pnl, da.total_trades, da.winning_trades,
@@ -194,15 +316,25 @@ router.post('/export', requirePermission('report.export'), async (req, res) => {
         [req.user.id]
       );
 
-      csvData = 'Date,PnL,Trades,Wins,Losses,WinRate,Volume,Account\n';
-      daily.rows.forEach(d => {
-        csvData += `${d.report_date},${d.total_pnl},${d.total_trades},${d.winning_trades},${d.losing_trades},${d.win_rate},${d.total_volume},${d.account_name}\n`;
-      });
+      if (format.toUpperCase() === 'PDF') {
+        // Reuse the PDF generator with mapped data
+        const mapped = daily.rows.map(d => ({
+          ticket: d.report_date, symbol: d.account_name || '-', side: `${d.total_trades} trades`,
+          lot_size: d.total_volume, entry_price: d.winning_trades, exit_price: d.losing_trades,
+          pnl: d.total_pnl, status: `${d.win_rate}%`, account_name: d.account_name,
+          closed_at: d.report_date
+        }));
+        const pdfBuffer = await generateTradePDF(mapped, 'Daily Performance Report', req.user.id);
+        fileUrl = `data:application/pdf;base64,${pdfBuffer.toString('base64')}`;
+      } else {
+        let csvData = 'Date,PnL,Trades,Wins,Losses,WinRate,Volume,Account\n';
+        daily.rows.forEach(d => {
+          csvData += `${d.report_date},${d.total_pnl},${d.total_trades},${d.winning_trades},${d.losing_trades},${d.win_rate},${d.total_volume},${d.account_name}\n`;
+        });
+        fileUrl = `data:text/csv;base64,${Buffer.from(csvData).toString('base64')}`;
+      }
     }
 
-    // Store as data URL (in production, upload to S3)
-    const fileUrl = `data:text/csv;base64,${Buffer.from(csvData).toString('base64')}`;
-    
     await pool.query(
       `UPDATE report_exports SET status = 'COMPLETED', file_url = $1, completed_at = NOW() WHERE id = $2`,
       [fileUrl, exportId]
