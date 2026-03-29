@@ -1,0 +1,222 @@
+เอกสารการออกแบบระบบเทรดระดับสูง 
+(Account-Centric Isolation - ACI) 
+ระบบนี้ถูกออกแบบมาบนพื้นฐานของความปลอดภัยขั้นสูงสุด (Security-First) และการขยายตัวอย่างไร้ขีดจำกัด 
+(Infinite Scalability) เพื่อรองรับทั้งกลุ่มผู้ใช้รายย่อยและคู่ค้าทางธุรกิจแบบ White-label/B2B โดยใช้หลักการ
+แยกทรัพยากรรายบัญชีแบบเบ็ดเสร็จ (Granular Resource Isolation) เพื่อป้องกันเหตุการณ์ Data Breach 
+และปัญหาด้านประสิทธิภาพที่เกิดจากผู้ใช้รายอื่น (Noisy Neighbor Effect) 
+1. กลยุทธ์การแยกบัญชีอิสระ (Account-Centric Isolation 
+Strategy) 
+สถาปัตยกรรมระดับ Gold Standard นี้มุ่งเน้นการสร้างกำแพงกั้นระหว่างผู้ใช้อย่างถาวร เพื่อให้ผู้ใช้แต่ละราย
+รู้สึกเสมือนมีเซิร์ฟเวอร์เทรดส่วนตัว (Private Dedicated Instance) ดังนี้: 
+●​ Data Isolation (การแยกข้อมูลในระดับกายภาพและตรรกะ): 
+○​ Schema-per-User Architecture: ในฐานข้อมูลหลัก (PostgreSQL) เราจะไม่ใช้ตารางรวม แต่
+จะสร้าง Schema แยกรายคน วิธีนี้ช่วยป้องกันความเสี่ยงจาก SQL Injection ข้ามบัญชี 100% และ
+ช่วยให้การทำ Backup/Restore ข้อมูลของผู้ใช้แต่ละคนทำได้โดยไม่กระทบคนอื่น 
+○​ Advanced Envelope Encryption: ข้อมูลที่อ่อนไหว เช่น API Keys ของ Exchange จะถูก
+เข้ารหัสสองชั้น ชั้นแรกด้วย Data Encryption Key (DEK) และชั้นที่สองด้วย Master Key จาก AWS 
+KMS หรือ HashiCorp Vault ซึ่งถูกจัดเก็บแยกส่วนกันโดยสิ้นเชิง 
+○​ Partitioned & Archived Trade Logs: ข้อมูลประวัติการเทรดมหาศาลจะถูกทำ Partitioning ตาม
+บัญชีผู้ใช้ และจะมีการย้ายข้อมูลเก่าเข้าสู่ Cold Storage (เช่น S3) เมื่อถึงเวลาที่กำหนด เพื่อรักษา
+ความเร็วในการดึงข้อมูลปัจจุบันให้คงที่เสมอ 
+●​ Process Isolation (การแยกทรัพยากรประมวลผล): 
+○​ Containerized Trading Micro-Bots: บอทแต่ละตัวจะถูกรันใน Docker Container หรือ 
+Micro-VM ที่มีการจำกัด CPU Shares และ Memory Quota หากบอทของบัญชี A เกิดปัญหา 
+Memory Leak หรือติด Infinite Loop ระบบ Isolation จะทำการ Kill และ Restart เฉพาะ 
+Container นั้นๆ โดยที่บัญชี B และ C จะไม่รู้สึกถึงความหน่วงแม้แต่น้อย 
+○​ Actor Model Implementation: ในระดับ Software เราใช้แนวคิด Actor Model เพื่อให้แต่ละ
+การตัดสินใจเทรดทำงานเป็นอิสระต่อกัน (Autonomous Entities) ไม่มีการแชร์สถานะ (No Shared 
+State) ลดความซับซ้อนของการเขียนโปรแกรมแบบขนาน 
+●​ Network Isolation (ความปลอดภัยระดับเครือข่าย): 
+○​ ใช้แนวคิด Zero Trust Architecture โดยทุกการเชื่อมต่อภายใน VPC จะต้องมีการระบุตัวตนและ
+ตรวจสอบสิทธิ์ตลอดเวลา และมีการแยก Subnet สำหรับ Internal Services และ External Facing 
+APIs อย่างชัดเจน 
+2. โมดูลและฟีเจอร์แยกตามระดับผู้ใช้งาน (Detailed 
+Role-based Features) 
+A. ระดับผู้ใช้บริการ (User Level: The End Trader) 
+●​ Dynamic Trading Interface: หน้าจอเทรดที่ปรับแต่งได้ตามความถนัด รองรับทั้งการส่งคำสั่งด้วยตน
+เอง (Limit/Market/Stop-Limit) และการเชื่อมต่อบอทอัตโนมัติ 
+●​ Currency & Liquidity Selector: สามารถเลือกเทรดสกุลเงินดิจิทัล (Crypto), อัตราแลกเปลี่ยน 
+(Forex), หรือหุ้นต่างประเทศ ผ่าน Liquidity Provider ที่หลากหลาย 
+●​ Algorithmic Strategy Store: ศูนย์รวมกลยุทธ์การเทรดที่ผ่านการทดสอบมาแล้ว ผู้ใช้สามารถเลือกใช้
+งาน (Copy Trading) หรือปรับแต่งค่าพารามิเตอร์เองได้ เช่น การตั้งค่า Risk-to-Reward Ratio และ 
+Max Daily Loss 
+●​ Personalized Analytics Dashboard: วิเคราะห์พฤติกรรมการเทรดของตนเองผ่าน AI เพื่อระบุ
+จุดอ่อนและจุดแข็ง (Trade Psychology Analysis) 
+B. ระดับหัวหน้ากลุ่ม/ทีมลีด (Team Lead Level: The Portfolio Manager) 
+●​ Team Aggregation Dashboard: แดชบอร์ดรวมที่แสดงภาพรวมพอร์ตของลูกทีมทุกคนในรูปแบบ 
+Heatmap เพื่อให้เห็นว่ากลุ่มกำลังถือครองสินทรัพย์ใดมากเกินไป (Exposure Risk) 
+●​ Collaborative Risk Management: สามารถตั้งค่า "Global Stop-Loss" สำหรับทั้งทีมได้ในกรณีที่
+ตลาดผันผวนรุนแรง และระบบจะทำการปิด Position ของลูกทีมทุกคนโดยอัตโนมัติ 
+●​ Performance Incentives: ระบบคำนวณส่วนแบ่งกำไร (Profit Sharing) ที่หัวหน้าทีมจะได้รับจากการ
+บริหารจัดการลูกทีมได้อย่างแม่นยำ 
+●​ Member Provisioning: อำนาจในการรับสมาชิกใหม่เข้ากลุ่ม หรือระงับสิทธิ์สมาชิกที่ทำผิดกฎการบริหาร
+ความเสี่ยงของทีม 
+C. ระดับผู้ดูแลระบบ (Admin Level: The System Governor) 
+●​ Real-time Infrastructure Monitoring: แดชบอร์ดแสดงสถานะสุขภาพของระบบแบบ Real-time 
+ตั้งแต่ Network Latency ไปจนถึง Database IOPS 
+●​ Financial & Revenue Intelligence: ระบบตรวจสอบรายได้รวม (Consolidated Revenue) แยกตาม
+แหล่งที่มา เช่น ค่าธรรมเนียมเทรด, ค่าเช่าบอท และส่วนแบ่งจากพาร์ทเนอร์ B2B 
+●​ Crisis Management Tools (Kill Switch): ปุ่มหยุดการทำงานของระบบในระดับ Global หรือราย 
+Exchange เพื่อป้องกันความเสียหายจากเหตุการณ์ไม่คาดฝัน (Flash Crash) หรือการถูกโจมตีทางไซเบอร์ 
+●​ B2B Onboarding & White-label Engine: เครื่องมือในการสร้างระบบย่อยให้กับพาร์ทเนอร์ 
+(Sub-tenancy) พร้อมระบบจัดการโควต้าทรัพยากรคลาวด์แยกตามสัญญาบริการ 
+3. การออกแบบ Flows (Deep-dive into Architecture 
+Flows) 
+System Flow: จากการคลิกสู่การส่งคำสั่ง 
+เมื่อผู้ใช้ส่งคำสั่ง User UI -> ผ่าน CloudFront/WAF เพื่อกัน DDoS -> เข้าสู่ API Gateway เพื่อตรวจสอบ 
+JWT Token -> Isolation Controller ตรวจสอบสิทธิ์และดึงข้อมูล Isolation -> สั่งการไปยัง Isolated Bot 
+Instance -> ส่งคำสั่งผ่าน Exchange Connectivity Manager ไปยังตลาดหลัก 
+Data Flow: การไหลของข้อมูลมหาศาล 
+●​ Market Insight (Hot Data): ข้อมูลราคาจาก Exchange วิ่งผ่าน WebSocket ความเร็วสูงเข้าสู่ Redis 
+Pub/Sub และกระจายไปยัง User Dashboard ภายในเวลาไม่เกิน 50ms 
+●​ Transaction Records (Cold Data): เมื่อเกิดการจับคู่ (Match) ข้อมูลจะถูกบันทึกลงใน 
+User-specific Schema และสำเนาไปยัง Data Warehouse เพื่อใช้ในการทำรายงานสรุปสิ้นเดือน 
+●​ System Telemetry: ทุกกิจกรรมจะถูกส่งไปยัง Elasticsearch/Loki เพื่อใช้ในการสืบสวนย้อนหลัง 
+(Auditing) 
+Business Flow: การสร้างรายได้และพันธมิตร 
+1.​ B2B Partner Onboarding: พาร์ทเนอร์สมัครใช้งาน -> เลือกแพ็กเกจทรัพยากร (เช่น รองรับ User 
+1,000 คน) -> ชำระค่า Setup Fee 
+2.​ Automated Infrastructure Provisioning: ระบบ Terraform/Ansible จะสร้างโครงสร้างพื้นฐาน
+แยกส่วนให้พาร์ทเนอร์โดยอัตโนมัติ 
+3.​ Revenue Settlement: ทุกวันศุกร์ ระบบจะสรุปยอดกำไรที่พาร์ทเนอร์ทำได้ และทำการหัก Revenue 
+Share 10% เข้าสู่บัญชีบริษัทหลักโดยอัตโนมัติ 
+4. ระบบการเก็บค่าบริการและการบริหารกำไร (Detailed 
+Monetization) 
+เราใช้โมเดลการหารายได้แบบผสมผสาน (Hybrid Model) เพื่อสร้างกระแสเงินสดที่มั่นคง: 
+ประเภทค่าบริการ 
+อัตราที่แนะนำ 
+รายละเอียดและกลยุทธ์ 
+Subscription (Tiered) 
+$29 - $199/เดือน 
+แบ่งตามระดับความเร็วของ
+เซิร์ฟเวอร์ และจำนวนบอทที่รัน
+พร้อมกันได้ 
+Success Fee 
+15% - 25% ของกำไร 
+ใช้เกณฑ์ High-Water Mark 
+(ไม่เก็บค่าธรรมเนียมซ้ำซ้อนหาก
+ยังไม่ผ่านจุดกำไรสูงสุดเดิม) 
+White-label Setup 
+$5,000 - $15,000 
+ค่าบริการติดตั้งระบบ การปรับ
+แต่ง UI/Logo และการเชื่อมต่อ
+โดเมนส่วนตัว 
+Partner Revenue Share 
+10% จากยอดขาย 
+เก็บจากพาร์ทเนอร์ B2B เพื่อเป็น
+ค่าลิขสิทธิ์และการดูแลรักษา
+เซิร์ฟเวอร์ 
+Service Fee (Vesting) 
+0.05% - 0.1% 
+ค่าธรรมเนียมเล็กน้อยต่อการส่ง
+คำสั่งซื้อขาย (Trading Volume 
+Fee) 
+5. แผนการขยายระบบและการเตรียมความพร้อม (Scalability 
+Roadmap) 
+จำนวนผู้ใช้ (Users) 
+กลยุทธ์ 
+Infrastructure 
+เทคโนโลยีที่เน้น 
+จุดวิกฤตที่ต้องระวัง 
+0 - 100 
+Single Region / Low 
+Cost 
+Docker Compose, 
+Managed DB 
+ความเร็วในการพัฒนา 
+(Time-to-Market) 
+100 - 1,000 
+Managed 
+Kubernetes (K8s) 
+Auto-scaling Pods, 
+Cloud Load 
+Balancer 
+ความหน่วงของฐาน
+ข้อมูล (DB Latency) 
+1,000 - 5,000 
+Multi-AZ 
+Deployment 
+RDS Read Replicas, 
+Redis Cluster 
+ระบบ Queue สำหรับ
+จัดการ Order จำนวน
+มาก 
+5,000 - 10,000+ 
+Global & 
+Multi-Cloud 
+Distributed SQL, 
+Global Accelerator 
+ความซับซ้อนของการ 
+Sync ข้อมูลข้ามทวีป 
+6. สรุปรายละเอียดค่าใช้จ่ายประมาณการ (Comprehensive 
+Cost Analysis) 
+เราประมาณการต้นทุนโดยเน้นความคุ้มค่าสูงสุดในช่วงเริ่มต้นและประสิทธิภาพสูงสุดในช่วงขยายตัว: 
+ตารางสรุปงบประมาณรายเดือนและรายปี (Total Cost of Ownership) 
+Tier ผู้ใช้งาน 
+ค่าใช้จ่ายรายเดือน 
+(เฉลี่ย) 
+ค่าใช้จ่ายรายปี (เฉลี่ย) 
+แพลตฟอร์มและ
+เครื่องมือหลัก 
+100 Users 
+$70 - $120 (~2,500 
+- 4,300 บาท) 
+$840 - $1,440 
+(~30,000 - 51,000 
+บาท) 
+DigitalOcean 
+Droplets + Basic 
+Managed DB 
+1,000 Users 
+$350 - $750 
+(~12,600 - 27,000 
+บาท) 
+$4,200 - $9,000 
+(~151,000 - 
+324,000 บาท) 
+AWS EKS (Spot 
+Instances) + Redis 
+HA 
+5,000 Users 
+$1,800 - $3,500 
+$21,600 - $42,000 
+AWS Aurora + Kafka 
+(~65,000 - 126,000 
+บาท) 
+(~777,000 - 1.5M 
+บาท) 
++ Enterprise 
+Support 
+10,000+ Users 
+$6,000 - $12,000+ 
+(~216,000 - 
+432,000+ บาท) 
+$72,000 - 
+$144,000+ (~2.6M 
+- 5.2M+ บาท) 
+Multi-Region AWS + 
+CockroachDB 
+Cloud 
+หมายเหตุ: ค่าใช้จ่ายนี้รวมถึงค่า Cloud Resources, การรักษาความปลอดภัย และเครื่องมือ Monitoring ระดับ
+อุตสาหกรรมแล้ว 
+7. เทคโนโลยีที่ใช้ในการขับเคลื่อน (Advanced Tech Stack) 
+●​ Frontend Architecture: Next.js (React) ร่วมกับ Tailwind CSS และ TanStack Query เพื่อให้
+มั่นใจว่าแดชบอร์ดลื่นไหลแม้มีข้อมูลราคาอัปเดตทุกวินาที 
+●​ High-Performance Backend: 
+○​ Go (Golang): ใช้สำหรับ Engine การเทรดหลักเนื่องจากจัดการ Concurrency ได้ดีเยี่ยมและใช้
+ทรัพยากรต่ำ 
+○​ Node.js (TypeScript): ใช้สำหรับ API Management และส่วนการจัดการผู้ใช้ที่เน้นความเร็วในการ
+พัฒนา 
+●​ Data Storage Layer: 
+○​ PostgreSQL (Primary): จัดเก็บข้อมูลธุรกรรมที่ต้องการความแม่นยำสูง (ACID Compliance) 
+○​ TimescaleDB: ฐานข้อมูลพิเศษสำหรับเก็บ Metric การเทรดและข้อมูลราคาย้อนหลัง 
+(Time-series Optimization) 
+○​ Redis: ใช้ทำ Distributed Caching และ Pub/Sub สำหรับ Market Data 
+●​ Infrastructure & DevOps: 
+○​ Terraform: จัดการโครงสร้างพื้นฐานในรูปแบบ Code (IaC) เพื่อความรวดเร็วในการขยาย Region 
+○​ Kubernetes (K8s): หัวใจหลักในการจัดการ Isolation และการขยายตัวแบบอัตโนมัติ 
+(Auto-scaling) 
+●​ Security & Observability: 
+○​ HashiCorp Vault: สำหรับการจัดการความลับ (Secret Management) ที่ปลอดภัยที่สุด 
+○​ Grafana/Prometheus/Loki: ชุดเครื่องมือที่ช่วยให้ Admin เห็นทุกความเคลื่อนไหวในระบบและ
+แก้ไขปัญหาก่อนที่ผู้ใช้จะรู้ตัว 

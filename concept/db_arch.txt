@@ -1,0 +1,207 @@
+Strategic Database Architecture: ACI 
+Trading Enterprise Edition (V2.2) 
+สถาปัตยกรรมฐานข้อมูลนี้ถูกออกแบบมาเพื่อรองรับการขยายตัว (Scaling) และความปลอดภัยสูงสุด โดยใช้
+กลยุทธ์ Hybrid Multi-tenancy ที่แยกข้อมูลธุรกรรมออกจากข้อมูลการบริหารจัดการอย่างเด็ดขาด 
+1. Global Management Schema (Shared DB) 
+ส่วนกลางที่ใช้ควบคุมโครงสร้างพื้นฐาน (Infrastructure Control Plane) ข้อมูลพาร์ทเนอร์ B2B และระบบ 
+Billing รวม 
+A. ตารางกลุ่มทะเบียนโบรกเกอร์และโปรโตคอล (Universal Broker Support) 
+Table Name 
+Key Columns 
+Description 
+brokers_registry 
+id, name, market_type, 
+protocol, adapter_config 
+ทะเบียนโบรกเกอร์ทั่วโลกและ
+วิธีการเชื่อมต่อ 
+(REST/FIX/gRPC) 
+asset_pairs 
+id, broker_id, symbol, 
+min_lot, tick_size 
+ทะเบียนสินทรัพย์ที่แต่ละโบรกเก
+อร์รองรับ เพื่อทำ Data 
+Normalization 
+B. ตารางกลุ่มสมาชิกและค่าธรรมเนียม (Subscription & Global Billing) 
+Table Name 
+Key Columns 
+Description 
+tenants 
+id, name, schema_name, 
+tier_id, status 
+ข้อมูลผู้เช่า/พาร์ทเนอร์ และชื่อ 
+Isolated Schema ที่ผูกไว้ 
+membership_plans 
+id, plan_name, 
+monthly_price, max_users, 
+features 
+รายละเอียดแพ็กเกจค่าสมาชิก 
+(Subscription Tiers) 
+subscription_history 
+id, tenant_id, plan_id, 
+amount, payment_status, 
+period_start, period_end 
+ประวัติการชำระค่าสมาชิกราย
+เดือน/รายปี 
+C. ตารางกลุ่มการจัดการสิทธิ์ (Advanced RBAC) 
+Table Name 
+Key Columns 
+Description 
+permissions 
+id, slug, module_name, 
+description 
+รายการสิทธิ์ทั้งหมด (e.g., 
+trade.execute, 
+finance.withdraw, 
+report.view) 
+roles 
+id, tenant_id, role_name, 
+is_system_default 
+บทบาทที่แต่ละ Tenant สร้างขึ้น
+เองได้ (e.g., Team Lead, 
+Compliance) 
+role_permissions 
+role_id, permission_id 
+การจับคู่สิทธิ์เข้ากับบทบาท 
+2. Isolated User Schema (Per-Tenant / Personal DB) 
+ข้อมูลที่ถูกสร้างแยกเป็น "เกาะส่วนตัว" สำหรับแต่ละบัญชี (Schema-per-Tenant) เพื่อความปลอดภัยสูงสุด 
+A. ตารางกลุ่มการจัดการกลุ่มและโครงสร้างทีม (Group Management) 
+Table Name 
+Key Columns 
+Description 
+groups 
+id, group_name, 
+lead_user_id, description, 
+config 
+การสร้างกลุ่มย่อยภายใน 
+Tenant (เช่น ทีมเทรด A, ทีมเท
+รด B) 
+group_members 
+group_id, user_id, joined_at 
+รายชื่อสมาชิกในแต่ละกลุ่ม 
+user_accounts 
+id, tenant_id, email, role_id, 
+mfa_status 
+ข้อมูลผู้ใช้ภายใต้ Tenant นั้นๆ 
+และบทบาทที่ได้รับ 
+B. ตารางกลุ่มการเงินและการเชื่อมต่อ (Financials & Connectivity) 
+Table Name 
+Key Columns 
+Description 
+wallets 
+id, user_id, currency, 
+balance, locked_balance 
+กระเป๋าเงินภายในระบบสำหรับ
+จัดการ 
+Deposit/Withdraw/Fees 
+financial_transactions 
+id, wallet_id, type, amount, 
+status, tx_hash 
+ประวัติการฝาก การถอน และการ
+ทำรายการทางการเงินทั้งหมด 
+broker_connections 
+id, broker_id, auth_payload 
+(ENC), status 
+เก็บ API Keys หรือ FIX 
+Credentials (เข้ารหัสชั้นที่ 2) 
+C. ตารางกลุ่มหัวใจการเทรดและค่าบริการ (Execution & Service Fees) 
+Table Name 
+Key Columns 
+Description 
+trading_bots 
+id, connection_id, 
+strategy_params, group_id 
+การตั้งค่าบอท และการผูกบอท
+เข้ากับกลุ่ม 
+orders 
+id, exchange_order_id, side, 
+price, status, filled_at 
+ข้อมูลคำสั่งซื้อขายที่ถูก 
+Normalize ให้เป็นรูปแบบ
+เดียวกัน 
+trade_history 
+id, order_id, pair, 
+entry_price, exit_price, pnl, 
+fee_broker 
+ประวัติการเทรดเชิงลึกพร้อม
+ข้อมูลกำไรขาดทุนรายไม้ 
+service_fee_logs 
+id, trade_id, fee_type, 
+amount, settled_at 
+ประวัติการเรียกเก็บค่าบริการ 
+(Success Fee หรือ Trading 
+Fee) 
+D. ตารางกลุ่มแดชบอร์ดและรายงานสรุป (Dashboards & Aggregated Reports) 
+(NEW SECTION) ออกแบบมาเพื่อลดภาระการคำนวณและรองรับการดึงข้อมูลรายงานที่รวดเร็ว 
+Table Name 
+Key Columns 
+Description 
+daily_aggregates 
+id, entity_id, entity_type, 
+report_date, total_pnl, 
+win_rate, volume 
+สรุปผลรายวัน (แยกตาม User 
+หรือ Group) เพื่อแสดงผลกราฟ 
+Dashboard 
+weekly_aggregates 
+id, entity_id, entity_type, 
+week_number, year, 
+net_pnl, growth_pct 
+สรุปผลรายอาทิตย์ สำหรับ
+รายงานระดับหัวหน้าทีมและนัก
+ลงทุน 
+monthly_aggregates 
+id, entity_id, entity_type, 
+month, year, total_fees, 
+drawdown_max 
+สรุปผลรายเดือน เพื่อใช้ในการทำ 
+Reconciliation และ Billing 
+dashboard_widgets 
+id, user_id, widget_type, 
+เก็บการตั้งค่าหน้าจอ 
+layout_config (JSONB), 
+is_visible 
+Dashboard ส่วนตัวของผู้ใช้
+แต่ละคน 
+report_exports 
+id, requested_by, 
+report_type 
+(DAILY/WEEKLY/MONTHLY), 
+format, file_url 
+บันทึกประวัติการสั่ง Export 
+รายงาน (PDF/CSV) และลิง
+ก์ดาวน์โหลด 
+E. ตารางกลุ่มตรวจสอบและบันทึก (Logging & Audit) 
+Table Name 
+Key Columns 
+Description 
+audit_logs 
+id, user_id, action, 
+ip_address, timestamp 
+บันทึกการเข้าใช้งานและแก้ไข
+สิทธิ์ (Compliance Ready) 
+bot_events 
+id, bot_id, event_type, 
+message, payload 
+Log การตัดสินใจของบอทเพื่อใช้
+ในการ Debug และ Monitor 
+ระดับ User 
+3. แผนผังความสัมพันธ์ (Logical ER Diagram Concept) 
+1.​ Identity & Group Flow: Tenants → Users → Groups ↔ Group Members 
+○​ นัยสำคัญ: หัวหน้ากลุ่มสามารถเข้าถึง daily_aggregates และ weekly_aggregates ของกลุ่มตน
+เองได้ 
+2.​ Reporting Flow: Trade History → Worker Process → Aggregates (Daily/Weekly/Monthly) 
+○​ นัยสำคัญ: มีระบบ Background Worker (เช่น Go routine หรือ Cron) คอยคำนวณกำไรสะสมและ 
+Win Rate แล้วบันทึกลงตาราง Aggregates ทุกสิ้นวัน/สัปดาห์/เดือน 
+3.​ Dashboard Flow: User Login → Dashboard Widgets → Aggregates Data 
+○​ นัยสำคัญ: หน้า Dashboard จะดึงข้อมูลจากตารางสรุปผลทันที ทำให้ประหยัดทรัพยากรฐานข้อมูล
+มหาศาล 
+4. การออกแบบเพื่อรองรับ Scaling และ Performance 
+●​ Materialized Views / Aggregated Tables: ใช้ตารางสรุปผลแทนการ Query trade_history โดย
+ตรงสำหรับหน้า Dashboard 
+●​ Data Retention Policy: ข้อมูลใน audit_logs และ bot_events ที่เก่ากว่า 6 เดือนจะถูก Archive ไป
+ยัง Cold Storage เพื่อรักษาประสิทธิภาพ DB 
+5. ความปลอดภัยและการกำหนดสิทธิ์ (Security Focus) 
+●​ Report Access Control: การสั่ง Export รายงานต้องตรวจสอบสิทธิ์ report.view ผ่าน Middleware 
+เสมอ 
+●​ Data Integrity: ตาราง Aggregates จะมีระบบ Checksum เพื่อตรวจสอบว่าข้อมูลสรุปตรงกับข้อมูล
+ดิบใน trade_history หรือไม่ 

@@ -1,0 +1,120 @@
+เอกสารรายละเอียดลำดับการทำงานของระบบ 
+(System Flow Architecture) 
+เอกสารฉบับนี้อธิบายลำดับขั้นตอนการทำงาน (Workflows) ของระบบเทรดแบบ Account-Centric Isolation 
+(ACI) ในเชิงลึก โดยเน้นความต่อเนื่องของข้อมูล ความปลอดภัยสูงสุด และการรองรับการขยายตัวระดับ Global 
+เพื่อใช้เป็นคู่มือสำหรับนักพัฒนา ผู้วางระบบ และทีม運ดำเนินงาน (Ops) 
+1. System Request Flow: เส้นทางการส่งคำสั่งเทรดแบบ 
+End-to-End 
+กระบวนการนี้เปรียบเสมือนกระดูกสันหลังของระบบ โดยเริ่มตั้งแต่ปลายนิ้วของผู้ใช้ไปจนถึงการจับคู่คำสั่งใน
+ตลาดหลัก (Exchange Matching Engine) 
+1.​ Client Request (The Entry Point): ผู้ใช้ส่งคำสั่งซื้อขาย (เช่น Buy/Sell Market Order) ผ่านหน้าจอ 
+Next.js Dashboard โดยใช้โปรโตคอล HTTPS/TLS 1.3 เพื่อความปลอดภัยในการรับส่งข้อมูล 
+2.​ Security Edge & Traffic Scrubbing: คำสั่งวิ่งผ่าน Cloudflare WAF ซึ่งทำหน้าที่เป็นปราการด่าน
+แรกในการกรอง Traffic ที่ผิดปกติ เช่น DDoS Attacks, Cross-Site Scripting (XSS) หรือ SQL 
+Injection นอกจากนี้ยังมีการทำ Geo-fencing เพื่อจำกัดการเข้าถึงจากประเทศที่ไม่อนุญาตตามกฎหมาย 
+(Compliance) 
+3.​ API Gateway & Intelligent Rate Limiting: ทำหน้าที่ตรวจสอบสิทธิ์ผ่าน JWT Auth และเช็คสิทธิ์
+การใช้งาน (Scopes) โดยมีการทำ Rate Limiting แยกรายบุคคล (เช่น 10 requests per second) เพื่อ
+ป้องกันไม่ให้ผู้ใช้คนใดคนหนึ่งใช้งานหนักเกินไปจนกระทบระบบส่วนรวม 
+4.​ Isolation Controller (The Traffic Cop): 
+○​ Tenant Identification: ระบบจะระบุ tenant_id จาก Token เพื่อเลือก Database Schema และ
+เลือกทรัพยากรการประมวลผลที่ถูกแยกไว้ 
+○​ Orchestration Check: ตรวจสอบสถานะความพร้อมของ Isolated Bot Pod ใน Kubernetes 
+หาก Pod ไม่อยู่ในสถานะ "Ready" ระบบจะทำการหมุนเวียน (Rotate) หรือเริ่มการทำงานใหม่ทันที 
+5.​ Trading Logic Engine (Go-based Engine): ประมวลผลคำสั่งด้วยความเร็วสูง 
+(High-concurrency) โดยทำการตรวจสอบความเสี่ยงเบื้องต้น (Pre-trade Risk Checks) เช่น: 
+○​ ตรวจสอบยอดเงินคงเหลือ (Sufficient Funds) 
+○​ ตรวจสอบขนาดคำสั่งซื้อขายต่ำสุด/สูงสุด (Min/Max Order Size) 
+○​ ตรวจสอบระดับ Leverage ที่อนุญาต 
+6.​ Order Management System (OMS): ทำหน้าที่เป็นตัวกลางในการจัดคิวคำสั่ง (Queueing) และ
+บันทึกสถานะคำสั่งลงในฐานข้อมูลแยกส่วน (Isolated DB) เพื่อใช้เป็น "Source of Truth" หากเกิดข้อ
+พิพาทหรือต้องการตรวจสอบย้อนหลัง 
+7.​ Exchange Connector (The Bridge): ส่งคำสั่งผ่านโปรโตคอลความเร็วสูง เช่น FIX (Financial 
+Information eXchange) สำหรับคู่ค้าสถาบัน หรือ REST/WebSocket API สำหรับ Exchange ทั่วไป 
+(เช่น Binance, Bybit) โดยมีการจัดการระบบ Retry อัตโนมัติหากการเชื่อมต่อมีปัญหา 
+8.​ Execution Callback & Real-time Update: เมื่อ Exchange ยืนยันผลการจับคู่ (Filled/Partially 
+Filled) ข้อมูลจะวิ่งย้อนกลับผ่าน Connector มาอัปเดตสถานะในระบบ และส่งสัญญาณผ่าน 
+WebSockets กลับไปยังหน้าจอผู้ใช้ทันที 
+2. Data Flow: การจัดการข้อมูลราคาวิ่งและข้อมูลธุรกรรม
+มหาศาล 
+ระบบถูกออกแบบมาเพื่อจัดการข้อมูลที่มีความถี่สูง (High-frequency Data) โดยแยกท่อข้อมูลตามความ
+สำคัญและความเร็ว 
+A. Market Data Feed (Hot Data - Low Latency) 
+●​ Ingestion & Load Balancing: ระบบเชื่อมต่อ WebSocket กับ Exchange หลายแห่งพร้อมกัน โดยมี
+ตัวจัดการการเชื่อมต่อ (Connector Nodes) เพื่อกระจายภาระงาน 
+●​ Stream Processing: ข้อมูลราคาสด (Ticker/Depth) ถูกนำมาประมวลผลเบื้องต้น เช่น การสร้าง 
+Candlestick Data (1m, 5m, 1h) หรือการคำนวณทางสถิติ 
+●​ Broadcasting via Redis Pub/Sub: ข้อมูลที่ประมวลผลแล้วจะถูกพ่นเข้าสู่ Redis Pub/Sub ซึ่งทำ
+หน้าที่เป็นศูนย์กลางการกระจายข้อมูลภายใน 
+●​ User Delivery: Socket.io หรือ WebSockets ดึงข้อมูลจาก Redis และส่งตรงไปยัง Browser/App 
+ของผู้ใช้ โดยตั้งเป้าหมาย Latency ภายในระบบที่ < 50ms เพื่อให้ผู้ใช้เห็นราคาที่ใกล้เคียงกับตลาดจริง
+ที่สุด 
+B. Transactional & Audit Data (Cold Data - Consistency) 
+●​ Event Sourcing via Kafka: ทุกกิจกรรม (Event) เช่น การเปิดออเดอร์, การโอนเงิน, หรือการเข้าสู่ระบบ 
+จะถูกส่งไปยัง Kafka Topic เพื่อทำ Event Logging ซึ่งช่วยให้สามารถ Reconstruct สถานะของระบบได้
+หากเกิดความเสียหาย 
+●​ Persistence & Reporting: Consumer จะดึงข้อมูลจาก Kafka ไปบันทึกใน PostgreSQL (User 
+Schema) สำหรับข้อมูลทางบัญชี และบันทึกใน TimescaleDB สำหรับข้อมูลสถิติที่เน้นเวลา 
+(Time-series) 
+●​ Lifecycle Management & Archiving: ข้อมูลที่มีอายุเกิน 90 วันและไม่ได้ใช้งานบ่อย จะถูกบีบอัดและ
+ย้ายไปเก็บที่ S3 Object Storage (Glacier) เพื่อลดต้นทุนการจัดเก็บข้อมูลในฐานข้อมูลหลัก แต่ยัง
+สามารถดึงกลับมาได้หากมีการทำ Audit 
+3. Work Flow: วงจรชีวิตการเทรดอัตโนมัติ (Automated Bot 
+Lifecycle) 
+การทำงานของบอทเทรดอัตโนมัติจะต้องมีความเป็นอิสระและตอบสนองต่อเงื่อนไขตลาดได้อย่างแม่นยำ 
+1.​ Signal Trigger: เมื่อราคาตลาด (Market Price) หรือตัวชี้วัดเทคนิค (Indicators) ถึงเงื่อนไขที่ผู้ใช้ตั้งไว้ 
+(เช่น RSI < 30 หรือ EMA Cross) ระบบจะส่งสัญญาณเข้าสู่บอท 
+2.​ Context Initialization: Isolated Bot Pod จะดึง "Trading Context" หรือพารามิเตอร์เฉพาะของผู้ใช้
+ออกมา (เช่น จำนวนเงินต่อไม้, กลยุทธ์การขาย) จากหน่วยความจำความเร็วสูง 
+3.​ Multi-level Risk Check: ระบบจะเช็คความเสี่ยงในหลายมิติ: 
+○​ Individual Level: ไม้นี้เกิน % ของพอร์ตหรือไม่? 
+○​ Group/Team Level: หากเป็นสมาชิกในทีมลีด ผลรวมความเสี่ยงของทีม (Total Exposure) จะเกิน
+ขีดจำกัดหรือไม่? 
+4.​ Order Execution: เมื่อผ่านการตรวจสอบ บอทจะทำการยิงคำสั่งซื้อขายทันทีผ่าน OMS 
+5.​ Active Monitoring: ระบบจะเฝ้าดูสถานะของออเดอร์แบบ Millisecond-by-millisecond เพื่อจัดการ
+เรื่อง Trailing Stop หรือ Take Profit ตามที่ตั้งโปรแกรมไว้ 
+6.​ Settlement & Fee Calculation: เมื่อบอทปิดไม้สำเร็จ (Trade Closed) ระบบจะบันทึกกำไร/ขาดทุน
+สุทธิ และทำการคำนวณ Success Fee โดยใช้หลักการ High-Water Mark เพื่อความเป็นธรรมต่อผู้ใช้ 
+4. Business & B2B Flow: การให้บริการแบบ White-label 
+(External Growth) 
+ระบบถูกออกแบบมาให้เป็น "Trading Infrastructure as a Service" สำหรับพาร์ทเนอร์ภายนอก 
+1.​ Onboarding & Identity Setup: พาร์ทเนอร์ลงทะเบียนและผ่านขั้นตอนการตรวจสอบความถูกต้อง 
+(Due Diligence) พร้อมชำระ Setup Fee 
+2.​ Automated Resource Provisioning (The Magic): 
+○​ Terraform & Ansible: สร้างเครือข่าย VPC, Subnet และ Security Groups แยกเฉพาะสำหรับ
+พาร์ทเนอร์รายนั้น 
+○​ Kubernetes (K8s) Multi-tenancy: สั่งรันชุด API, Dashboard และ Bot Engine ภายใต้ 
+Namespace ของพาร์ทเนอร์ เพื่อให้แน่ใจว่าทรัพยากร (CPU/RAM) จะไม่ถูกแบ่งปันกับพาร์ทเนอ
+ร์รายอื่น 
+○​ Vault Key Ring: สร้างกุญแจเข้ารหัสชุดใหม่เฉพาะสำหรับลูกค้าของพาร์ทเนอร์รายนั้นๆ 
+3.​ Custom Configuration: พาร์ทเนอร์สามารถปรับแต่ง Branding (Logo, Colors) และตั้งค่า
+ค่าธรรมเนียมส่วนต่าง (Markup) ของตนเองได้ 
+4.​ Monthly Settlement & Reporting: ระบบจะสรุปยอดรายได้และกำไรที่พาร์ทเนอร์ทำได้ในแต่ละเดือน 
+พร้อมทำรายการหัก Revenue Share 10% อัตโนมัติและโอนเงินสุทธิให้พาร์ทเนอร์ 
+5. Security & Isolation Flow: การแยกความปลอดภัยอย่าง
+เด็ดขาด 
+หัวใจของระบบคือการทำให้ข้อมูลของแต่ละคนเป็น "เกาะส่วนตัว" 
+●​ Auth & Tenant Binding Flow: เมื่อผู้ใช้ Log-in ระบบจะสร้าง JWT ที่มี tenant_id และ 
+isolation_token ซึ่งจะถูกตรวจสอบทุกครั้งที่เข้าถึงฐานข้อมูล (DB Row-level Security หรือ 
+Schema-based Isolation) 
+●​ Encryption at Rest & In-transit: 
+○​ In-transit: ทุกการรับส่งข้อมูลต้องผ่าน SSL/TLS 1.3 
+○​ Encryption Flow (Write): ข้อมูลลับ (เช่น API Secret) -> เข้ารหัสด้วย DEK (Data Encryption 
+Key) -> DEK ถูกเข้ารหัสอีกครั้งด้วย Master Key จาก KMS -> บันทึกค่าที่เข้ารหัสลงฐานข้อมูล 
+○​ Decryption Flow (Read): กระบวนการย้อนกลับที่ต้องใช้สิทธิ์ในการเข้าถึง KMS ของ Tenant 
+นั้นๆ เท่านั้น 
+6. Monitoring & Recovery Flow: ความเสถียรและการจัดการ
+วิกฤต 
+ระบบต้องทำงานได้ 24/7 แม้ในช่วงตลาดผันผวนรุนแรง 
+●​ Self-Healing & Observability: 
+○​ Health Checks: Prometheus จะทำการสแกน Liveness และ Readiness Probes ของทุก Pod 
+ทุกๆ 15 วินาที 
+○​ Auto-Restart: หากตรวจพบว่า Bot Pod ของผู้ใช้รายหนึ่งล่ม Kubernetes จะสร้าง Pod ใหม่ขึ้นมา
+แทนที่ในเวลาเพียงไม่กี่วินาที และดึงสถานะล่าสุดจาก Redis มาทำงานต่อ 
+●​ Escalation & Alerting: หากตรวจพบความล่าช้า (Latency) สูงเกิน 200ms หรืออัตราความผิดพลาด 
+(Error Rate) สูงกว่า 1% ระบบจะยิงแจ้งเตือนเข้า Slack/PagerDuty ของทีมวิศวกรทันที 
+●​ Emergency Kill Switch (The Red Button): ในกรณีที่เกิดเหตุสุดวิสัย (เช่น ตลาดมีช่องโหว่ หรือ
+ระบบ Exchange ปิดปรับปรุงกะทันหัน) Admin สามารถเปิดใช้งาน Kill Switch เพื่อ: 
+1.​ หยุดการทำงานของบอททั้งหมดทันที 
+2.​ ส่งคำสั่ง Cancel All Open Orders ไปยัง Exchange ทุกแห่งภายในเวลา < 1 วินาที เพื่อป้องกัน
+ความเสียหายของเงินทุนผู้ใช้ 
