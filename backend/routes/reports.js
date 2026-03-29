@@ -361,4 +361,45 @@ router.get('/exports', async (req, res) => {
   }
 });
 
+// =============================================
+// TRADE PSYCHOLOGY ANALYSIS
+// =============================================
+const TradePsychology = require('../services/tradePsychology');
+
+/**
+ * @swagger
+ * /reports/psychology:
+ *   get:
+ *     summary: Get AI-powered trade psychology analysis
+ *     tags: [Reports]
+ *     parameters:
+ *       - in: query
+ *         name: days
+ *         schema: { type: integer, default: 30 }
+ *     responses:
+ *       200:
+ *         description: Psychology analysis report
+ */
+router.get('/psychology', async (req, res) => {
+  try {
+    const { days = 30 } = req.query;
+    const report = await TradePsychology.analyze(req.user.id, parseInt(days));
+    res.json(report);
+  } catch (err) {
+    console.error('Psychology analysis error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/reports/psychology/history
+router.get('/psychology/history', async (req, res) => {
+  try {
+    const history = await TradePsychology.getHistory(req.user.id);
+    res.json(history);
+  } catch (err) {
+    console.error('Psychology history error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;

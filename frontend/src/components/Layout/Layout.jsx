@@ -3,7 +3,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard, History, Target, Settings, LogOut, TrendingUp, User,
-  Building2, ChevronDown, Menu, Wallet, Users, BarChart3, Shield, Cpu, TerminalSquare, CreditCard, Store, Flame
+  Building2, ChevronDown, Menu, Wallet, Users, BarChart3, Shield, Cpu, TerminalSquare, CreditCard, Store, Flame, Copy, MessageSquare
 } from 'lucide-react';
 
 export default function Layout() {
@@ -69,7 +69,18 @@ export default function Layout() {
 
           <NavLink to="/store" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="สโตร์กลยุทธ์">
             <Store size={18} className="nav-icon" />
-            {!isCollapsed && <span>สโตร์กลยุทธ์</span>}
+            {!isCollapsed && <span>Trading Bots</span>}
+          </NavLink>
+
+          <NavLink to="/strategies" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="ตลาด Copy Trading">
+            <Copy size={18} className="nav-icon" />
+            {!isCollapsed && <span>Copy Trading</span>}
+          </NavLink>
+
+          {!isCollapsed && <div className="sidebar-section-title">สังคมการเทรด (Community)</div>}
+          <NavLink to="/forums" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="เว็บบอร์ด (Forums)">
+            <MessageSquare size={18} className="nav-icon" />
+            {!isCollapsed && <span>เว็บบอร์ดโซเชียล</span>}
           </NavLink>
 
           {!isCollapsed && <div className="sidebar-section-title">การเงิน & สมาชิก</div>}

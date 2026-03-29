@@ -79,6 +79,7 @@ export const api = {
   getPlans: () => request('/billing/plans'),
   upgradeSubscription: (body) => request('/billing/upgrade', { method: 'POST', body: JSON.stringify(body) }),
   getSubscriptionHistory: () => request('/billing/history'),
+  createCheckout: (body) => request('/billing/checkout', { method: 'POST', body: JSON.stringify(body) }),
   calculateProfitSharing: (body) => request('/billing/profit-sharing/calculate', { method: 'POST', body: JSON.stringify(body) }),
   settleProfitSharing: (body) => request('/billing/profit-sharing/settle', { method: 'POST', body: JSON.stringify(body) }),
   getProfitSharingHistory: () => request('/billing/profit-sharing/history'),
@@ -96,6 +97,7 @@ export const api = {
   getSettings: () => request('/settings'),
   updateSettings: (data) => request('/settings', { method: 'PUT', body: JSON.stringify(data) }),
   testLineNotify: () => request('/settings/test-line', { method: 'POST' }),
+  testTelegram: () => request('/settings/test-telegram', { method: 'POST' }),
 
   // =============================================
   // NEW: Groups / Team Management
@@ -141,4 +143,39 @@ export const api = {
   getAdminRevenue: (params = {}) => request(`/admin/revenue?${new URLSearchParams(params)}`),
   getAdminRoles: () => request('/admin/roles'),
   activateKillSwitch: (body) => request('/admin/kill-switch', { method: 'POST', body: JSON.stringify(body) }),
+
+  // =============================================
+  // NEW: MFA
+  // =============================================
+  setupMFA: () => request('/mfa/setup', { method: 'POST' }),
+  verifyMFA: (body) => request('/mfa/verify', { method: 'POST', body: JSON.stringify(body) }),
+  disableMFA: (body) => request('/mfa/disable', { method: 'POST', body: JSON.stringify(body) }),
+  getMFAStatus: () => request('/mfa/status'),
+
+  // =============================================
+  // NEW: Strategies (Copy Trading)
+  // =============================================
+  getStrategies: (params = {}) => request(`/strategies?${new URLSearchParams(params)}`),
+  getMyStrategies: () => request('/strategies/my'),
+  createStrategy: (body) => request('/strategies', { method: 'POST', body: JSON.stringify(body) }),
+  updateStrategy: (id, body) => request(`/strategies/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  subscribeStrategy: (id, body) => request(`/strategies/${id}/subscribe`, { method: 'POST', body: JSON.stringify(body) }),
+  unsubscribeStrategy: (id) => request(`/strategies/${id}/unsubscribe`, { method: 'POST' }),
+  getMySubscriptions: () => request('/strategies/subscriptions/my'),
+  getStrategySignals: (id, params = {}) => request(`/strategies/${id}/signals?${new URLSearchParams(params)}`),
+  publishSignal: (id, body) => request(`/strategies/${id}/signal`, { method: 'POST', body: JSON.stringify(body) }),
+
+  // =============================================
+  // NEW: Trade Psychology
+  // =============================================
+  getPsychologyReport: (params = {}) => request(`/reports/psychology?${new URLSearchParams(params)}`),
+  getPsychologyHistory: () => request('/reports/psychology/history'),
+
+  // =============================================
+  // NEW: Social Forums (Community)
+  // =============================================
+  getForums: (params = {}) => request(`/forums?${new URLSearchParams(params)}`),
+  createForumPost: (body) => request('/forums', { method: 'POST', body: JSON.stringify(body) }),
+  getForumPost: (id) => request(`/forums/${id}`),
+  createForumComment: (id, body) => request(`/forums/${id}/comments`, { method: 'POST', body: JSON.stringify(body) }),
 };

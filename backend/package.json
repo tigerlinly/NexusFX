@@ -19,7 +19,10 @@
     "metaapi.cloud-sdk": "^27.2.0",
     "pdfkit": "^0.18.0",
     "pg": "^8.13.0",
+    "qrcode": "^1.5.4",
     "socket.io": "^4.7.5",
+    "speakeasy": "^2.0.0",
+    "stripe": "^21.0.1",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
     "ws": "^8.20.0"

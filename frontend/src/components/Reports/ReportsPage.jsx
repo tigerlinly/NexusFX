@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { api } from '../../utils/api';
 import {
   BarChart3, PieChart, Clock, Calendar, Download, FileText,
-  TrendingUp, TrendingDown, Target, Award, AlertTriangle
+  TrendingUp, TrendingDown, Target, Award, AlertTriangle, Brain
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -20,6 +20,7 @@ export default function ReportsPage() {
   const [weeklyData, setWeeklyData] = useState([]);
   const [monthlyData, setMonthlyData] = useState([]);
   const [exports, setExports] = useState([]);
+  const [psychologyData, setPsychologyData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
 
@@ -38,6 +39,9 @@ export default function ReportsPage() {
       } else if (activeTab === 'export') {
         const data = await api.getExportHistory();
         setExports(data);
+      } else if (activeTab === 'psychology') {
+        const data = await api.getPsychologyReport({ days: period });
+        setPsychologyData(data);
       }
     } catch (err) {
       console.error('Reports fetch error:', err);
@@ -74,6 +78,7 @@ export default function ReportsPage() {
 
   const tabs = [
     { id: 'analytics', label: 'วิเคราะห์การเทรด', icon: BarChart3 },
+    { id: 'psychology', label: 'จิตวิทยาการเทรด', icon: Brain },
     { id: 'weekly', label: 'สรุปรายสัปดาห์', icon: Calendar },
     { id: 'monthly', label: 'สรุปรายเดือน', icon: Calendar },
     { id: 'export', label: 'ส่งออกรายงาน', icon: Download },
@@ -361,6 +366,80 @@ export default function ReportsPage() {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              </div>
+            )}
+
+            {/* Psychology Tab */}
+            {activeTab === 'psychology' && psychologyData && (
+              <div>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
+                  {['7', '14', '30', '60', '90'].map(p => (
+                    <button key={p} className={`filter-btn ${period === p ? 'active' : ''}`}
+                      onClick={() => setPeriod(p)}
+                      style={{ padding: '6px 16px', fontSize: 13, borderRadius: 6, border: '1px solid var(--border-primary)' }}>
+                      {p} วัน
+                    </button>
+                  ))}
+                </div>
+
+                <div className="stat-grid" style={{ marginBottom: 24, gridTemplateColumns: '1fr 3fr' }}>
+                  <div className="card" style={{ background: 'var(--bg-tertiary)', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ fontSize: 14, color: 'var(--text-tertiary)', marginBottom: 8 }}>คะแนนวินัยการเทรด</div>
+                    <div style={{ 
+                      fontSize: 48, fontWeight: 700, 
+                      color: psychologyData.overall_score >= 80 ? 'var(--profit)' : psychologyData.overall_score >= 50 ? 'var(--warning)' : 'var(--loss)' 
+                    }}>
+                      {psychologyData.overall_score}
+                    </div>
+                    <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>/ 100</div>
+                  </div>
+
+                  <div className="card" style={{ background: 'var(--bg-tertiary)' }}>
+                    <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>คำแนะนำการปรับปรุงพฤติกรรม</h4>
+                    <ul style={{ paddingLeft: 20, color: 'var(--text-secondary)', fontSize: 14, lineHeight: '1.8' }}>
+                      {psychologyData.recommendations.map((rec, i) => (
+                        <li key={i}>{rec}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+                <h4 style={{ fontSize: 15, fontWeight: 600, marginBottom: 16 }}>พฤติกรรมที่ตรวจพบ</h4>
+                <div style={{ display: 'grid', gap: 12 }}>
+                  {psychologyData.patterns.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: 32, background: 'var(--bg-tertiary)', borderRadius: 8, color: 'var(--text-tertiary)' }}>
+                      ไม่มีข้อมูลพฤติกรรมในช่วงเวลานี้
+                    </div>
+                  ) : psychologyData.patterns.map((pattern, i) => {
+                    let badgeColor = 'var(--text-tertiary)';
+                    let bgColor = 'var(--bg-secondary)';
+                    
+                    if (pattern.severity === 'critical') { badgeColor = 'var(--loss)'; bgColor = 'rgba(255, 71, 87, 0.1)'; }
+                    else if (pattern.severity === 'high') { badgeColor = 'var(--loss)'; bgColor = 'rgba(255, 71, 87, 0.05)'; }
+                    else if (pattern.severity === 'medium') { badgeColor = 'var(--warning)'; bgColor = 'rgba(245, 158, 11, 0.1)'; }
+                    else if (pattern.severity === 'positive') { badgeColor = 'var(--profit)'; bgColor = 'rgba(0, 200, 150, 0.1)'; }
+
+                    return (
+                      <div key={i} style={{ 
+                        background: 'var(--bg-tertiary)', padding: 16, borderRadius: 8,
+                        borderLeft: `4px solid ${badgeColor}`
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                          <div>
+                            <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>{pattern.name}</div>
+                            <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{pattern.description}</div>
+                          </div>
+                          <div style={{ 
+                            background: bgColor, color: badgeColor, 
+                            padding: '4px 10px', borderRadius: 4, fontSize: 11, fontWeight: 600 
+                          }}>
+                            {pattern.severity.toUpperCase()}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}

@@ -21,12 +21,11 @@ class MockBotEngine {
     this.running = true;
 
     try {
-      // 1. Get all active bots that have strategies assigned
+      // 1. Get all active bots
       const activeBotsRes = await pool.query(
-         `SELECT tb.*, ss.strategy_type 
-          FROM trading_bots tb
-          JOIN strategy_store ss ON ss.id = tb.strategy_id
-          WHERE tb.status = 'RUNNING'`
+         `SELECT * 
+          FROM trading_bots
+          WHERE status = 'RUNNING' AND is_active = true`
       );
 
       const activeBots = activeBotsRes.rows;

@@ -49,6 +49,20 @@ services:
       timeout: 5s
       retries: 3
 
+  # =============================================
+  # NexusFX Frontend Web Server (Nginx)
+  # =============================================
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: nexusfx-web
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+
 volumes:
   pgdata:
     driver: local

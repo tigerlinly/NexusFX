@@ -116,18 +116,16 @@ router.post('/:id/sync', async (req, res) => {
       await pool.query(
         `UPDATE accounts SET 
           balance = $1, equity = $2, 
-          account_name = COALESCE(NULLIF($3, ''), account_name),
-          account_type = COALESCE(NULLIF($4, ''), account_type),
-          leverage = COALESCE($5, leverage),
-          server = COALESCE(NULLIF($6, ''), server),
-          currency = COALESCE(NULLIF($7, ''), currency),
+          leverage = COALESCE($3, leverage),
+          server = COALESCE(NULLIF($4, ''), server),
+          currency = COALESCE(NULLIF($5, ''), currency),
           is_connected = true, last_sync_at = NOW() 
-        WHERE id = $8`,
-        [info.balance, info.equity, info.account_name, info.account_type, info.leverage, info.server, info.currency, acct.id]
+        WHERE id = $6`,
+        [info.balance, info.equity, info.leverage, info.server, info.currency, acct.id]
       );
       res.json({ 
         success: true, balance: info.balance, equity: info.equity,
-        account_name: info.account_name, account_type: info.account_type 
+        account_name: acct.account_name, account_type: acct.account_type 
       });
     } else {
       await pool.query(`UPDATE accounts SET is_connected = false WHERE id = $1`, [acct.id]);

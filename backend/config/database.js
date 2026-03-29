@@ -61,16 +61,24 @@ async function initDatabase() {
         role_id INTEGER REFERENCES roles(id),
         theme_id VARCHAR(50) DEFAULT 'dark-trading',
         is_active BOOLEAN DEFAULT true,
+        mfa_secret VARCHAR(255),
+        mfa_enabled BOOLEAN DEFAULT false,
+        reset_token VARCHAR(255),
+        reset_token_expires TIMESTAMPTZ,
         last_login_at TIMESTAMPTZ,
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
 
-    // Add role_id column if missing (for existing tables)
+    // Add columns if missing (for existing tables)
     try {
       await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS role_id INTEGER REFERENCES roles(id);`);
       await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ;`);
+      await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS mfa_secret VARCHAR(255);`);
+      await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS mfa_enabled BOOLEAN DEFAULT false;`);
+      await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token VARCHAR(255);`);
+      await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expires TIMESTAMPTZ;`);
     } catch (e) { /* ignore */ }
 
     // =============================================
@@ -222,7 +230,9 @@ async function initDatabase() {
         status VARCHAR(20) DEFAULT 'OPEN',
         magic_number INTEGER,
         comment TEXT,
-        created_at TIMESTAMPTZ DEFAULT NOW()
+        current_price DECIMAL(18,6),
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(account_id, ticket)
       );
     `);
 
@@ -430,12 +440,16 @@ async function initDatabase() {
       await client.query(`ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS binance_api_secret TEXT;`);
       await client.query(`ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS twelvedata_api_key TEXT;`);
       await client.query(`ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS line_notify_token TEXT;`);
+      await client.query(`ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS telegram_bot_token TEXT;`);
+      await client.query(`ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS telegram_chat_id TEXT;`);
 
       // Ensure existing columns are wide enough (upgrade from VARCHAR(255) to TEXT)
       await client.query(`ALTER TABLE user_settings ALTER COLUMN metaapi_token TYPE TEXT;`);
       await client.query(`ALTER TABLE user_settings ALTER COLUMN binance_api_key TYPE TEXT;`);
       await client.query(`ALTER TABLE user_settings ALTER COLUMN binance_api_secret TYPE TEXT;`);
       await client.query(`ALTER TABLE user_settings ALTER COLUMN line_notify_token TYPE TEXT;`);
+      await client.query(`ALTER TABLE user_settings ALTER COLUMN telegram_bot_token TYPE TEXT;`);
+      await client.query(`ALTER TABLE user_settings ALTER COLUMN telegram_chat_id TYPE TEXT;`);
     } catch (e) { /* ignore */ }
 
     // =============================================
@@ -602,6 +616,87 @@ async function initDatabase() {
     `);
 
     // =============================================
+    // COPY TRADING — Strategies
+    // =============================================
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS strategies (
+        id SERIAL PRIMARY KEY,
+        publisher_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        name VARCHAR(100) NOT NULL,
+        description TEXT,
+        category VARCHAR(50) DEFAULT 'manual',
+        tags TEXT[] DEFAULT '{}',
+        symbols TEXT[] DEFAULT '{}',
+        risk_level VARCHAR(20) DEFAULT 'medium',
+        monthly_return DECIMAL(10,2) DEFAULT 0,
+        win_rate DECIMAL(5,2) DEFAULT 0,
+        total_trades INTEGER DEFAULT 0,
+        subscribers_count INTEGER DEFAULT 0,
+        price_monthly DECIMAL(10,2) DEFAULT 0,
+        is_free BOOLEAN DEFAULT true,
+        is_published BOOLEAN DEFAULT false,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    // =============================================
+    // COPY TRADING — Subscriptions
+    // =============================================
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS strategy_subscriptions (
+        id SERIAL PRIMARY KEY,
+        strategy_id INTEGER NOT NULL REFERENCES strategies(id) ON DELETE CASCADE,
+        subscriber_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        account_id INTEGER REFERENCES accounts(id),
+        lot_multiplier DECIMAL(5,2) DEFAULT 1.0,
+        max_lot DECIMAL(10,2) DEFAULT 10,
+        is_active BOOLEAN DEFAULT true,
+        subscribed_at TIMESTAMPTZ DEFAULT NOW(),
+        unsubscribed_at TIMESTAMPTZ,
+        UNIQUE(strategy_id, subscriber_id)
+      );
+    `);
+
+    // =============================================
+    // COPY TRADING — Signal History
+    // =============================================
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS strategy_signals (
+        id SERIAL PRIMARY KEY,
+        strategy_id INTEGER NOT NULL REFERENCES strategies(id) ON DELETE CASCADE,
+        publisher_trade_id INTEGER REFERENCES trades(id),
+        symbol VARCHAR(20) NOT NULL,
+        side VARCHAR(10) NOT NULL,
+        lot_size DECIMAL(10,2),
+        entry_price DECIMAL(18,6),
+        sl DECIMAL(18,6),
+        tp DECIMAL(18,6),
+        signal_type VARCHAR(20) DEFAULT 'OPEN',
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    // =============================================
+    // TRADE PSYCHOLOGY — Analysis Reports
+    // =============================================
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS trade_psychology_reports (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        report_date DATE NOT NULL DEFAULT CURRENT_DATE,
+        period_days INTEGER DEFAULT 30,
+        overall_score DECIMAL(5,2) DEFAULT 0,
+        patterns JSONB DEFAULT '[]',
+        recommendations JSONB DEFAULT '[]',
+        metrics JSONB DEFAULT '{}',
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(user_id, report_date, period_days)
+      );
+    `);
+
+    // =============================================
     // INDEXES
     // =============================================
     await client.query(`
@@ -704,7 +799,58 @@ async function initDatabase() {
       WHERE role_id IS NULL;
     `);
 
+    // =============================================
+    // SOCIAL TRADING / FORUMS (Phase 4)
+    // =============================================
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS forums (
+        id SERIAL PRIMARY KEY,
+        author_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        title VARCHAR(255) NOT NULL,
+        content TEXT NOT NULL,
+        category VARCHAR(50) DEFAULT 'general',
+        views INTEGER DEFAULT 0,
+        is_pinned BOOLEAN DEFAULT false,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS forum_comments (
+        id SERIAL PRIMARY KEY,
+        post_id INTEGER NOT NULL REFERENCES forums(id) ON DELETE CASCADE,
+        author_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        content TEXT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS forum_likes (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        post_id INTEGER REFERENCES forums(id) ON DELETE CASCADE,
+        comment_id INTEGER REFERENCES forum_comments(id) ON DELETE CASCADE,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        CHECK (
+          (post_id IS NOT NULL AND comment_id IS NULL) OR
+          (post_id IS NULL AND comment_id IS NOT NULL)
+        ),
+        UNIQUE(user_id, post_id),
+        UNIQUE(user_id, comment_id)
+      );
+    `);
+
     await client.query('COMMIT');
+
+    // Safe to run outside transaction:
+    try {
+      await client.query(`ALTER TABLE trades ADD COLUMN IF NOT EXISTS current_price DECIMAL(18,6);`);
+      await client.query(`ALTER TABLE trades ADD CONSTRAINT unique_account_ticket UNIQUE (account_id, ticket);`);
+    } catch (e) { /* ignore constraint errors if already exists */ }
+
     console.log('✅ Database schema initialized successfully');
   } catch (err) {
     await client.query('ROLLBACK');

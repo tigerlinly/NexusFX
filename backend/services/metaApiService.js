@@ -96,7 +96,10 @@ class MetaApiService {
       
       // info.tradeMode = "DEMO" / "REAL" — ประเภทระดับ trade mode
       // account.accountType = "DEMO PREMIUM", "Pro" etc — ถ้าโบรกเกอร์ส่งมาใน MetaAPI
-      const accountType = account.accountType || info.type || info.tradeMode || '';
+      let accountType = account.accountType || info.type || info.tradeMode || '';
+      if (typeof accountType === 'string' && accountType.length > 20) {
+        accountType = accountType.substring(0, 20);
+      }
 
       return {
         balance: info.balance,

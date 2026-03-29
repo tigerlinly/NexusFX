@@ -1,6 +1,7 @@
 const express = require('express');
 const { pool } = require('../config/database');
 const { authMiddleware, auditLog } = require('../middleware/auth');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_mock_secret');
 const router = express.Router();
 
 router.use(authMiddleware);
@@ -139,6 +140,82 @@ router.get('/history', async (req, res) => {
   } catch (err) {
     console.error('Subscription history error:', err);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// =============================================
+// STRIPE PAYMENT GATEWAY
+// =============================================
+
+/**
+ * @swagger
+ * /billing/checkout:
+ *   post:
+ *     summary: Create Stripe checkout session for wallet top-up or subscription
+ *     tags: [Billing]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               amountUSD: { type: number, description: "USD amount to charge if wallet topup" }
+ *               planId: { type: string, description: "Plan key if subscription" }
+ *     responses:
+ *       200:
+ *         description: Stripe Session URL returned
+ */
+router.post('/checkout', async (req, res) => {
+  try {
+    const { amountUSD, planId } = req.body;
+    let lineItems = [];
+    
+    // Allow either custom topup amount or explicit plan
+    if (planId) {
+      const planRes = await pool.query('SELECT * FROM membership_plans WHERE plan_key = $1 AND is_active = true', [planId]);
+      if (planRes.rows.length === 0) return res.status(400).json({ error: 'Invalid plan' });
+      
+      lineItems.push({
+        price_data: {
+          currency: 'usd',
+          product_data: { name: `NexusFX Subscription: ${planRes.rows[0].plan_name}` },
+          unit_amount: Math.round(planRes.rows[0].monthly_price * 100), // cents
+        },
+        quantity: 1,
+      });
+    } else if (amountUSD && amountUSD > 0) {
+      lineItems.push({
+        price_data: {
+          currency: 'usd',
+          product_data: { name: 'NexusFX Wallet Top-up (USDT)' },
+          unit_amount: Math.round(amountUSD * 100), // cents
+        },
+        quantity: 1,
+      });
+    } else {
+      return res.status(400).json({ error: 'Must provide amountUSD or planId' });
+    }
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: lineItems,
+      mode: 'payment',
+      success_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/wallet?payment=success`,
+      cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/wallet?payment=cancelled`,
+      client_reference_id: req.user.id.toString(), // identify user
+      metadata: {
+        userId: req.user.id,
+        type: planId ? 'SUBSCRIPTION' : 'TOPUP',
+        planId: planId || '',
+        amountUSD: amountUSD || 0
+      }
+    });
+
+    res.json({ url: session.url, sessionId: session.id });
+  } catch (err) {
+    console.error('Stripe checkout error:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 

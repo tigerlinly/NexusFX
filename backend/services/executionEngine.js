@@ -1,6 +1,8 @@
 const { pool } = require('../config/database');
 const crypto = require('crypto');
+const axios = require('axios');
 const LineNotify = require('./lineNotify');
+const TelegramNotify = require('./telegramNotify');
 
 class ExecutionEngine {
   constructor() {
@@ -53,6 +55,8 @@ class ExecutionEngine {
           const metaApiAccountId = order.metaapi_account_id;
 
           let executionResult = false;
+          let executionPrice = order.price || 'Market';
+          let filled_qty = order.quantity;
           
           if (order.broker_name && order.broker_name.toLowerCase() === 'binance') {
             executionResult = await this.executeBinance(order, userKey, userSecret);
@@ -72,11 +76,11 @@ class ExecutionEngine {
               [order.id]
             );
             
-            // Notify user via LINE
-            await LineNotify.sendAlert(
-              order.user_id, 
-              `✅ Order Executed\nSymbol: ${order.symbol}\nSide: ${order.side}\nVolume: ${order.quantity}\nBroker: ${order.broker_name}`
-            );
+            // Notify user via LINE & Telegram
+            await Promise.all([
+              LineNotify.sendAlert(order.user_id, `✅ Trade Executed!\nSymbol: ${order.symbol}\nSide: ${order.side}\nPrice: ${executionPrice}\nQuantity: ${filled_qty}`),
+              TelegramNotify.sendAlert(order.user_id, `✅ Trade Executed!\nSymbol: ${order.symbol}\nSide: ${order.side}\nPrice: ${executionPrice}\nQuantity: ${filled_qty}`)
+            ]).catch(err => console.warn('Notification error:', err));
           }
         } catch (orderErr) {
           console.error(`❌ [ExecutionEngine] Order ${order.id} failed:`, orderErr.message);
@@ -85,7 +89,10 @@ class ExecutionEngine {
             [order.id]
           );
           
-          await LineNotify.sendAlert(order.user_id, `❌ Order Failed\nSymbol: ${order.symbol}\nReason: ${orderErr.message}`);
+          await Promise.all([
+            LineNotify.sendAlert(order.user_id, `❌ Order Failed\nSymbol: ${order.symbol}\nReason: ${orderErr.message}`),
+            TelegramNotify.sendAlert(order.user_id, `❌ Order Failed\nSymbol: ${order.symbol}\nReason: ${orderErr.message}`)
+          ]).catch(e => console.error(e));
         }
       }
 

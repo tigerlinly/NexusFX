@@ -140,7 +140,7 @@ router.post('/register', async (req, res) => {
  */
 router.post('/login', async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { username, password, mfa_code } = req.body;
     if (!username || !password) {
       return res.status(400).json({ error: 'username and password required' });
     }
@@ -160,6 +160,30 @@ router.post('/login', async (req, res) => {
     const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) {
       return res.status(401).json({ error: 'ชื่อผู้ใช้/อีเมล หรือรหัสผ่านไม่ถูกต้อง' });
+    }
+
+    // 🔐 MFA CHECK: If MFA is enabled, require TOTP code
+    if (user.mfa_enabled && user.mfa_secret) {
+      if (!mfa_code) {
+        // First step: credentials OK, but need MFA code
+        return res.status(200).json({
+          mfa_required: true,
+          message: 'กรุณากรอกรหัส 2FA จากแอป Authenticator ของคุณ',
+        });
+      }
+
+      // Verify TOTP code
+      const speakeasy = require('speakeasy');
+      const mfaValid = speakeasy.totp.verify({
+        secret: user.mfa_secret,
+        encoding: 'base32',
+        token: mfa_code,
+        window: 2,
+      });
+
+      if (!mfaValid) {
+        return res.status(401).json({ error: 'รหัส 2FA ไม่ถูกต้อง กรุณาลองใหม่' });
+      }
     }
 
     // Update last login
@@ -186,6 +210,7 @@ router.post('/login', async (req, res) => {
         display_name: user.display_name,
         avatar_url: user.avatar_url,
         role: user.role_name || 'user',
+        mfa_enabled: user.mfa_enabled || false,
       },
       token,
     });

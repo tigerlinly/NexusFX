@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTheme } from '../../context/ThemeContext';
-import { Palette, Bell, Globe, Moon, Save, Eye, EyeOff, Key } from 'lucide-react';
+import { Palette, Bell, Globe, Moon, Save, Eye, EyeOff, Key, Shield } from 'lucide-react';
 import { api } from '../../utils/api';
 
 export default function SettingsPage() {
@@ -9,6 +9,12 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [showToken, setShowToken] = useState(false);
+
+  // MFA State
+  const [mfaStatus, setMfaStatus] = useState(false);
+  const [mfaSetupData, setMfaSetupData] = useState(null);
+  const [mfaCode, setMfaCode] = useState('');
+  const [passwordForMfa, setPasswordForMfa] = useState('');
 
   // Form State
   const [settings, setSettings] = useState({
@@ -23,12 +29,24 @@ export default function SettingsPage() {
     binance_api_key: '',
     binance_api_secret: '',
     twelvedata_api_key: '',
-    line_notify_token: ''
+    line_notify_token: '',
+    telegram_bot_token: '',
+    telegram_chat_id: ''
   });
 
   useEffect(() => {
     fetchSettings();
+    checkMfaStatus();
   }, []);
+
+  const checkMfaStatus = async () => {
+    try {
+      const { mfa_enabled } = await api.getMFAStatus();
+      setMfaStatus(mfa_enabled);
+    } catch (err) {
+      console.error('Failed to get MFA status', err);
+    }
+  };
 
   const fetchSettings = async () => {
     try {
@@ -45,7 +63,9 @@ export default function SettingsPage() {
         binance_api_key: data.binance_api_key || '',
         binance_api_secret: data.binance_api_secret || '',
         twelvedata_api_key: data.twelvedata_api_key || '',
-        line_notify_token: data.line_notify_token || ''
+        line_notify_token: data.line_notify_token || '',
+        telegram_bot_token: data.telegram_bot_token || '',
+        telegram_chat_id: data.telegram_chat_id || ''
       });
       if (data.theme_id && data.theme_id !== currentTheme) {
         // Suppress warning if missing from contexts, just try to set it.
@@ -85,8 +105,44 @@ export default function SettingsPage() {
     { id: 'notifications', label: 'การแจ้งเตือน', icon: Bell },
     { id: 'mt5', label: 'การเชื่อมต่อ MT5', icon: Globe },
     { id: 'apis', label: 'API Keys', icon: Key },
+    { id: 'security', label: 'ความปลอดภัย', icon: Shield },
     { id: 'general', label: 'ทั่วไป', icon: Moon },
   ];
+
+  const handleSetupMFA = async () => {
+    try {
+      const data = await api.setupMFA();
+      setMfaSetupData(data);
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleVerifyMFA = async () => {
+    try {
+      if (!mfaCode) return alert('กรุณากรอกรหัส 6 หลัก');
+      const data = await api.verifyMFA({ code: mfaCode });
+      alert(data.message);
+      setMfaStatus(true);
+      setMfaSetupData(null);
+      setMfaCode('');
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleDisableMFA = async () => {
+    try {
+      if (!passwordForMfa && !mfaCode) return alert('กรุณากรอกรหัส 2FA หรือรหัสผ่านเพื่อปิดใช้งาน');
+      const data = await api.disableMFA({ code: mfaCode, password: passwordForMfa });
+      alert(data.message);
+      setMfaStatus(false);
+      setMfaCode('');
+      setPasswordForMfa('');
+    } catch (err) {
+      alert(err.message);
+    }
+  };
 
   const handleTestLineNotify = async () => {
     try {
@@ -94,6 +150,15 @@ export default function SettingsPage() {
       alert('ส่งแจ้งเตือนทดสอบสำเร็จ กรุณาตรวจสอบ LINE ของคุณ');
     } catch (err) {
       alert('ส่งแจ้งเตือนล้มเหลว ตรวจสอบว่าใส่ Token ถูกต้องและกดบันทึกแล้วหรือยัง');
+    }
+  };
+
+  const handleTestTelegram = async () => {
+    try {
+      await api.testTelegram();
+      alert('ส่งแจ้งเตือนทดสอบสำเร็จ กรุณาตรวจสอบ Telegram ของคุณ');
+    } catch (err) {
+      alert('ส่งแจ้งเตือนล้มเหลว ตรวจสอบว่าใส่ Token/Chat ID ถูกต้องและกดบันทึกแล้วหรือยัง');
     }
   };
 
@@ -355,7 +420,7 @@ export default function SettingsPage() {
                 </div>
 
                 {/* Line Notify Token */}
-                <div className="settings-row" style={{ borderBottom: 'none', flexDirection: 'column', alignItems: 'stretch' }}>
+                <div className="settings-row" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '12px' }}>
                     <div className="settings-label" style={{ marginBottom: 0 }}>Line Notify Token</div>
                     <div className="settings-desc" style={{ marginTop: 0 }}>
@@ -382,6 +447,135 @@ export default function SettingsPage() {
                       ทดสอบการส่ง
                     </button>
                   </div>
+                </div>
+
+                {/* Telegram Bot Token & Chat ID */}
+                <div className="settings-row" style={{ borderBottom: 'none', flexDirection: 'column', alignItems: 'stretch' }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '12px' }}>
+                    <div className="settings-label" style={{ marginBottom: 0 }}>Telegram Notifications</div>
+                    <div className="settings-desc" style={{ marginTop: 0 }}>
+                      ยิงแจ้งเตือนการเทรดผ่าน Telegram (สร้าง Bot ด้วย @BotFather)
+                    </div>
+                  </div>
+                  
+                  <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
+                    <div style={{ flex: 1, position: 'relative' }}>
+                      <label className="form-label" style={{ fontSize: 12 }}>Bot Token</label>
+                      <input
+                        className="form-input"
+                        type={showToken ? 'text' : 'password'}
+                        placeholder="123456789:ABCDEF..."
+                        style={{ width: '100%', paddingRight: '46px' }}
+                        value={settings.telegram_bot_token}
+                        onChange={(e) => handleLocalUpdate('telegram_bot_token', e.target.value)}
+                      />
+                      <button 
+                        className="btn btn-ghost btn-icon" 
+                        onClick={() => setShowToken(!showToken)}
+                        style={{ position: 'absolute', right: '4px', top: '22px' }}
+                      >
+                        {showToken ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+
+                    <div style={{ flex: 1 }}>
+                      <label className="form-label" style={{ fontSize: 12 }}>Chat ID</label>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <input
+                          className="form-input"
+                          type="text"
+                          placeholder="เช่น 123456789"
+                          style={{ flex: 1 }}
+                          value={settings.telegram_chat_id}
+                          onChange={(e) => handleLocalUpdate('telegram_chat_id', e.target.value)}
+                        />
+                        <button onClick={handleTestTelegram} className="btn-secondary" style={{ whiteSpace: 'nowrap' }}>
+                          ทดสอบการส่ง
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Security / MFA */}
+            {activeTab === 'security' && (
+              <div>
+                <h3 style={{ marginBottom: 'var(--space-md)', fontSize: 16 }}>การยืนยันตัวตนแบบสองขั้นตอน (2FA)</h3>
+                <p style={{ color: 'var(--text-tertiary)', fontSize: 13, marginBottom: 'var(--space-lg)' }}>
+                  เปิดใช้งาน 2FA เพื่อเพิ่มความปลอดภัยให้กับบัญชีของคุณ โดยคุณจะต้องสแกน QR Code ด้วยแอปเตือนภัยเช่น Google Authenticator
+                </p>
+
+                <div className="card" style={{ background: 'var(--bg-tertiary)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: 14 }}>สถานะ 2FA</div>
+                      <div style={{ fontSize: 13, color: mfaStatus ? 'var(--profit)' : 'var(--text-tertiary)', marginTop: 4 }}>
+                        {mfaStatus ? 'เปิดใช้งานแล้ว' : 'ยังไม่ได้เปิดใช้งาน'}
+                      </div>
+                    </div>
+                    <div>
+                      {!mfaStatus && !mfaSetupData && (
+                        <button className="btn btn-primary btn-sm" onClick={handleSetupMFA}>
+                          เปิดใช้งาน 2FA
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {mfaSetupData && !mfaStatus && (
+                    <div style={{ marginTop: 'var(--space-lg)', paddingTop: 'var(--space-lg)', borderTop: '1px solid var(--border-primary)' }}>
+                      <div style={{ textAlign: 'center', marginBottom: 16 }}>
+                        <img src={mfaSetupData.qr_code} alt="QR Code" style={{ background: '#fff', padding: 8, borderRadius: 8, width: 200, height: 200 }} />
+                        <div style={{ marginTop: 8, fontSize: 13, color: 'var(--text-tertiary)' }}>
+                          สแกน QR Code ด้วย Google Authenticator หรือ Authy
+                          <br />
+                          หรือใส่รหัส: <code style={{ userSelect: 'all', background: 'var(--bg-secondary)', padding: '2px 6px', borderRadius: 4 }}>{mfaSetupData.secret}</code>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: 12, maxWidth: 300, margin: '0 auto' }}>
+                        <input
+                          type="text"
+                          className="form-input"
+                          placeholder="รหัส 6 หลัก"
+                          maxLength={6}
+                          value={mfaCode}
+                          onChange={(e) => setMfaCode(e.target.value)}
+                        />
+                        <button className="btn btn-primary" onClick={handleVerifyMFA}>ยืนยัน</button>
+                      </div>
+                    </div>
+                  )}
+
+                  {mfaStatus && (
+                    <div style={{ marginTop: 'var(--space-lg)', paddingTop: 'var(--space-lg)', borderTop: '1px solid var(--border-primary)' }}>
+                      <h4 style={{ fontSize: 14, marginBottom: 12, color: 'var(--loss)' }}>ปิดการใช้งาน 2FA</h4>
+                      <p style={{ fontSize: 13, color: 'var(--text-tertiary)', marginBottom: 16 }}>หากต้องการปิด กรุณายืนยันด้วยรหัส 2FA ปัจจุบัน หรือรหัสผ่านของคุณ</p>
+                      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                        <input
+                          type="text"
+                          className="form-input"
+                          placeholder="รหัส 2FA"
+                          maxLength={6}
+                          value={mfaCode}
+                          onChange={(e) => setMfaCode(e.target.value)}
+                          style={{ width: 150 }}
+                        />
+                        <span style={{ display: 'flex', alignItems: 'center', color: 'var(--text-tertiary)' }}>หรือ</span>
+                        <input
+                          type="password"
+                          className="form-input"
+                          placeholder="รหัสผ่านเข้าสู่ระบบ"
+                          value={passwordForMfa}
+                          onChange={(e) => setPasswordForMfa(e.target.value)}
+                          style={{ width: 200 }}
+                        />
+                        <button className="btn" style={{ background: 'var(--loss)', color: '#fff' }} onClick={handleDisableMFA}>ปิดการใช้งาน</button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

@@ -19,8 +19,11 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  const login = async (username, password) => {
-    const data = await api.login({ username, password });
+  const login = async (username, password, mfa_code) => {
+    const data = await api.login({ username, password, mfa_code });
+    if (data.mfa_required) {
+      return data;
+    }
     setToken(data.token);
     setUser(data.user);
     return data;

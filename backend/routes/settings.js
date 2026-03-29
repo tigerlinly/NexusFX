@@ -40,6 +40,8 @@ router.get('/', async (req, res) => {
     if (settings.binance_api_secret) decrypted.binance_api_secret_masked = mask(decrypt(settings.binance_api_secret));
     if (settings.twelvedata_api_key) decrypted.twelvedata_api_key_masked = mask(decrypt(settings.twelvedata_api_key));
     if (settings.line_notify_token) decrypted.line_notify_token_masked = mask(decrypt(settings.line_notify_token));
+    if (settings.telegram_bot_token) decrypted.telegram_bot_token_masked = mask(decrypt(settings.telegram_bot_token));
+    if (settings.telegram_chat_id) decrypted.telegram_chat_id = settings.telegram_chat_id; // Un-encrypted or simple string
 
     res.json(decrypted);
   } catch (err) {
@@ -69,7 +71,8 @@ router.put('/', auditLog('UPDATE_SETTINGS', 'SETTING'), async (req, res) => {
       theme_id, custom_colors, dashboard_layout,
       notifications_enabled, sound_enabled, language, timezone,
       notify_new_trade, metaapi_token, auto_sync,
-      binance_api_key, binance_api_secret, twelvedata_api_key, line_notify_token
+      binance_api_key, binance_api_secret, twelvedata_api_key, line_notify_token,
+      telegram_bot_token, telegram_chat_id
     } = req.body;
 
     // 🔒 Encrypt sensitive API keys before storing
@@ -78,6 +81,7 @@ router.put('/', auditLog('UPDATE_SETTINGS', 'SETTING'), async (req, res) => {
     const encBinanceSecret = binance_api_secret !== undefined ? (binance_api_secret ? encrypt(binance_api_secret) : '') : null;
     const encTwelvedata = twelvedata_api_key !== undefined ? (twelvedata_api_key ? encrypt(twelvedata_api_key) : '') : null;
     const encLineToken = line_notify_token !== undefined ? (line_notify_token ? encrypt(line_notify_token) : '') : null;
+    const encTelegramToken = telegram_bot_token !== undefined ? (telegram_bot_token ? encrypt(telegram_bot_token) : '') : null;
 
     const result = await pool.query(
       `UPDATE user_settings SET
@@ -95,6 +99,8 @@ router.put('/', auditLog('UPDATE_SETTINGS', 'SETTING'), async (req, res) => {
         binance_api_secret = COALESCE($13, binance_api_secret),
         twelvedata_api_key = COALESCE($14, twelvedata_api_key),
         line_notify_token = COALESCE($15, line_notify_token),
+        telegram_bot_token = COALESCE($16, telegram_bot_token),
+        telegram_chat_id = COALESCE($17, telegram_chat_id),
         updated_at = NOW()
       WHERE user_id = $1
       RETURNING *`,
@@ -113,16 +119,18 @@ router.put('/', auditLog('UPDATE_SETTINGS', 'SETTING'), async (req, res) => {
         encBinanceKey,
         encBinanceSecret,
         encTwelvedata,
-        encLineToken
+        encLineToken,
+        encTelegramToken,
+        telegram_chat_id !== undefined ? telegram_chat_id : null
       ]
     );
 
     if (result.rows.length === 0) {
       const insertResult = await pool.query(
-        `INSERT INTO user_settings (user_id, theme_id, notifications_enabled, sound_enabled, language, timezone, notify_new_trade, metaapi_token, auto_sync, binance_api_key, binance_api_secret, twelvedata_api_key, line_notify_token)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        `INSERT INTO user_settings (user_id, theme_id, notifications_enabled, sound_enabled, language, timezone, notify_new_trade, metaapi_token, auto_sync, binance_api_key, binance_api_secret, twelvedata_api_key, line_notify_token, telegram_bot_token, telegram_chat_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
          RETURNING *`,
-        [req.user.id, theme_id || 'dark-trading', notifications_enabled ?? true, sound_enabled ?? true, language || 'th', timezone || 'Asia/Bangkok', notify_new_trade ?? false, encMetaapi || '', auto_sync ?? true, encBinanceKey || '', encBinanceSecret || '', encTwelvedata || '', encLineToken || '']
+        [req.user.id, theme_id || 'dark-trading', notifications_enabled ?? true, sound_enabled ?? true, language || 'th', timezone || 'Asia/Bangkok', notify_new_trade ?? false, encMetaapi || '', auto_sync ?? true, encBinanceKey || '', encBinanceSecret || '', encTwelvedata || '', encLineToken || '', encTelegramToken || '', telegram_chat_id || '']
       );
       return res.json(insertResult.rows[0]);
     }
@@ -139,6 +147,21 @@ router.post('/test-line', async (req, res) => {
   try {
     const LineNotify = require('../services/lineNotify');
     const success = await LineNotify.sendAlert(req.user.id, `✅ การทดสอบการเชื่อมต่อ Line Notify สำเร็จ!\nระบบ NexusFX ของคุณพร้อมส่งแจ้งเตือนการเทรดแล้ว 🚀`);
+    if (success) {
+      res.json({ success: true });
+    } else {
+      res.status(400).json({ error: 'Failed' });
+    }
+  } catch(err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/settings/test-telegram
+router.post('/test-telegram', async (req, res) => {
+  try {
+    const TelegramNotify = require('../services/telegramNotify');
+    const success = await TelegramNotify.sendAlert(req.user.id, `✅ การทดสอบการเชื่อมต่อ Telegram สำเร็จ!\nระบบ NexusFX ของคุณพร้อมส่งแจ้งเตือนการเทรดแล้ว 🚀`);
     if (success) {
       res.json({ success: true });
     } else {

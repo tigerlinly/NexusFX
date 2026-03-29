@@ -20,6 +20,8 @@ import TerminalPage from './components/Terminal/TerminalPage';
 import ForgotPasswordPage from './components/Auth/ForgotPasswordPage';
 import ResetPasswordPage from './components/Auth/ResetPasswordPage';
 import HeatmapPage from './components/Heatmap/HeatmapPage';
+import StrategiesPage from './components/Strategies/StrategiesPage';
+import ForumsPage from './components/Forums/ForumsPage';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -61,11 +63,13 @@ function AppRoutes() {
         <Route path="wallet" element={<WalletPage />} />
         <Route path="billing" element={<BillingPage />} />
         <Route path="store" element={<StorePage />} />
+        <Route path="strategies" element={<StrategiesPage />} />
         <Route path="groups" element={<GroupsPage />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="heatmap" element={<HeatmapPage />} />
         <Route path="admin" element={<AdminPage />} />
         <Route path="bots" element={<BotsPage />} />
+        <Route path="forums" element={<ForumsPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
       <Route path="*" element={

@@ -14,6 +14,9 @@ const BinanceFeed = require('./services/binanceFeed');
 const ExecutionEngine = require('./services/executionEngine');
 const RiskEngine = require('./services/riskEngine');
 const metrics = require('./services/metrics');
+const FeeTracker = require('./services/feeTracker');
+const mockBotEngine = require('./services/mockBotEngine');
+const orderSyncEngine = require('./services/orderSyncEngine');
 
 const app = express();
 const server = http.createServer(app);
@@ -69,7 +72,7 @@ const generalLimiter = rateLimit({
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20, // 20 login/register attempts per 15 min
+  max: 500, // Increased for dev/testing
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many auth attempts, please try again later.' },
@@ -94,6 +97,7 @@ app.use(express.json({ limit: '10mb' }));
 // Routes
 // =============================================
 const authRoutes = require('./routes/auth');
+const mfaRoutes = require('./routes/mfa');
 const dashboardRoutes = require('./routes/dashboard');
 const accountsRoutes = require('./routes/accounts');
 const walletRoutes = require('./routes/wallet');
@@ -108,9 +112,12 @@ const settingsRoutes = require('./routes/settings');
 const storeRoutes = require('./routes/store');
 const brokersRoutes = require('./routes/brokers');
 const billingRoutes = require('./routes/billing');
+const strategiesRoutes = require('./routes/strategies');
+const forumsRoutes = require('./routes/forums');
 
 // Apply stricter rate limits to sensitive routes
 app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/mfa', authLimiter, mfaRoutes);
 app.use('/api/trades', tradeLimiter, tradesRoutes);
 
 app.use('/api/brokers', brokersRoutes);
@@ -126,6 +133,8 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/store', storeRoutes);
+app.use('/api/strategies', strategiesRoutes);
+app.use('/api/forums', forumsRoutes);
 
 // =============================================
 // Swagger API Docs (Level 3)
@@ -199,12 +208,10 @@ io.on('connection', (socket) => {
 const ms = new MT5Service(io);
 const profitTracker = new ProfitTracker(io);
 const aggregationService = new AggregationService();
-const FeeTracker = require('./services/feeTracker');
 const feeTracker = new FeeTracker();
 const binanceFeed = new BinanceFeed(io);
 const executionEngine = new ExecutionEngine();
 const riskEngine = new RiskEngine(io);
-const mockBotEngine = require('./services/mockBotEngine');
 
 // Store services for route access
 app.set('mt5Service', ms);
@@ -220,6 +227,7 @@ async function start() {
     profitTracker.start();
     aggregationService.start();
     feeTracker.start();
+    orderSyncEngine.start();
     binanceFeed.start();
     executionEngine.start();
     riskEngine.start();

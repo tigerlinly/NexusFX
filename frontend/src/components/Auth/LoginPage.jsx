@@ -11,6 +11,8 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [form, setForm] = useState({ username: '', email: '', password: '' });
+  const [showMfa, setShowMfa] = useState(false);
+  const [mfaCode, setMfaCode] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -19,10 +21,16 @@ export default function LoginPage() {
     try {
       if (isRegister) {
         await register(form.username, form.email, form.password);
+        navigate('/');
       } else {
-        await login(form.username, form.password);
+        const response = await login(form.username, form.password, mfaCode);
+        if (response?.mfa_required) {
+          setShowMfa(true);
+          setError(''); // clear error, wait for mfa code
+          return;
+        }
+        navigate('/');
       }
-      navigate('/');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -57,91 +65,125 @@ export default function LoginPage() {
         )}
 
         <form className="login-form" onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label className="form-label">Username</label>
-            <input
-              className="form-input"
-              type="text"
-              placeholder="ชื่อผู้ใช้"
-              value={form.username}
-              onChange={e => setForm(p => ({ ...p, username: e.target.value }))}
-              required
-            />
-          </div>
+          {!showMfa ? (
+            <>
+              <div className="form-group">
+                <label className="form-label">Username</label>
+                <input
+                  className="form-input"
+                  type="text"
+                  placeholder="ชื่อผู้ใช้"
+                  value={form.username}
+                  onChange={e => setForm(p => ({ ...p, username: e.target.value }))}
+                  required
+                />
+              </div>
 
-          {isRegister && (
+              {isRegister && (
+                <div className="form-group">
+                  <label className="form-label">Email</label>
+                  <input
+                    className="form-input"
+                    type="email"
+                    placeholder="email@example.com"
+                    value={form.email}
+                    onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
+                    required
+                  />
+                </div>
+              )}
+
+              <div className="form-group">
+                <label className="form-label">Password</label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    className="form-input"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="รหัสผ่าน"
+                    value={form.password}
+                    onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
+                    required
+                    style={{ width: '100%', paddingRight: 40 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(p => !p)}
+                    style={{
+                      position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+                      background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer'
+                    }}
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+
+              {!isRegister && (
+                <div style={{ textAlign: 'right', marginTop: 8, marginBottom: 16 }}>
+                  <button
+                    type="button"
+                    onClick={() => window.location.href = '/forgot-password'}
+                    style={{
+                      background: 'none', border: 'none', color: 'var(--text-tertiary)',
+                      cursor: 'pointer', fontSize: 13, textDecoration: 'underline'
+                    }}
+                  >
+                    ลืมรหัสผ่าน?
+                  </button>
+                </div>
+              )}
+            </>
+          ) : (
             <div className="form-group">
-              <label className="form-label">Email</label>
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <LogIn size={14} /> รหัส 2FA (Authenticator)
+              </label>
               <input
                 className="form-input"
-                type="email"
-                placeholder="email@example.com"
-                value={form.email}
-                onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
+                type="text"
+                placeholder="กรอก 6 หลัก"
+                value={mfaCode}
+                onChange={e => setMfaCode(e.target.value)}
+                maxLength={6}
                 required
+                autoFocus
               />
-            </div>
-          )}
-
-          <div className="form-group">
-            <label className="form-label">Password</label>
-            <div style={{ position: 'relative' }}>
-              <input
-                className="form-input"
-                type={showPassword ? 'text' : 'password'}
-                placeholder="รหัสผ่าน"
-                value={form.password}
-                onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
-                required
-                style={{ width: '100%', paddingRight: 40 }}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(p => !p)}
-                style={{
-                  position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
-                  background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer'
-                }}
-              >
-                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
-            </div>
-          </div>
-
-          {!isRegister && (
-            <div style={{ textAlign: 'right', marginTop: 8, marginBottom: 16 }}>
-              <button
-                type="button"
-                onClick={() => window.location.href = '/forgot-password'}
-                style={{
-                  background: 'none', border: 'none', color: 'var(--text-tertiary)',
-                  cursor: 'pointer', fontSize: 13, textDecoration: 'underline'
-                }}
-              >
-                ลืมรหัสผ่าน?
-              </button>
+              <div style={{ textAlign: 'center', marginTop: 12 }}>
+                <button
+                  type="button"
+                  onClick={() => { setShowMfa(false); setMfaCode(''); setError(''); }}
+                  style={{
+                    background: 'none', border: 'none', color: 'var(--text-tertiary)',
+                    cursor: 'pointer', fontSize: 13, textDecoration: 'underline'
+                  }}
+                >
+                  ย้อนกลับ
+                </button>
+              </div>
             </div>
           )}
 
           <button className="btn btn-primary btn-lg" type="submit" disabled={loading}
             style={{ width: '100%', marginTop: 'var(--space-sm)' }}>
             {loading ? 'กำลังดำเนินการ...' : (
-              isRegister ? (<><UserPlus size={16} /> สมัครสมาชิก</>) : (<><LogIn size={16} /> เข้าสู่ระบบ</>)
+              showMfa ? 'ยืนยันรหัส 2FA' : isRegister ? (<><UserPlus size={16} /> สมัครสมาชิก</>) : (<><LogIn size={16} /> เข้าสู่ระบบ</>)
             )}
           </button>
         </form>
 
-        <div style={{ textAlign: 'center', marginTop: 'var(--space-lg)' }}>
-          <button
-            onClick={() => { setIsRegister(p => !p); setError(''); }}
-            style={{
-              background: 'none', border: 'none', color: 'var(--accent-primary)',
-              cursor: 'pointer', fontSize: 13
-            }}
-          >
-            {isRegister ? 'มีบัญชีแล้ว? เข้าสู่ระบบ' : 'ยังไม่มีบัญชี? สมัครสมาชิก'}
-          </button>
-        </div>
+        {!showMfa && (
+          <div style={{ textAlign: 'center', marginTop: 'var(--space-lg)' }}>
+            <button
+              onClick={() => { setIsRegister(p => !p); setError(''); }}
+              style={{
+                background: 'none', border: 'none', color: 'var(--accent-primary)',
+                cursor: 'pointer', fontSize: 13
+              }}
+            >
+              {isRegister ? 'มีบัญชีแล้ว? เข้าสู่ระบบ' : 'ยังไม่มีบัญชี? สมัครสมาชิก'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

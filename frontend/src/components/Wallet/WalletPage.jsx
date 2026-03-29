@@ -34,7 +34,17 @@ export default function WalletPage() {
     }
   };
 
-  useEffect(() => { fetchData(); }, [page, filter]);
+  useEffect(() => { 
+    fetchData(); 
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('payment') === 'success') {
+      alert('เริ่มดำเนินการชำระเงินเรียบร้อยแล้ว (Stripe Session Closed)');
+      window.history.replaceState(null, '', window.location.pathname);
+    } else if (params.get('payment') === 'cancelled') {
+      alert('คุณได้ยกเลิกการทำรายการชำระเงิน');
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  }, [page, filter]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -42,7 +52,11 @@ export default function WalletPage() {
     setProcessing(true);
     try {
       if (showModal === 'deposit') {
-        await api.topup({ amount: parseFloat(amount), note });
+        const res = await api.createCheckout({ amountUSD: parseFloat(amount) });
+        if (res.url) {
+          window.location.href = res.url;
+          return; // Redirecting to Stripe
+        }
       } else {
         await api.withdraw({ amount: parseFloat(amount), note });
       }
