@@ -185,4 +185,7 @@ export const api = {
   // Brokers
   // =============================================
   getBrokers: () => request('/brokers'),
+  createBroker: (body) => request('/brokers', { method: 'POST', body: JSON.stringify(body) }),
+  updateBroker: (id, body) => request(`/brokers/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  deleteBroker: (id) => request(`/brokers/${id}`, { method: 'DELETE' }),
 };
