@@ -19,6 +19,7 @@ import BotsPage from './components/Bots/BotsPage';
 import TerminalPage from './components/Terminal/TerminalPage';
 import ForgotPasswordPage from './components/Auth/ForgotPasswordPage';
 import ResetPasswordPage from './components/Auth/ResetPasswordPage';
+import HeatmapPage from './components/Heatmap/HeatmapPage';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -62,6 +63,7 @@ function AppRoutes() {
         <Route path="store" element={<StorePage />} />
         <Route path="groups" element={<GroupsPage />} />
         <Route path="reports" element={<ReportsPage />} />
+        <Route path="heatmap" element={<HeatmapPage />} />
         <Route path="admin" element={<AdminPage />} />
         <Route path="bots" element={<BotsPage />} />
         <Route path="settings" element={<SettingsPage />} />

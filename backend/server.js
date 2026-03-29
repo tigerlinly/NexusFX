@@ -13,6 +13,7 @@ const AggregationService = require('./services/aggregationService');
 const BinanceFeed = require('./services/binanceFeed');
 const ExecutionEngine = require('./services/executionEngine');
 const RiskEngine = require('./services/riskEngine');
+const metrics = require('./services/metrics');
 
 const app = express();
 const server = http.createServer(app);
@@ -83,6 +84,9 @@ const tradeLimiter = rateLimit({
 });
 
 app.use('/api', generalLimiter);
+
+// 📊 Metrics middleware (counts requests)
+app.use(metrics.middleware());
 
 app.use(express.json({ limit: '10mb' }));
 
@@ -167,6 +171,16 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString(), version: '1.0.0' });
 });
 
+// 📊 Prometheus Metrics Endpoint
+app.get('/metrics', async (req, res) => {
+  try {
+    res.set('Content-Type', 'text/plain; charset=utf-8');
+    res.send(await metrics.toPrometheusText());
+  } catch (err) {
+    res.status(500).send('# Error collecting metrics');
+  }
+});
+
 // Socket.io
 io.on('connection', (socket) => {
   console.log(`🔌 Socket connected: ${socket.id}`);
@@ -215,9 +229,10 @@ async function start() {
       console.log(`\n🚀 NexusFX Backend running on http://localhost:${PORT}`);
       console.log(`   API: http://localhost:${PORT}/api`);
       console.log(`   Docs: http://localhost:${PORT}/api-docs`);
+      console.log(`   Metrics: http://localhost:${PORT}/metrics`);
       console.log(`   Socket.io: ws://localhost:${PORT}`);
       console.log(`   CORS: ${ALLOWED_ORIGINS.join(', ')}`);
-      console.log(`   Security: Helmet ✅ | Rate Limit ✅ | Encryption ✅\n`);
+      console.log(`   Security: Helmet ✅ | Rate Limit ✅ | Encryption ✅ | Metrics ✅\n`);
     });
   } catch (err) {
     console.error('❌ Failed to start server:', err);

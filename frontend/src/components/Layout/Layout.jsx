@@ -3,7 +3,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard, History, Target, Settings, LogOut, TrendingUp, User,
-  Building2, ChevronDown, Menu, Wallet, Users, BarChart3, Shield, Cpu, TerminalSquare, CreditCard, Store
+  Building2, ChevronDown, Menu, Wallet, Users, BarChart3, Shield, Cpu, TerminalSquare, CreditCard, Store, Flame
 } from 'lucide-react';
 
 export default function Layout() {
@@ -57,6 +57,10 @@ export default function Layout() {
           <NavLink to="/reports" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="รายงาน/วิเคราะห์">
             <BarChart3 size={18} className="nav-icon" />
             {!isCollapsed && <span>รายงาน/วิเคราะห์</span>}
+          </NavLink>
+          <NavLink to="/heatmap" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="Exposure Heatmap">
+            <Flame size={18} className="nav-icon" />
+            {!isCollapsed && <span>Exposure Heatmap</span>}
           </NavLink>
           <NavLink to="/bots" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="Trading Bots">
             <Cpu size={18} className="nav-icon" />

@@ -241,5 +241,111 @@ router.put('/widgets', async (req, res) => {
     res.status(500).json({ error: 'Internal server error', detail: err.message });
   }
 });
+// =============================================
+// HEATMAP DATA (Symbol-level exposure)
+// =============================================
+/**
+ * @swagger
+ * /dashboard/heatmap:
+ *   get:
+ *     summary: Get symbol-level exposure heatmap data
+ *     tags: [Dashboard]
+ *     responses:
+ *       200:
+ *         description: Heatmap data by symbol
+ */
+router.get('/heatmap', async (req, res) => {
+  try {
+    const { view = 'all', broker_id, account_id, days = 30 } = req.query;
+    const accountIds = await getFilteredAccountIds(req.user.id, view, broker_id, account_id);
+
+    if (accountIds.length === 0) return res.json({ symbols: [], accounts: [] });
+
+    // 1. Symbol-level aggregation (open + recent closed)
+    const symbolData = await pool.query(`
+      SELECT 
+        t.symbol,
+        COUNT(*) as trade_count,
+        SUM(CASE WHEN t.status = 'OPEN' THEN t.lot_size ELSE 0 END) as open_lots,
+        SUM(t.lot_size) as total_lots,
+        COALESCE(SUM(t.pnl), 0) as total_pnl,
+        SUM(CASE WHEN t.side = 'BUY' THEN 1 ELSE 0 END) as buy_count,
+        SUM(CASE WHEN t.side = 'SELL' THEN 1 ELSE 0 END) as sell_count,
+        SUM(CASE WHEN t.pnl > 0 THEN 1 ELSE 0 END) as win_count,
+        SUM(CASE WHEN t.pnl < 0 THEN 1 ELSE 0 END) as loss_count,
+        MAX(t.lot_size) as max_lot
+      FROM trades t
+      WHERE t.account_id = ANY($1) 
+        AND (t.status = 'OPEN' OR t.closed_at >= NOW() - INTERVAL '1 day' * $2)
+      GROUP BY t.symbol
+      ORDER BY SUM(t.lot_size) DESC
+    `, [accountIds, parseInt(days)]);
+
+    // 2. Account-level exposure
+    const accountData = await pool.query(`
+      SELECT 
+        a.id, a.account_name, b.display_name as broker_name,
+        COUNT(t.id) as open_trades,
+        COALESCE(SUM(t.lot_size), 0) as total_exposure,
+        COALESCE(SUM(t.pnl), 0) as floating_pnl
+      FROM accounts a
+      JOIN brokers b ON b.id = a.broker_id
+      LEFT JOIN trades t ON t.account_id = a.id AND t.status = 'OPEN'
+      WHERE a.id = ANY($1)
+      GROUP BY a.id, a.account_name, b.display_name
+      ORDER BY COALESCE(SUM(t.lot_size), 0) DESC
+    `, [accountIds]);
+
+    // 3. Hourly distribution (when do trades happen)
+    const hourlyDist = await pool.query(`
+      SELECT 
+        EXTRACT(HOUR FROM t.opened_at) as hour,
+        COUNT(*) as trade_count,
+        COALESCE(SUM(t.pnl), 0) as total_pnl
+      FROM trades t
+      WHERE t.account_id = ANY($1) 
+        AND t.opened_at >= NOW() - INTERVAL '1 day' * $2
+      GROUP BY EXTRACT(HOUR FROM t.opened_at)
+      ORDER BY hour
+    `, [accountIds, parseInt(days)]);
+
+    res.json({
+      symbols: symbolData.rows.map(s => ({
+        symbol: s.symbol,
+        trade_count: parseInt(s.trade_count),
+        open_lots: parseFloat(s.open_lots),
+        total_lots: parseFloat(s.total_lots),
+        total_pnl: parseFloat(s.total_pnl),
+        buy_count: parseInt(s.buy_count),
+        sell_count: parseInt(s.sell_count),
+        win_count: parseInt(s.win_count),
+        loss_count: parseInt(s.loss_count),
+        max_lot: parseFloat(s.max_lot),
+        win_rate: parseInt(s.trade_count) > 0 
+          ? ((parseInt(s.win_count) / parseInt(s.trade_count)) * 100).toFixed(1) 
+          : '0.0',
+      })),
+      accounts: accountData.rows.map(a => ({
+        id: a.id,
+        account_name: a.account_name,
+        broker_name: a.broker_name,
+        open_trades: parseInt(a.open_trades),
+        total_exposure: parseFloat(a.total_exposure),
+        floating_pnl: parseFloat(a.floating_pnl),
+      })),
+      hourly: Array.from({ length: 24 }, (_, h) => {
+        const found = hourlyDist.rows.find(r => parseInt(r.hour) === h);
+        return {
+          hour: h,
+          trade_count: found ? parseInt(found.trade_count) : 0,
+          pnl: found ? parseFloat(found.total_pnl) : 0,
+        };
+      }),
+    });
+  } catch (err) {
+    console.error('Heatmap error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 module.exports = router;

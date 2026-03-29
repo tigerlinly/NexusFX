@@ -2,6 +2,7 @@ const express = require('express');
 const { pool } = require('../config/database');
 const { authMiddleware, auditLog } = require('../middleware/auth');
 const LineNotify = require('../services/lineNotify');
+const PreTradeRiskCheck = require('../services/preTradeRiskCheck');
 const router = express.Router();
 
 router.use(authMiddleware);
@@ -245,6 +246,19 @@ router.post('/', auditLog('PLACE_TRADE', 'ORDER'), async (req, res) => {
       return res.status(403).json({ error: 'Account not found or not authorized' });
     }
 
+    // 🛡️ PRE-TRADE RISK CHECK (blocks risky orders before execution)
+    const riskResult = await PreTradeRiskCheck.validate(
+      req.user.id, account_id, symbol, side, lot_size
+    );
+    
+    if (!riskResult.allowed) {
+      return res.status(422).json({ 
+        error: riskResult.reason, 
+        risk_blocked: true,
+        warnings: riskResult.warnings 
+      });
+    }
+
     // Insert into orders table (simulating OMS)
     const orderResult = await pool.query(
       `INSERT INTO orders (account_id, symbol, side, order_type, quantity, price, status)
@@ -262,7 +276,12 @@ router.post('/', auditLog('PLACE_TRADE', 'ORDER'), async (req, res) => {
       take_profit: tp
     }).catch(err => console.warn('[LineNotify] Trade notify failed:', err.message));
 
-    res.status(201).json({ success: true, order: { ...orderResult.rows[0], lot_size }, message: 'Order submitted successfully' });
+    res.status(201).json({ 
+      success: true, 
+      order: { ...orderResult.rows[0], lot_size }, 
+      message: 'Order submitted successfully',
+      risk_warnings: riskResult.warnings.length > 0 ? riskResult.warnings : undefined
+    });
   } catch (err) {
     console.error('Place trade error:', err);
     res.status(500).json({ error: 'Internal server error' });

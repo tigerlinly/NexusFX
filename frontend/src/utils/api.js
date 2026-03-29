@@ -59,6 +59,7 @@ export const api = {
   getAccountBreakdown: (params) => request(`/dashboard/account-breakdown?${new URLSearchParams(params)}`),
   getWidgets: () => request('/dashboard/widgets'),
   updateWidgets: (widgets) => request('/dashboard/widgets', { method: 'PUT', body: JSON.stringify({ widgets }) }),
+  getHeatmapData: (params = {}) => request(`/dashboard/heatmap?${new URLSearchParams(params)}`),
 
   // Trades
   getTrades: (params) => request(`/trades?${new URLSearchParams(params)}`),
