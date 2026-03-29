@@ -3,7 +3,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard, History, Target, Settings, LogOut, TrendingUp, User,
-  Building2, ChevronDown, Menu, Wallet, Users, BarChart3, Shield, Cpu, TerminalSquare, CreditCard, Store, Flame, Copy, MessageSquare
+  Building2, ChevronDown, Menu, Wallet, Users, BarChart3, Shield, Cpu, TerminalSquare, CreditCard, Store, Flame, Copy, MessageSquare, Globe
 } from 'lucide-react';
 
 export default function Layout() {
@@ -97,6 +97,10 @@ export default function Layout() {
           <NavLink to="/accounts" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="จัดการบัญชี">
             <Building2 size={18} className="nav-icon" />
             {!isCollapsed && <span>จัดการบัญชี</span>}
+          </NavLink>
+          <NavLink to="/brokers" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="โบรกเกอร์ (Brokers)">
+            <Globe size={18} className="nav-icon" />
+            {!isCollapsed && <span>โบรกเกอร์แนะนำ</span>}
           </NavLink>
 
           {isTeamLead && (

@@ -180,4 +180,9 @@ export const api = {
   createForumComment: (id, body) => request(`/forums/${id}/comments`, { method: 'POST', body: JSON.stringify(body) }),
   likeForumPost: (id) => request(`/forums/${id}/like`, { method: 'POST' }),
   getLeaderboard: () => request('/forums/leaderboard'),
+
+  // =============================================
+  // Brokers
+  // =============================================
+  getBrokers: () => request('/brokers'),
 };

@@ -101,6 +101,15 @@ async function initDatabase() {
     try {
       await client.query(`ALTER TABLE brokers ADD COLUMN IF NOT EXISTS market_type VARCHAR(50) DEFAULT 'Forex';`);
       await client.query(`ALTER TABLE brokers ADD COLUMN IF NOT EXISTS adapter_config JSONB DEFAULT '{}';`);
+      await client.query(`ALTER TABLE brokers ADD COLUMN IF NOT EXISTS regulation VARCHAR(255);`);
+      await client.query(`ALTER TABLE brokers ADD COLUMN IF NOT EXISTS country VARCHAR(100);`);
+      await client.query(`ALTER TABLE brokers ADD COLUMN IF NOT EXISTS website VARCHAR(255);`);
+      await client.query(`ALTER TABLE brokers ADD COLUMN IF NOT EXISTS max_leverage VARCHAR(20);`);
+      await client.query(`ALTER TABLE brokers ADD COLUMN IF NOT EXISTS min_deposit DECIMAL(18,2);`);
+      await client.query(`ALTER TABLE brokers ADD COLUMN IF NOT EXISTS description TEXT;`);
+      await client.query(`ALTER TABLE brokers ADD COLUMN IF NOT EXISTS rating DECIMAL(3,1) DEFAULT 0;`);
+      await client.query(`ALTER TABLE brokers ADD COLUMN IF NOT EXISTS spread_from VARCHAR(50);`);
+      await client.query(`ALTER TABLE brokers ADD COLUMN IF NOT EXISTS platforms VARCHAR(255);`);
     } catch (e) { /* ignore */ }
 
     // =============================================
