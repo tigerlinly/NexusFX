@@ -1337,3 +1337,51 @@ input:-webkit-autofill:active{
 .spin {
   animation: spin 1s linear infinite;
 }
+
+/* =============================================
+   DASHBOARD DRAG & DROP
+   ============================================= */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Drag handle label */
+.drag-handle {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+[draggable="true"]:hover .drag-handle {
+  opacity: 1;
+}
+
+[draggable="true"] {
+  user-select: none;
+}
+
+/* Active drag state */
+[draggable="true"]:active {
+  cursor: grabbing !important;
+}
+
+/* Smooth reorder animation */
+[draggable="true"] > * {
+  pointer-events: auto;
+}
+
+/* Edit mode indicator pulse */
+@keyframes editPulse {
+  0%, 100% { border-color: var(--border-secondary); }
+  50% { border-color: var(--accent-primary); }
+}
+
+.edit-toolbar {
+  animation: slideDown 0.3s ease;
+}
