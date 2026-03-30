@@ -1,7 +1,6 @@
 const express = require('express');
 const { pool } = require('../config/database');
 const { authMiddleware, auditLog } = require('../middleware/auth');
-const { encrypt, decrypt, mask } = require('../utils/encryption');
 const router = express.Router();
 
 router.use(authMiddleware);
@@ -30,28 +29,20 @@ router.get('/', async (req, res) => {
       return res.json(newSettings.rows[0]);
     }
 
-    // Decrypt sensitive fields for display (masked)
+    // Return settings directly — no encryption, plain text
     const settings = result.rows[0];
     const response = { ...settings };
 
-    // Decrypt actual values for the frontend to use (copy feature)
+    // Provide _actual and _masked fields for frontend compatibility
     const sensitiveFields = ['metaapi_token', 'binance_api_key', 'binance_api_secret', 'twelvedata_api_key', 'line_notify_token', 'telegram_bot_token'];
     for (const field of sensitiveFields) {
-      if (settings[field]) {
-        const decryptedVal = decrypt(settings[field]);
-        if (decryptedVal) {
-          response[`${field}_masked`] = mask(decryptedVal);
-          response[`${field}_actual`] = decryptedVal;
-        } else {
-          // Token is corrupted (double-encrypted) — show warning
-          response[`${field}_masked`] = '⚠️ ค่าเสียหาย กรุณาใส่ใหม่';
-          response[`${field}_actual`] = '';
-        }
-      }
-      // Remove the raw encrypted value from response to prevent leaking ciphertext
-      delete response[field];
+      const val = settings[field] || '';
+      response[`${field}_actual`] = val;
+      response[`${field}_masked`] = val.length >= 10
+        ? val.substring(0, 4) + '••••••••' + val.substring(val.length - 4)
+        : val ? '••••••••' : '';
+      // Keep the raw field too for backward compatibility
     }
-    // telegram_chat_id is not encrypted
     response.telegram_chat_id = settings.telegram_chat_id || '';
 
     res.json(response);
@@ -86,13 +77,13 @@ router.put('/', auditLog('UPDATE_SETTINGS', 'SETTING'), async (req, res) => {
       telegram_bot_token, telegram_chat_id
     } = req.body;
 
-    // 🔒 Encrypt sensitive API keys before storing
-    const encMetaapi = metaapi_token !== undefined ? (metaapi_token ? encrypt(metaapi_token) : '') : null;
-    const encBinanceKey = binance_api_key !== undefined ? (binance_api_key ? encrypt(binance_api_key) : '') : null;
-    const encBinanceSecret = binance_api_secret !== undefined ? (binance_api_secret ? encrypt(binance_api_secret) : '') : null;
-    const encTwelvedata = twelvedata_api_key !== undefined ? (twelvedata_api_key ? encrypt(twelvedata_api_key) : '') : null;
-    const encLineToken = line_notify_token !== undefined ? (line_notify_token ? encrypt(line_notify_token) : '') : null;
-    const encTelegramToken = telegram_bot_token !== undefined ? (telegram_bot_token ? encrypt(telegram_bot_token) : '') : null;
+    // Store plain text — no encryption
+    const valMetaapi = metaapi_token !== undefined ? (metaapi_token || '') : null;
+    const valBinanceKey = binance_api_key !== undefined ? (binance_api_key || '') : null;
+    const valBinanceSecret = binance_api_secret !== undefined ? (binance_api_secret || '') : null;
+    const valTwelvedata = twelvedata_api_key !== undefined ? (twelvedata_api_key || '') : null;
+    const valLineToken = line_notify_token !== undefined ? (line_notify_token || '') : null;
+    const valTelegramToken = telegram_bot_token !== undefined ? (telegram_bot_token || '') : null;
 
     const result = await pool.query(
       `UPDATE user_settings SET
@@ -125,13 +116,13 @@ router.put('/', auditLog('UPDATE_SETTINGS', 'SETTING'), async (req, res) => {
         language || null,
         timezone || null,
         notify_new_trade !== undefined ? notify_new_trade : null,
-        encMetaapi,
+        valMetaapi,
         auto_sync !== undefined ? auto_sync : null,
-        encBinanceKey,
-        encBinanceSecret,
-        encTwelvedata,
-        encLineToken,
-        encTelegramToken,
+        valBinanceKey,
+        valBinanceSecret,
+        valTwelvedata,
+        valLineToken,
+        valTelegramToken,
         telegram_chat_id !== undefined ? telegram_chat_id : null
       ]
     );
@@ -141,7 +132,7 @@ router.put('/', auditLog('UPDATE_SETTINGS', 'SETTING'), async (req, res) => {
         `INSERT INTO user_settings (user_id, theme_id, notifications_enabled, sound_enabled, language, timezone, notify_new_trade, metaapi_token, auto_sync, binance_api_key, binance_api_secret, twelvedata_api_key, line_notify_token, telegram_bot_token, telegram_chat_id)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
          RETURNING *`,
-        [req.user.id, theme_id || 'dark-trading', notifications_enabled ?? true, sound_enabled ?? true, language || 'th', timezone || 'Asia/Bangkok', notify_new_trade ?? false, encMetaapi || '', auto_sync ?? true, encBinanceKey || '', encBinanceSecret || '', encTwelvedata || '', encLineToken || '', encTelegramToken || '', telegram_chat_id || '']
+        [req.user.id, theme_id || 'dark-trading', notifications_enabled ?? true, sound_enabled ?? true, language || 'th', timezone || 'Asia/Bangkok', notify_new_trade ?? false, valMetaapi || '', auto_sync ?? true, valBinanceKey || '', valBinanceSecret || '', valTwelvedata || '', valLineToken || '', valTelegramToken || '', telegram_chat_id || '']
       );
       return res.json(insertResult.rows[0]);
     }

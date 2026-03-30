@@ -1,6 +1,5 @@
 const { pool } = require('../config/database');
 const https = require('https');
-const { decrypt } = require('../utils/encryption');
 
 class TelegramNotify {
   
@@ -22,13 +21,9 @@ class TelegramNotify {
       // Check if notifications are enabled
       if (settingsQuery.rows[0].notifications_enabled === false) return false;
 
-      const encryptedToken = settingsQuery.rows[0].telegram_bot_token;
+      const botToken = settingsQuery.rows[0].telegram_bot_token;
       const chatId = settingsQuery.rows[0].telegram_chat_id;
-      if (!encryptedToken || encryptedToken.trim() === '' || !chatId || chatId.trim() === '') return false;
-
-      // 🔒 Decrypt the token before use
-      const botToken = decrypt(encryptedToken);
-      if (!botToken || botToken.trim() === '') return false;
+      if (!botToken || botToken.trim() === '' || !chatId || chatId.trim() === '') return false;
 
       // 2. Prepare payload
       const postData = JSON.stringify({

@@ -3,7 +3,6 @@ const crypto = require('crypto');
 const axios = require('axios');
 const LineNotify = require('./lineNotify');
 const TelegramNotify = require('./telegramNotify');
-const { decrypt } = require('../utils/encryption');
 
 class ExecutionEngine {
   constructor() {
@@ -50,9 +49,9 @@ class ExecutionEngine {
           // Check if system is killed (Kill Switch globally active)
           // Ideally handled before, but good double check
           // Verify user has correctly stored their Binance API Keys
-          const userKey = order.binance_api_key ? decrypt(order.binance_api_key) : null;
-          const userSecret = order.binance_api_secret ? decrypt(order.binance_api_secret) : null;
-          const metaApiToken = order.metaapi_token ? decrypt(order.metaapi_token) : null;
+          const userKey = order.binance_api_key || null;
+          const userSecret = order.binance_api_secret || null;
+          const metaApiToken = order.metaapi_token || null;
           const metaApiAccountId = order.metaapi_account_id;
 
           let executionResult = false;

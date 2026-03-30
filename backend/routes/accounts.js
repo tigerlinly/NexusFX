@@ -109,10 +109,8 @@ router.post('/:id/sync', async (req, res) => {
       return res.status(400).json({ error: 'MetaAPI Account ID หรือ Token ยังไม่ได้ตั้งค่า' });
     }
 
-    const { decrypt } = require('../utils/encryption');
     const metaApiService = require('../services/metaApiService');
-    const decryptedToken = decrypt(acct.metaapi_token);
-    const info = await metaApiService.getAccountInfo(acct.metaapi_account_id, decryptedToken);
+    const info = await metaApiService.getAccountInfo(acct.metaapi_account_id, acct.metaapi_token);
 
     if (info.connected) {
       await pool.query(
