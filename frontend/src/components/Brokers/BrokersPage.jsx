@@ -115,6 +115,71 @@ export default function BrokersPage() {
     return <div style={{ display: 'flex', gap: 2, alignItems: 'center' }}>{stars} <span style={{ marginLeft: 4, fontSize: 13, color: 'var(--text-secondary)', fontWeight: 600 }}>{rating}</span></div>;
   };
 
+  const getBrokerLogo = (brokerName) => {
+    const name = (brokerName || '').toLowerCase();
+    const brokerLogos = {
+      'exness': { url: 'https://logo.clearbit.com/exness.com', abbr: 'ex', color: '#F5C518', bg: '#2D2D00' },
+      'xm': { url: 'https://logo.clearbit.com/xm.com', abbr: 'XM', color: '#E2001A', bg: '#2D0004' },
+      'ic markets': { url: 'https://logo.clearbit.com/icmarkets.com', abbr: 'IC', color: '#00B4D8', bg: '#002833' },
+      'icmarkets': { url: 'https://logo.clearbit.com/icmarkets.com', abbr: 'IC', color: '#00B4D8', bg: '#002833' },
+      'fbs': { url: 'https://logo.clearbit.com/fbs.com', abbr: 'FB', color: '#5BC0BE', bg: '#0B3D3B' },
+      'pepperstone': { url: 'https://logo.clearbit.com/pepperstone.com', abbr: 'PP', color: '#0074E0', bg: '#001A33' },
+      'roboforex': { url: 'https://logo.clearbit.com/roboforex.com', abbr: 'RF', color: '#2196F3', bg: '#0D2137' },
+      'hfm': { url: 'https://logo.clearbit.com/hfm.com', abbr: 'HF', color: '#C62828', bg: '#2D0000' },
+      'hotforex': { url: 'https://logo.clearbit.com/hfm.com', abbr: 'HF', color: '#C62828', bg: '#2D0000' },
+      'avatrade': { url: 'https://logo.clearbit.com/avatrade.com', abbr: 'AV', color: '#1565C0', bg: '#0D1F33' },
+      'tickmill': { url: 'https://logo.clearbit.com/tickmill.com', abbr: 'TM', color: '#4CAF50', bg: '#0D2D0F' },
+      'fxpro': { url: 'https://logo.clearbit.com/fxpro.com', abbr: 'FX', color: '#FF6F00', bg: '#331600' },
+      'oanda': { url: 'https://logo.clearbit.com/oanda.com', abbr: 'OA', color: '#000000', bg: '#1A1A1A' },
+      'fxtm': { url: 'https://logo.clearbit.com/fxtm.com', abbr: 'FT', color: '#0D47A1', bg: '#051933' },
+      'octafx': { url: 'https://logo.clearbit.com/octafx.com', abbr: 'OF', color: '#FF6F00', bg: '#331600' },
+      'vantage': { url: 'https://logo.clearbit.com/vantagemarkets.com', abbr: 'VT', color: '#E53935', bg: '#2D0000' },
+      'fxgt': { url: 'https://logo.clearbit.com/fxgt.com', abbr: 'FX', color: '#00A1E0', bg: '#001A24' },
+      'fxgt.com': { url: 'https://logo.clearbit.com/fxgt.com', abbr: 'FX', color: '#00A1E0', bg: '#001A24' },
+    };
+
+    for (const [key, data] of Object.entries(brokerLogos)) {
+      if (name.includes(key)) return data;
+    }
+    const abbr = (brokerName || 'BR').substring(0, 2).toUpperCase();
+    return { url: null, abbr, color: '#90A4AE', bg: '#1A2433' };
+  };
+
+  const BrokerLogo = ({ brokerName, dbLogoUrl, size = 64 }) => {
+    const [imgError, setImgError] = useState(false);
+    const logoData = getBrokerLogo(brokerName);
+    const finalUrl = dbLogoUrl || logoData.url;
+    
+    if (finalUrl && !imgError) {
+      return (
+        <div style={{
+          width: size, height: size, borderRadius: 12, overflow: 'hidden',
+          backgroundColor: logoData.bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          border: `1px solid ${logoData.color}40`, padding: 4, flexShrink: 0
+        }}>
+          <img 
+            src={finalUrl} 
+            alt={brokerName}
+            style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: 8 }}
+            onError={() => setImgError(true)}
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div style={{
+        width: size, height: size, borderRadius: 12,
+        backgroundColor: logoData.bg, color: logoData.color,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: size * 0.4, fontWeight: 800, letterSpacing: '-0.5px',
+        border: `1px solid ${logoData.color}40`, flexShrink: 0
+      }}>
+        {logoData.abbr}
+      </div>
+    );
+  };
+
   if (loading) {
     return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: 'var(--text-secondary)' }}>กำลังโหลดรายชื่อโบรกเกอร์...</div>;
   }
@@ -162,18 +227,7 @@ export default function BrokersPage() {
               {brokers.map((broker) => (
                 <div key={broker.id} className="card hover-glow" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                   <div style={{ padding: 24, borderBottom: '1px solid var(--border-primary)', display: 'flex', gap: 16, alignItems: 'center', position: 'relative' }}>
-                    <div style={{ 
-                      width: 64, height: 64, borderRadius: 12, background: 'var(--bg-primary)', 
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      border: '1px solid var(--border-primary)', padding: 4, overflow: 'hidden'
-                    }}>
-                      {broker.logo_url ? (
-                        <img src={broker.logo_url} alt={broker.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} />
-                      ) : null}
-                      <div style={{ display: broker.logo_url ? 'none' : 'flex', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', fontSize: 24, fontWeight: 800, color: 'var(--text-muted)' }}>
-                        {broker.name[0]}
-                      </div>
-                    </div>
+                    <BrokerLogo brokerName={broker.name} dbLogoUrl={broker.logo_url} size={64} />
                     <div style={{ flex: 1 }}>
                       <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>{broker.display_name}</h3>
                       {renderStars(Number(broker.rating) || 0)}
