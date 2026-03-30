@@ -39,8 +39,14 @@ router.get('/', async (req, res) => {
     for (const field of sensitiveFields) {
       if (settings[field]) {
         const decryptedVal = decrypt(settings[field]);
-        response[`${field}_masked`] = mask(decryptedVal);
-        response[`${field}_actual`] = decryptedVal; // actual value for copy
+        if (decryptedVal) {
+          response[`${field}_masked`] = mask(decryptedVal);
+          response[`${field}_actual`] = decryptedVal;
+        } else {
+          // Token is corrupted (double-encrypted) — show warning
+          response[`${field}_masked`] = '⚠️ ค่าเสียหาย กรุณาใส่ใหม่';
+          response[`${field}_actual`] = '';
+        }
       }
       // Remove the raw encrypted value from response to prevent leaking ciphertext
       delete response[field];

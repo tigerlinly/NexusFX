@@ -7,7 +7,6 @@ const crypto = require('crypto');
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 16;
 const TAG_LENGTH = 16;
-const SALT_LENGTH = 32;
 
 // Derive encryption key from JWT_SECRET (or a dedicated ENCRYPTION_KEY env var)
 function getEncryptionKey() {
@@ -18,6 +17,18 @@ function getEncryptionKey() {
 }
 
 /**
+ * Check if a string looks like it's already encrypted (iv:authTag:ciphertext hex format)
+ */
+function isEncrypted(text) {
+  if (!text || typeof text !== 'string') return false;
+  const parts = text.split(':');
+  if (parts.length !== 3) return false;
+  // Check that all parts are valid hex strings with expected lengths
+  const [iv, tag, cipher] = parts;
+  return iv.length === 32 && tag.length === 32 && cipher.length > 0 && /^[0-9a-f]+$/i.test(iv) && /^[0-9a-f]+$/i.test(tag) && /^[0-9a-f]+$/i.test(cipher);
+}
+
+/**
  * Encrypt a plaintext string
  * @param {string} plaintext 
  * @returns {string} encrypted string in format: iv:authTag:ciphertext (all hex)
@@ -25,6 +36,12 @@ function getEncryptionKey() {
 function encrypt(plaintext) {
   if (!plaintext || typeof plaintext !== 'string' || plaintext.trim() === '') {
     return plaintext; // Don't encrypt empty values
+  }
+
+  // GUARD: Don't double-encrypt — if already encrypted, return as-is
+  if (isEncrypted(plaintext)) {
+    console.warn('[Encryption] Value appears already encrypted, skipping double-encryption');
+    return plaintext;
   }
 
   const key = getEncryptionKey();
@@ -42,19 +59,20 @@ function encrypt(plaintext) {
 /**
  * Decrypt an encrypted string
  * @param {string} encryptedText - format: iv:authTag:ciphertext (all hex)
- * @returns {string} decrypted plaintext
+ * @returns {string|null} decrypted plaintext, or null if decryption fails
  */
 function decrypt(encryptedText) {
-  if (!encryptedText || typeof encryptedText !== 'string') {
-    return encryptedText;
+  if (!encryptedText || typeof encryptedText !== 'string' || encryptedText.trim() === '') {
+    return null;
   }
 
   // Check if it's actually encrypted (has the iv:tag:cipher format)
-  const parts = encryptedText.split(':');
-  if (parts.length !== 3) {
+  if (!isEncrypted(encryptedText)) {
     // Not encrypted (legacy plaintext), return as-is
     return encryptedText;
   }
+
+  const parts = encryptedText.split(':');
 
   try {
     const key = getEncryptionKey();
@@ -69,9 +87,9 @@ function decrypt(encryptedText) {
     decrypted += decipher.final('utf8');
     return decrypted;
   } catch (err) {
-    // If decryption fails, it might be legacy plaintext containing colons
-    console.warn('[Encryption] Decryption failed, returning as-is:', err.message);
-    return encryptedText;
+    // Decryption failed — data is likely corrupted (double-encrypted or wrong key)
+    console.error('[Encryption] Decryption FAILED — data may be corrupted:', err.message);
+    return null; // Return null instead of corrupt data
   }
 }
 
@@ -83,4 +101,4 @@ function mask(value) {
   return value.substring(0, 4) + '••••••••' + value.substring(value.length - 4);
 }
 
-module.exports = { encrypt, decrypt, mask };
+module.exports = { encrypt, decrypt, mask, isEncrypted };

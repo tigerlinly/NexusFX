@@ -51,6 +51,11 @@ class OrderSyncEngine {
     const { account_id, user_id, metaapi_account_id, metaapi_token: encryptedToken } = accountInfo;
     const metaapi_token = decrypt(encryptedToken);
     
+    if (!metaapi_token) {
+      console.warn(`[OrderSyncEngine] Cannot decrypt metaapi_token for account ${account_id}, skipping`);
+      return;
+    }
+
     // 1. Fetch current open DB trades for this account
     const dbOpenTradesResult = await pool.query(
       `SELECT * FROM trades WHERE account_id = $1 AND status = 'OPEN'`,
