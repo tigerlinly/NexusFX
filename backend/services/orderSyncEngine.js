@@ -1,5 +1,6 @@
 const { pool } = require('../config/database');
 const metaApiService = require('./metaApiService');
+const { decrypt } = require('../utils/encryption');
 const TelegramNotify = require('./telegramNotify');
 const LineNotify = require('./lineNotify');
 
@@ -47,7 +48,8 @@ class OrderSyncEngine {
   }
 
   async syncAccountPositions(accountInfo) {
-    const { account_id, user_id, metaapi_account_id, metaapi_token } = accountInfo;
+    const { account_id, user_id, metaapi_account_id, metaapi_token: encryptedToken } = accountInfo;
+    const metaapi_token = decrypt(encryptedToken);
     
     // 1. Fetch current open DB trades for this account
     const dbOpenTradesResult = await pool.query(
