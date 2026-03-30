@@ -86,7 +86,7 @@ export default function AdminBillingPage() {
             <p style={{ color: 'var(--text-secondary)', fontSize: 14, lineHeight: 1.6 }}>
               ระบบ NexusFX มีการเก็บค่าบริการแยกจากบัญชีเทรดโบรกเกอร์ (Broker Account) ของผู้ใช้
               <br/>เงินที่ผู้ใช้ฝากเข้ามาจะถูกส่งตรงไปที่บัญชีหรือช่องทางที่คุณกำหนดไว้ในหน้านี้
-              <br/>จากนั้นระบบจะบวกยอดเป็น <b>"เครดิต (USDT)" </b>ใน System Wallet ของผู้ใช้
+              <br/>จากนั้นระบบจะบวกยอดเป็น <b>"เครดิต (USD)" </b>ใน System Wallet ของผู้ใช้
             </p>
           </div>
 
@@ -113,7 +113,7 @@ export default function AdminBillingPage() {
             <div className="form-group" style={{ marginBottom: 24, padding: 16, background: 'var(--bg-tertiary)', borderRadius: 8, border: '1px solid var(--border-primary)' }}>
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 15 }}>
                 <DollarSign size={16} style={{ color: 'var(--accent-secondary)' }}/>
-                กระเป๋าเงินคริปโต (TRC20 USDT)
+                กระเป๋าเงินคริปโต (TRC20 USD หรือ USDT)
               </label>
               <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 8 }}>ใช้สำหรับแสดงที่อยู่ในการโอนเงินให้ลูกค้า (กรณีเติมเงินแบบ Manual)</p>
               <input 

@@ -29,7 +29,7 @@ export default function StorePage() {
   const handlePurchase = async (bot) => {
     if (!selectedAccountId) return alert('กรุณาเลือกบัญชีเทรดก่อนเชื่อมต่อบอท');
     const confirmMsg = bot.price > 0 
-      ? `คุณต้องการเช่าบอท ${bot.name} ในราคา $${bot.price} USDT หรือไม่? (ระบบจะหักเงินจาก Wallet)`
+      ? `คุณต้องการเช่าบอท ${bot.name} ในราคา $${bot.price} USD หรือไม่? (ระบบจะหักเงินจาก Wallet)`
       : `คุณต้องการติดตั้งบอท ${bot.name} (ฟรี) ลงในพอร์ตหรือไม่?`;
     
     if (!await window.customConfirm(confirmMsg)) return;
@@ -42,7 +42,7 @@ export default function StorePage() {
         alert(`ดึงบอทลงระบบสำเร็จ! เข้าไปกดเริ่มการทำงานที่หน้า Trading Bots ได้เลย`);
       }
     } catch (err) {
-      alert(err.message || 'เกิดข้อผิดพลาดในการเช่าบอท อาจเป็นเพราะยอดเงิน USDT ไม่เพียงพอ');
+      alert(err.message || 'เกิดข้อผิดพลาดในการเช่าบอท อาจเป็นเพราะยอดเงิน USD ไม่เพียงพอ');
     } finally {
       setProcessing(false);
     }

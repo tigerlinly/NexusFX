@@ -53,9 +53,9 @@ router.post('/purchase', async (req, res) => {
 
     // Deduct from wallet if price > 0
     if (botToBuy.price > 0) {
-      const walletRes = await client.query('SELECT id, balance FROM wallets WHERE user_id = $1 AND currency = $2 FOR UPDATE', [req.user.id, 'USDT']);
+      const walletRes = await client.query('SELECT id, balance FROM wallets WHERE user_id = $1 AND currency = $2 FOR UPDATE', [req.user.id, 'USD']);
       if (walletRes.rows.length === 0 || walletRes.rows[0].balance < botToBuy.price) {
-        throw new Error('Insufficient USDT balance');
+        throw new Error('Insufficient USD balance');
       }
       const walletId = walletRes.rows[0].id;
       
