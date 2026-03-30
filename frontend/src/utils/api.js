@@ -149,6 +149,8 @@ export const api = {
   getAuditLogs: (params = {}) => request(`/admin/audit-logs?${new URLSearchParams(params)}`),
   getAdminRevenue: (params = {}) => request(`/admin/revenue?${new URLSearchParams(params)}`),
   getAdminRoles: () => request('/admin/roles'),
+  getSystemConfig: () => request('/admin/system-config'),
+  updateSystemConfig: (body) => request('/admin/system-config', { method: 'PUT', body: JSON.stringify(body) }),
   activateKillSwitch: (body) => request('/admin/kill-switch', { method: 'POST', body: JSON.stringify(body) }),
 
   // =============================================

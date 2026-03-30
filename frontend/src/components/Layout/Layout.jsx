@@ -3,7 +3,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard, History, Target, Settings, LogOut, TrendingUp, User,
-  Building2, ChevronDown, Menu, Wallet, Users, BarChart3, Shield, Cpu, TerminalSquare, CreditCard, Store, Flame, Copy, MessageSquare, Globe
+  Building2, ChevronDown, Menu, Wallet, Users, BarChart3, Shield, Cpu, TerminalSquare, CreditCard, Store, Flame, Copy, MessageSquare, Globe, DollarSign
 } from 'lucide-react';
 
 export default function Layout() {
@@ -116,9 +116,13 @@ export default function Layout() {
           {isAdmin && (
             <>
               {!isCollapsed && <div className="sidebar-section-title">ผู้ดูแล</div>}
-              <NavLink to="/admin" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="แผงควบคุม">
+              <NavLink to="/admin" className={({ isActive }) => `nav-item ${isActive && window.location.pathname === '/admin' ? 'active' : ''}`} title="แผงควบคุม" end>
                 <Shield size={18} className="nav-icon" />
                 {!isCollapsed && <span>แผงควบคุม</span>}
+              </NavLink>
+              <NavLink to="/admin/billing" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="ตั้งค่าบัญชีรับเงิน">
+                <DollarSign size={18} className="nav-icon" />
+                {!isCollapsed && <span>ตั้งค่าบัญชีรับเงิน</span>}
               </NavLink>
             </>
           )}
