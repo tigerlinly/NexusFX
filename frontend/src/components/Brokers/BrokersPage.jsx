@@ -148,7 +148,8 @@ export default function BrokersPage() {
   const BrokerLogo = ({ brokerName, dbLogoUrl, size = 64 }) => {
     const [imgError, setImgError] = useState(false);
     const logoData = getBrokerLogo(brokerName);
-    const finalUrl = dbLogoUrl || logoData.url;
+    // Always use local logo first, DB logo as last resort
+    const finalUrl = logoData.url || dbLogoUrl;
     
     if (finalUrl && !imgError) {
       return (
