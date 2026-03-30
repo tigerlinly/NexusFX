@@ -45,9 +45,9 @@ export default function HeatmapPage() {
     return Math.max(1, Math.min(3, Math.ceil((lots / maxLots) * 3)));
   };
 
-  const maxLots = Math.max(...data.symbols.map(s => s.total_lots), 1);
-  const maxPnl = Math.max(...data.symbols.map(s => Math.abs(s.total_pnl)), 1);
-  const maxHourlyTrades = Math.max(...data.hourly.map(h => h.trade_count), 1);
+  const maxLots = data.symbols.length > 0 ? Math.max(...data.symbols.map(s => s.total_lots), 1) : 1;
+  const maxPnl = data.symbols.length > 0 ? Math.max(...data.symbols.map(s => Math.abs(s.total_pnl)), 1) : 1;
+  const maxHourlyTrades = data.hourly.length > 0 ? Math.max(...data.hourly.map(h => h.trade_count), 1) : 1;
 
   return (
     <>
