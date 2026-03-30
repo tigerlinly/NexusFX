@@ -880,6 +880,28 @@ async function initDatabase() {
       );
     `);
 
+    // =============================================
+    // DATA MIGRATION: Merge USDT wallets into USD wallets
+    // =============================================
+    try {
+      await client.query(`
+        UPDATE wallets w1
+        SET balance = w1.balance + (SELECT w2.balance FROM wallets w2 WHERE w2.user_id = w1.user_id AND w2.currency = 'USDT' LIMIT 1)
+        WHERE w1.currency = 'USD'
+        AND EXISTS (SELECT 1 FROM wallets w2 WHERE w2.user_id = w1.user_id AND w2.currency = 'USDT');
+      `);
+      
+      await client.query(`
+        UPDATE financial_transactions ft
+        SET wallet_id = (SELECT id FROM wallets w WHERE w.user_id = ft.user_id AND w.currency = 'USD' LIMIT 1)
+        WHERE wallet_id IN (SELECT id FROM wallets WHERE currency = 'USDT');
+      `);
+      
+      await client.query(`DELETE FROM wallets WHERE currency = 'USDT';`);
+    } catch (e) {
+      console.warn('⚠️ USDT to USD wallet migration skipped or failed:', e.message);
+    }
+
     await client.query('COMMIT');
 
     // Safe to run outside transaction:

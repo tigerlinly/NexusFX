@@ -21,9 +21,12 @@ export default function WalletPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
+      const params = { page, limit: 20 };
+      if (filter) params.type = filter;
+      
       const [sum, txData] = await Promise.all([
         api.getWalletSummary(),
-        api.getTransactions({ type: filter || undefined, page, limit: 20 }),
+        api.getTransactions(params),
       ]);
       setSummary(sum);
       setTransactions(txData.transactions);
