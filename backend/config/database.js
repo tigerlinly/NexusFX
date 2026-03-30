@@ -612,6 +612,9 @@ async function initDatabase() {
     await client.query(`
       INSERT INTO membership_plans (plan_key, plan_name, description, monthly_price, max_bots, max_accounts, features, is_popular, sort_order)
       VALUES 
+        ('free', 'Free Trial', 'สำหรับทดลองใช้งาน 15 วัน', 0, 1, 1, 
+         '["รันบอทสูงสุด 1 ตัว", "ระยะเวลาใช้งาน 15 วัน", "อัปเดตราคาแบบ Real-time", "อีเมลแจ้งเตือนเมื่อออเดอร์เข้า", "ประวัติย้อนหลัง 30 วัน"]', 
+         false, 0),
         ('basic', 'Starter Trader', 'เหมาะสำหรับเทรดเดอร์มือใหม่', 29, 2, 3, 
          '["รันบอทสูงสุด 2 ตัว", "อัปเดตราคาแบบ Real-time", "อีเมลแจ้งเตือนเมื่อออเดอร์เข้า", "ประวัติย้อนหลัง 30 วัน"]', 
          false, 1),
