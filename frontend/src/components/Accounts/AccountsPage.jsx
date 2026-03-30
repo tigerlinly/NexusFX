@@ -81,25 +81,65 @@ export default function AccountsPage() {
 
   const getBrokerLogo = (brokerName) => {
     const name = (brokerName || '').toLowerCase();
-    const logos = {
-      'exness': 'https://www.google.com/s2/favicons?domain=exness.com&sz=32',
-      'xm': 'https://www.google.com/s2/favicons?domain=xm.com&sz=32',
-      'ic markets': 'https://www.google.com/s2/favicons?domain=icmarkets.com&sz=32',
-      'icmarkets': 'https://www.google.com/s2/favicons?domain=icmarkets.com&sz=32',
-      'fbs': 'https://www.google.com/s2/favicons?domain=fbs.com&sz=32',
-      'pepperstone': 'https://www.google.com/s2/favicons?domain=pepperstone.com&sz=32',
-      'roboforex': 'https://www.google.com/s2/favicons?domain=roboforex.com&sz=32',
-      'hfm': 'https://www.google.com/s2/favicons?domain=hfm.com&sz=32',
-      'hotforex': 'https://www.google.com/s2/favicons?domain=hfm.com&sz=32',
-      'avatrade': 'https://www.google.com/s2/favicons?domain=avatrade.com&sz=32',
-      'tickmill': 'https://www.google.com/s2/favicons?domain=tickmill.com&sz=32',
-      'fxpro': 'https://www.google.com/s2/favicons?domain=fxpro.com&sz=32',
-      'oanda': 'https://www.google.com/s2/favicons?domain=oanda.com&sz=32',
+    const brokerLogos = {
+      'exness': { url: 'https://logo.clearbit.com/exness.com', abbr: 'ex', color: '#F5C518', bg: '#2D2D00' },
+      'xm': { url: 'https://logo.clearbit.com/xm.com', abbr: 'XM', color: '#E2001A', bg: '#2D0004' },
+      'ic markets': { url: 'https://logo.clearbit.com/icmarkets.com', abbr: 'IC', color: '#00B4D8', bg: '#002833' },
+      'icmarkets': { url: 'https://logo.clearbit.com/icmarkets.com', abbr: 'IC', color: '#00B4D8', bg: '#002833' },
+      'fbs': { url: 'https://logo.clearbit.com/fbs.com', abbr: 'FB', color: '#5BC0BE', bg: '#0B3D3B' },
+      'pepperstone': { url: 'https://logo.clearbit.com/pepperstone.com', abbr: 'PP', color: '#0074E0', bg: '#001A33' },
+      'roboforex': { url: 'https://logo.clearbit.com/roboforex.com', abbr: 'RF', color: '#2196F3', bg: '#0D2137' },
+      'hfm': { url: 'https://logo.clearbit.com/hfm.com', abbr: 'HF', color: '#C62828', bg: '#2D0000' },
+      'hotforex': { url: 'https://logo.clearbit.com/hfm.com', abbr: 'HF', color: '#C62828', bg: '#2D0000' },
+      'avatrade': { url: 'https://logo.clearbit.com/avatrade.com', abbr: 'AV', color: '#1565C0', bg: '#0D1F33' },
+      'tickmill': { url: 'https://logo.clearbit.com/tickmill.com', abbr: 'TM', color: '#4CAF50', bg: '#0D2D0F' },
+      'fxpro': { url: 'https://logo.clearbit.com/fxpro.com', abbr: 'FX', color: '#FF6F00', bg: '#331600' },
+      'oanda': { url: 'https://logo.clearbit.com/oanda.com', abbr: 'OA', color: '#000000', bg: '#1A1A1A' },
+      'fxtm': { url: 'https://logo.clearbit.com/fxtm.com', abbr: 'FT', color: '#0D47A1', bg: '#051933' },
+      'octafx': { url: 'https://logo.clearbit.com/octafx.com', abbr: 'OF', color: '#FF6F00', bg: '#331600' },
+      'vantage': { url: 'https://logo.clearbit.com/vantagemarkets.com', abbr: 'VT', color: '#E53935', bg: '#2D0000' },
     };
-    for (const [key, url] of Object.entries(logos)) {
-      if (name.includes(key)) return url;
+
+    for (const [key, data] of Object.entries(brokerLogos)) {
+      if (name.includes(key)) return data;
     }
-    return null;
+    // Default fallback
+    const abbr = (brokerName || 'BR').substring(0, 2).toUpperCase();
+    return { url: null, abbr, color: '#90A4AE', bg: '#1A2433' };
+  };
+
+  const BrokerLogo = ({ brokerName, size = 28 }) => {
+    const [imgError, setImgError] = useState(false);
+    const logoData = getBrokerLogo(brokerName);
+    
+    if (logoData.url && !imgError) {
+      return (
+        <div style={{
+          width: size, height: size, borderRadius: '50%', overflow: 'hidden',
+          backgroundColor: logoData.bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          border: `2px solid ${logoData.color}40`, flexShrink: 0
+        }}>
+          <img 
+            src={logoData.url} 
+            alt={brokerName}
+            style={{ width: size - 4, height: size - 4, objectFit: 'contain', borderRadius: '50%' }}
+            onError={() => setImgError(true)}
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div style={{
+        width: size, height: size, borderRadius: '50%',
+        backgroundColor: logoData.bg, color: logoData.color,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: size * 0.35, fontWeight: 700, letterSpacing: '-0.5px',
+        border: `2px solid ${logoData.color}40`, flexShrink: 0
+      }}>
+        {logoData.abbr}
+      </div>
+    );
   };
 
   const getBrokerLink = (brokerId) => {
@@ -198,16 +238,11 @@ export default function AccountsPage() {
         {/* Accounts grouped by broker */}
         {Object.entries(grouped).map(([brokerName, group]) => {
           const accs = group.accs;
-          const logoUrl = group.logo || getBrokerLogo(group.broker_name || brokerName);
           return (
           <div key={brokerName} className="settings-section">
-            <h3 className="settings-section-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              {logoUrl ? (
-                <img src={logoUrl} alt="" style={{ width: 20, height: 20, borderRadius: 4, objectFit: 'contain' }} onError={e => { e.target.style.display = 'none'; }} />
-              ) : (
-                <Building2 size={16} />
-              )}
-              {brokerName}
+            <h3 className="settings-section-title" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <BrokerLogo brokerName={group.broker_name || brokerName} size={32} />
+              <span>{brokerName}</span>
               <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-tertiary)' }}>
                 ({accs.length} บัญชี)
               </span>
@@ -222,9 +257,12 @@ export default function AccountsPage() {
                 padding: '12px 16px',
                 minHeight: '48px'
               }}>
-                <div style={{ overflow: 'hidden' }}>
-                  <span style={{ fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>{acc.account_name || '-'}</span>
-                  <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>#{acc.account_number}</div>
+                <div style={{ overflow: 'hidden', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <BrokerLogo brokerName={group.broker_name || brokerName} size={22} />
+                  <div>
+                    <span style={{ fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>{acc.account_name || '-'}</span>
+                    <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>#{acc.account_number}</div>
+                  </div>
                 </div>
                 <div>
                   <span style={{ fontWeight: 500, fontSize: 12 }}>{acc.account_type || '-'}</span>
