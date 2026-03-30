@@ -7,12 +7,11 @@ class MetaApiService {
 
   getApi(token) {
     if (!token) throw new Error('MetaApi token is required');
-    const cleanToken = token.trim();
-    if (!this.apiInstances.has(cleanToken)) {
-      const api = new MetaApi(cleanToken);
-      this.apiInstances.set(cleanToken, api);
+    if (!this.apiInstances.has(token)) {
+      const api = new MetaApi(token);
+      this.apiInstances.set(token, api);
     }
-    return this.apiInstances.get(cleanToken);
+    return this.apiInstances.get(token);
   }
 
   async executeTrade(accountId, token, order) {
