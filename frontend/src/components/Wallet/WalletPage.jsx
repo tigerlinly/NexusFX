@@ -52,11 +52,9 @@ export default function WalletPage() {
     setProcessing(true);
     try {
       if (showModal === 'deposit') {
-        const res = await api.createCheckout({ amountUSD: parseFloat(amount) });
-        if (res.url) {
-          window.location.href = res.url;
-          return; // Redirecting to Stripe
-        }
+        // Direct topup — skip payment gateway
+        await api.topup({ amount: parseFloat(amount), currency: 'USDT' });
+        alert(`เติมเงิน $${parseFloat(amount).toFixed(2)} USDT สำเร็จ!`);
       } else {
         await api.withdraw({ amount: parseFloat(amount), note });
       }
