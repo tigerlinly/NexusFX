@@ -131,10 +131,10 @@ export default function SettingsPage() {
   const tabs = [
     { id: 'theme', label: 'ธีมสี', icon: Palette },
     { id: 'notifications', label: 'การแจ้งเตือน', icon: Bell },
-    { id: 'mt5', label: 'การเชื่อมต่อ MT5', icon: Globe },
-    { id: 'apis', label: 'API Keys', icon: Key },
     { id: 'security', label: 'ความปลอดภัย', icon: Shield },
     { id: 'general', label: 'ทั่วไป', icon: Moon },
+    { id: 'mt5', label: 'การเชื่อมต่อ MT5', icon: Globe },
+    { id: 'apis', label: 'API Keys', icon: Key },
   ];
 
   const handleSetupMFA = async () => {

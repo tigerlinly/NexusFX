@@ -15,6 +15,7 @@ import ReportsPage from './components/Reports/ReportsPage';
 import BillingPage from './components/Billing/BillingPage';
 import StorePage from './components/Store/StorePage';
 import AdminPage from './components/Admin/AdminPage';
+import AdminBillingPage from './components/Admin/AdminBillingPage';
 import BotsPage from './components/Bots/BotsPage';
 import TerminalPage from './components/Terminal/TerminalPage';
 import ForgotPasswordPage from './components/Auth/ForgotPasswordPage';
@@ -69,6 +70,7 @@ function AppRoutes() {
         <Route path="reports" element={<ReportsPage />} />
         <Route path="heatmap" element={<HeatmapPage />} />
         <Route path="admin" element={<AdminPage />} />
+        <Route path="admin/billing" element={<AdminBillingPage />} />
         <Route path="bots" element={<BotsPage />} />
         <Route path="forums" element={<ForumsPage />} />
         <Route path="brokers" element={<BrokersPage />} />
