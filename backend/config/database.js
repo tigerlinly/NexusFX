@@ -79,6 +79,8 @@ async function initDatabase() {
       await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS mfa_enabled BOOLEAN DEFAULT false;`);
       await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token VARCHAR(255);`);
       await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expires TIMESTAMPTZ;`);
+      await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS current_plan_id INTEGER REFERENCES membership_plans(id);`);
+      await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS plan_expires_at TIMESTAMPTZ;`);
     } catch (e) { /* ignore */ }
 
     // =============================================

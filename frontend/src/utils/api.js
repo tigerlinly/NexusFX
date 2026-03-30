@@ -84,6 +84,7 @@ export const api = {
   getStoreBots: () => request('/store/bots'),
   purchaseBot: (body) => request('/store/purchase', { method: 'POST', body: JSON.stringify(body) }),
   getPlans: () => request('/billing/plans'),
+  getCurrentPlan: () => request('/billing/current'),
   upgradeSubscription: (body) => request('/billing/upgrade', { method: 'POST', body: JSON.stringify(body) }),
   getSubscriptionHistory: () => request('/billing/history'),
   createCheckout: (body) => request('/billing/checkout', { method: 'POST', body: JSON.stringify(body) }),
