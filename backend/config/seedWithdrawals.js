@@ -13,7 +13,7 @@ async function seedWithdrawals() {
   // Clear existing
   await pool.query('DELETE FROM withdrawals WHERE user_id = $1', [userId]);
   
-  const methods = ['Bank Transfer', 'USDT (TRC20)', 'Crypto BTC', 'Local Transfer'];
+  const methods = ['Bank Transfer', 'USD/USDT (TRC20)', 'Crypto BTC', 'Local Transfer'];
   
   for (const accId of accountIds) {
     const numW = Math.floor(Math.random() * 3) + 2; // 2-4 withdrawals per account
