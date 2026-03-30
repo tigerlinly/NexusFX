@@ -53,8 +53,8 @@ export default function WalletPage() {
     try {
       if (showModal === 'deposit') {
         // Direct topup — skip payment gateway
-        await api.topup({ amount: parseFloat(amount), currency: 'USDT' });
-        alert(`เติมเงิน $${parseFloat(amount).toFixed(2)} USDT สำเร็จ!`);
+        await api.topup({ amount: parseFloat(amount), currency: 'USD' });
+        alert(`ฝากเงิน $${parseFloat(amount).toFixed(2)} ยอดเข้าสู่กระเป๋า USD แล้ว!`);
       } else {
         await api.withdraw({ amount: parseFloat(amount), note });
       }
