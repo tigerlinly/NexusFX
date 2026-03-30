@@ -36,7 +36,7 @@ router.get('/plans', async (req, res) => {
  * @swagger
  * /billing/upgrade:
  *   post:
- *     summary: Upgrade subscription plan (pays from USDT wallet)
+ *     summary: Upgrade subscription plan (pays from USD wallet)
  *     tags: [Billing]
  *     requestBody:
  *       required: true
@@ -74,14 +74,14 @@ router.post('/upgrade', auditLog('PURCHASE_SUBSCRIPTION', 'BILLING'), async (req
 
     const selectedPlan = planRes.rows[0];
 
-    // Check USDT wallet balance
+    // Check USD wallet balance
     const walletRes = await client.query(
       'SELECT id, balance FROM wallets WHERE user_id = $1 AND currency = $2 FOR UPDATE',
-      [req.user.id, 'USDT']
+      [req.user.id, 'USD']
     );
 
     if (walletRes.rows.length === 0 || walletRes.rows[0].balance < selectedPlan.monthly_price) {
-      throw new Error(`Insufficient USDT balance (${selectedPlan.monthly_price} USDT required). Please deposit funds.`);
+      throw new Error(`Insufficient USD balance (${selectedPlan.monthly_price} USD required). Please deposit funds.`);
     }
 
     const walletId = walletRes.rows[0].id;
@@ -188,7 +188,7 @@ router.post('/checkout', async (req, res) => {
       lineItems.push({
         price_data: {
           currency: 'usd',
-          product_data: { name: 'NexusFX Wallet Top-up (USDT)' },
+          product_data: { name: 'NexusFX Wallet Top-up (USD)' },
           unit_amount: Math.round(amountUSD * 100), // cents
         },
         quantity: 1,

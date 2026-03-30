@@ -607,7 +607,7 @@ async function initDatabase() {
       INSERT INTO system_config (key, value, description)
       VALUES 
         ('STRIPE_SECRET_KEY', '', 'Stripe API Secret Key (สำหรับการรับชำระเงิน)'),
-        ('CRYPTO_WALLET_ADDRESS', '', 'ที่อยู่กระเป๋าเงินคริปโต (TRC20 USDT)'),
+        ('CRYPTO_WALLET_ADDRESS', '', 'ที่อยู่กระเป๋าเงินคริปโต (TRC20 USD หรือ USDT)'),
         ('BANK_ACCOUNT_INFO', '', 'ข้อมูลบัญชีธนาคาร (เช่น ธ.กสิกรไทย 123-4-56789-0)')
       ON CONFLICT (key) DO NOTHING;
     `);

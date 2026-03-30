@@ -35,7 +35,7 @@ export default function BillingPage() {
   }, []);
 
   const handleUpgrade = async (plan) => {
-    const confirmMsg = `ยืนยันการทำรายการ: อัปเกรดเป็น ${plan.plan_name} ในราคา $${plan.monthly_price} USDT ต่อเดือน ใช่หรือไม่?`;
+    const confirmMsg = `ยืนยันการทำรายการ: อัปเกรดเป็น ${plan.plan_name} ในราคา $${plan.monthly_price} USD ต่อเดือน ใช่หรือไม่?`;
     if (!await window.customConfirm(confirmMsg)) return;
 
     setProcessing(true);
@@ -48,7 +48,7 @@ export default function BillingPage() {
         setCurrentPlan(updated);
       }
     } catch (err) {
-      alert(err.message || 'เกิดข้อผิดพลาดในการชำระเงิน กรุณาเติมเงิน USDT ให้เพียงพอ');
+      alert(err.message || 'เกิดข้อผิดพลาดในการชำระเงิน กรุณาเติมเงิน USD ให้เพียงพอ');
     } finally {
       setProcessing(false);
     }
@@ -263,7 +263,7 @@ export default function BillingPage() {
         </div>
         
         <div style={{ marginTop: 'var(--space-2xl)', textAlign: 'center', color: 'var(--text-tertiary)', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-          <ShieldCheck size={16} /> รองรับการชำระเงินผ่านบัตรเครดิต, พร้อมเพย์, และคริปโต (USDT)
+          <ShieldCheck size={16} /> รองรับการชำระเงินผ่านบัตรเครดิต, พร้อมเพย์, และคริปโต (USD)
         </div>
       </div>
     </>
