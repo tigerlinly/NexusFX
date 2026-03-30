@@ -16,6 +16,7 @@ export default function WalletPage() {
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
   const [processing, setProcessing] = useState(false);
+  const [depositMethod, setDepositMethod] = useState('test');
 
   const fetchData = async () => {
     setLoading(true);
@@ -52,20 +53,32 @@ export default function WalletPage() {
     setProcessing(true);
     try {
       if (showModal === 'deposit') {
-        // Direct topup — skip payment gateway
-        await api.topup({ amount: parseFloat(amount), currency: 'USD' });
-        alert(`ฝากเงิน $${parseFloat(amount).toFixed(2)} ยอดเข้าสู่กระเป๋า USD แล้ว!`);
+        if (depositMethod === 'test') {
+          // Direct topup — skip payment gateway
+          await api.topup({ amount: parseFloat(amount), currency: 'USD' });
+          alert(`ฝากเงิน $${parseFloat(amount).toFixed(2)} ยอดเข้าสู่กระเป๋า USD แล้ว! (โหมดทดสอบ)`);
+        } else {
+          // Stripe checkout
+          const res = await api.createCheckout({ amountUSD: parseFloat(amount) });
+          if (res.url) {
+            window.location.href = res.url;
+            return; // Redirecting to Stripe
+          }
+        }
       } else {
         await api.withdraw({ amount: parseFloat(amount), note });
+        alert(`ทำรายการถอนเงิน $${parseFloat(amount).toFixed(2)} สำเร็จ!`);
       }
       setShowModal(null);
       setAmount('');
       setNote('');
       fetchData();
     } catch (err) {
-      alert(err.message);
+      alert(err.message || 'เกิดข้อผิดพลาดในการทำรายการ');
     } finally {
-      setProcessing(false);
+      if (depositMethod === 'test' || showModal !== 'deposit') {
+        setProcessing(false);
+      }
     }
   };
 
@@ -253,6 +266,33 @@ export default function WalletPage() {
                   autoFocus
                 />
               </div>
+              {showModal === 'deposit' && (
+                <div className="form-group" style={{ marginBottom: 16 }}>
+                  <label className="form-label">รูปแบบการทำรายการ</label>
+                  <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', color: depositMethod === 'test' ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
+                      <input 
+                        type="radio" 
+                        name="depositMethod" 
+                        value="test" 
+                        checked={depositMethod === 'test'} 
+                        onChange={() => setDepositMethod('test')} 
+                      />
+                      ทดสอบ (เพิ่มยอดเข้าทันที)
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', color: depositMethod === 'real' ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
+                      <input 
+                        type="radio" 
+                        name="depositMethod" 
+                        value="real" 
+                        checked={depositMethod === 'real'} 
+                        onChange={() => setDepositMethod('real')} 
+                      />
+                      โอนจริง (ไปที่ Payment)
+                    </label>
+                  </div>
+                </div>
+              )}
               <div className="form-group" style={{ marginBottom: 16 }}>
                 <label className="form-label">หมายเหตุ</label>
                 <input
