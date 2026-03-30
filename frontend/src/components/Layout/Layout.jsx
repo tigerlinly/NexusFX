@@ -21,7 +21,7 @@ export default function Layout() {
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    window.location.href = '/login';
   };
 
   const isAdmin = user?.role === 'admin';

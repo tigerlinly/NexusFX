@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTheme } from '../../context/ThemeContext';
-import { Palette, Bell, Globe, Moon, Save, Eye, EyeOff, Key, Shield } from 'lucide-react';
+import { Palette, Bell, Globe, Moon, Save, Eye, EyeOff, Key, Shield, Copy, Check } from 'lucide-react';
 import { api } from '../../utils/api';
 
 export default function SettingsPage() {
@@ -9,6 +9,19 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [showToken, setShowToken] = useState(false);
+  const [copiedField, setCopiedField] = useState('');
+
+  const handleCopy = async (field) => {
+    const value = settings[field] || settings[`${field}_actual`];
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopiedField(field);
+      setTimeout(() => setCopiedField(''), 2000);
+    } catch (err) {
+      console.error('Copy failed:', err);
+    }
+  };
 
   // MFA State
   const [mfaStatus, setMfaStatus] = useState(false);
@@ -51,24 +64,24 @@ export default function SettingsPage() {
   const fetchSettings = async () => {
     try {
       const data = await api.getSettings();
+      // Load actual decrypted values from backend (for display & copy)
       setSettings({
         theme_id: data.theme_id || currentTheme || 'dark-trading',
         notifications_enabled: data.notifications_enabled ?? true,
         sound_enabled: data.sound_enabled ?? true,
         notify_new_trade: data.notify_new_trade ?? false,
-        metaapi_token: data.metaapi_token || '',
+        metaapi_token: data.metaapi_token_actual || '',
         auto_sync: data.auto_sync ?? true,
         language: data.language || 'th',
         timezone: data.timezone || 'Asia/Bangkok',
-        binance_api_key: data.binance_api_key || '',
-        binance_api_secret: data.binance_api_secret || '',
-        twelvedata_api_key: data.twelvedata_api_key || '',
-        line_notify_token: data.line_notify_token || '',
-        telegram_bot_token: data.telegram_bot_token || '',
-        telegram_chat_id: data.telegram_chat_id || ''
+        binance_api_key: data.binance_api_key_actual || '',
+        binance_api_secret: data.binance_api_secret_actual || '',
+        twelvedata_api_key: data.twelvedata_api_key_actual || '',
+        line_notify_token: data.line_notify_token_actual || '',
+        telegram_bot_token: data.telegram_bot_token_actual || '',
+        telegram_chat_id: data.telegram_chat_id || '',
       });
       if (data.theme_id && data.theme_id !== currentTheme) {
-        // Suppress warning if missing from contexts, just try to set it.
         changeTheme(data.theme_id);
       }
     } catch (err) {
@@ -86,12 +99,27 @@ export default function SettingsPage() {
     setIsSaving(true);
     try {
       const payload = {
-        ...settings,
-        theme_id: settings.theme_id || currentTheme
+        theme_id: settings.theme_id || currentTheme,
+        notifications_enabled: settings.notifications_enabled,
+        sound_enabled: settings.sound_enabled,
+        notify_new_trade: settings.notify_new_trade,
+        auto_sync: settings.auto_sync,
+        language: settings.language,
+        timezone: settings.timezone,
+        telegram_chat_id: settings.telegram_chat_id,
       };
-      console.log('Saving settings payload:', payload);
+
+      // Always include API keys so they re-encrypt correctly
+      if (settings.metaapi_token) payload.metaapi_token = settings.metaapi_token;
+      if (settings.binance_api_key) payload.binance_api_key = settings.binance_api_key;
+      if (settings.binance_api_secret) payload.binance_api_secret = settings.binance_api_secret;
+      if (settings.twelvedata_api_key) payload.twelvedata_api_key = settings.twelvedata_api_key;
+      if (settings.line_notify_token) payload.line_notify_token = settings.line_notify_token;
+      if (settings.telegram_bot_token) payload.telegram_bot_token = settings.telegram_bot_token;
+
       await api.updateSettings(payload);
       alert('บันทึกการตั้งค่าเรียบร้อยแล้ว');
+      fetchSettings();
     } catch (err) {
       console.error(err);
       alert('เกิดข้อผิดพลาดในการบันทึก กรุณาลองใหม่อีกครั้ง');
@@ -312,20 +340,31 @@ export default function SettingsPage() {
                         minHeight: '400px',
                         lineHeight: '1.5',
                         resize: 'vertical',
-                        paddingRight: '46px',
+                        paddingRight: '84px',
                         WebkitTextSecurity: showToken ? 'none' : 'disc'
                       }}
                       value={settings.metaapi_token}
                       onChange={(e) => handleLocalUpdate('metaapi_token', e.target.value)}
                     />
-                    <button 
-                      className="btn btn-ghost btn-icon" 
-                      onClick={() => setShowToken(!showToken)}
-                      title={showToken ? 'ซ่อน Token' : 'แสดง Token'}
-                      style={{ position: 'absolute', right: '4px', top: '4px' }}
-                    >
-                      {showToken ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
+                    <div style={{ position: 'absolute', right: '4px', top: '4px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <button 
+                        className="btn btn-ghost btn-icon" 
+                        onClick={() => setShowToken(!showToken)}
+                        title={showToken ? 'ซ่อน Token' : 'แสดง Token'}
+                      >
+                        {showToken ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                      {settings.metaapi_token && (
+                        <button 
+                          className="btn btn-ghost btn-icon" 
+                          onClick={() => handleCopy('metaapi_token')}
+                          title="คัดลอก Token"
+                          style={{ color: copiedField === 'metaapi_token' ? 'var(--profit)' : undefined }}
+                        >
+                          {copiedField === 'metaapi_token' ? <Check size={16} /> : <Copy size={16} />}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -351,17 +390,20 @@ export default function SettingsPage() {
                       className="form-input"
                       type={showToken ? 'text' : 'password'}
                       placeholder="ใส่ Binance API Key"
-                      style={{ width: '100%', paddingRight: '46px' }}
+                      style={{ width: '100%', paddingRight: '80px' }}
                       value={settings.binance_api_key}
                       onChange={(e) => handleLocalUpdate('binance_api_key', e.target.value)}
                     />
-                    <button 
-                      className="btn btn-ghost btn-icon" 
-                      onClick={() => setShowToken(!showToken)}
-                      style={{ position: 'absolute', right: '4px', top: '4px' }}
-                    >
-                      {showToken ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
+                    <div style={{ position: 'absolute', right: '4px', top: '4px', display: 'flex', gap: '2px' }}>
+                      <button className="btn btn-ghost btn-icon" onClick={() => setShowToken(!showToken)} title={showToken ? 'ซ่อน' : 'แสดง'}>
+                        {showToken ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                      {settings.binance_api_key && (
+                        <button className="btn btn-ghost btn-icon" onClick={() => handleCopy('binance_api_key')} title="คัดลอก" style={{ color: copiedField === 'binance_api_key' ? 'var(--profit)' : undefined }}>
+                          {copiedField === 'binance_api_key' ? <Check size={16} /> : <Copy size={16} />}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -378,17 +420,20 @@ export default function SettingsPage() {
                       className="form-input"
                       type={showToken ? 'text' : 'password'}
                       placeholder="ใส่ Binance Secret Key"
-                      style={{ width: '100%', paddingRight: '46px' }}
+                      style={{ width: '100%', paddingRight: '80px' }}
                       value={settings.binance_api_secret}
                       onChange={(e) => handleLocalUpdate('binance_api_secret', e.target.value)}
                     />
-                    <button 
-                      className="btn btn-ghost btn-icon" 
-                      onClick={() => setShowToken(!showToken)}
-                      style={{ position: 'absolute', right: '4px', top: '4px' }}
-                    >
-                      {showToken ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
+                    <div style={{ position: 'absolute', right: '4px', top: '4px', display: 'flex', gap: '2px' }}>
+                      <button className="btn btn-ghost btn-icon" onClick={() => setShowToken(!showToken)} title={showToken ? 'ซ่อน' : 'แสดง'}>
+                        {showToken ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                      {settings.binance_api_secret && (
+                        <button className="btn btn-ghost btn-icon" onClick={() => handleCopy('binance_api_secret')} title="คัดลอก" style={{ color: copiedField === 'binance_api_secret' ? 'var(--profit)' : undefined }}>
+                          {copiedField === 'binance_api_secret' ? <Check size={16} /> : <Copy size={16} />}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -405,17 +450,20 @@ export default function SettingsPage() {
                       className="form-input"
                       type={showToken ? 'text' : 'password'}
                       placeholder="ใส่ TwelveData API Key"
-                      style={{ width: '100%', paddingRight: '46px' }}
+                      style={{ width: '100%', paddingRight: '80px' }}
                       value={settings.twelvedata_api_key}
                       onChange={(e) => handleLocalUpdate('twelvedata_api_key', e.target.value)}
                     />
-                    <button 
-                      className="btn btn-ghost btn-icon" 
-                      onClick={() => setShowToken(!showToken)}
-                      style={{ position: 'absolute', right: '4px', top: '4px' }}
-                    >
-                      {showToken ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
+                    <div style={{ position: 'absolute', right: '4px', top: '4px', display: 'flex', gap: '2px' }}>
+                      <button className="btn btn-ghost btn-icon" onClick={() => setShowToken(!showToken)} title={showToken ? 'ซ่อน' : 'แสดง'}>
+                        {showToken ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                      {settings.twelvedata_api_key && (
+                        <button className="btn btn-ghost btn-icon" onClick={() => handleCopy('twelvedata_api_key')} title="คัดลอก" style={{ color: copiedField === 'twelvedata_api_key' ? 'var(--profit)' : undefined }}>
+                          {copiedField === 'twelvedata_api_key' ? <Check size={16} /> : <Copy size={16} />}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -427,22 +475,27 @@ export default function SettingsPage() {
                       ยิงแจ้งเตือนการเทรดผ่าน LINE — <a href="https://notify-bot.line.me/my/" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-primary)', textDecoration: 'none' }}>รับ Token ที่นี่</a>
                     </div>
                   </div>
-                  <div style={{ position: 'relative', display: 'flex', gap: '12px' }}>
-                    <input
-                      className="form-input"
-                      type={showToken ? 'text' : 'password'}
-                      placeholder="ใส่ Line Notify Token"
-                      style={{ flex: 1, paddingRight: '46px' }}
-                      value={settings.line_notify_token}
-                      onChange={(e) => handleLocalUpdate('line_notify_token', e.target.value)}
-                    />
-                    <button 
-                      className="btn btn-ghost btn-icon" 
-                      onClick={() => setShowToken(!showToken)}
-                      style={{ position: 'absolute', right: '120px', top: '4px' }}
-                    >
-                      {showToken ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <div style={{ flex: 1, position: 'relative' }}>
+                      <input
+                        className="form-input"
+                        type={showToken ? 'text' : 'password'}
+                        placeholder="ใส่ Line Notify Token"
+                        style={{ width: '100%', paddingRight: '80px' }}
+                        value={settings.line_notify_token}
+                        onChange={(e) => handleLocalUpdate('line_notify_token', e.target.value)}
+                      />
+                      <div style={{ position: 'absolute', right: '4px', top: '4px', display: 'flex', gap: '2px' }}>
+                        <button className="btn btn-ghost btn-icon" onClick={() => setShowToken(!showToken)} title={showToken ? 'ซ่อน' : 'แสดง'}>
+                          {showToken ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                        {settings.line_notify_token && (
+                          <button className="btn btn-ghost btn-icon" onClick={() => handleCopy('line_notify_token')} title="คัดลอก" style={{ color: copiedField === 'line_notify_token' ? 'var(--profit)' : undefined }}>
+                            {copiedField === 'line_notify_token' ? <Check size={16} /> : <Copy size={16} />}
+                          </button>
+                        )}
+                      </div>
+                    </div>
                     <button onClick={handleTestLineNotify} className="btn-secondary" style={{ whiteSpace: 'nowrap' }}>
                       ทดสอบการส่ง
                     </button>
@@ -465,17 +518,20 @@ export default function SettingsPage() {
                         className="form-input"
                         type={showToken ? 'text' : 'password'}
                         placeholder="123456789:ABCDEF..."
-                        style={{ width: '100%', paddingRight: '46px' }}
+                        style={{ width: '100%', paddingRight: '80px' }}
                         value={settings.telegram_bot_token}
                         onChange={(e) => handleLocalUpdate('telegram_bot_token', e.target.value)}
                       />
-                      <button 
-                        className="btn btn-ghost btn-icon" 
-                        onClick={() => setShowToken(!showToken)}
-                        style={{ position: 'absolute', right: '4px', top: '22px' }}
-                      >
-                        {showToken ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </button>
+                      <div style={{ position: 'absolute', right: '4px', top: '22px', display: 'flex', gap: '2px' }}>
+                        <button className="btn btn-ghost btn-icon" onClick={() => setShowToken(!showToken)} title={showToken ? 'ซ่อน' : 'แสดง'}>
+                          {showToken ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                        {settings.telegram_bot_token && (
+                          <button className="btn btn-ghost btn-icon" onClick={() => handleCopy('telegram_bot_token')} title="คัดลอก" style={{ color: copiedField === 'telegram_bot_token' ? 'var(--profit)' : undefined }}>
+                            {copiedField === 'telegram_bot_token' ? <Check size={16} /> : <Copy size={16} />}
+                          </button>
+                        )}
+                      </div>
                     </div>
 
                     <div style={{ flex: 1 }}>

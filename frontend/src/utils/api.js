@@ -9,7 +9,14 @@ export function setToken(token) {
 }
 
 export function clearToken() {
-  localStorage.removeItem('nexusfx_token');
+  const theme = localStorage.getItem('nexusfx_theme');
+  const sidebar = localStorage.getItem('nexusfx_sidebar_collapsed');
+  
+  localStorage.clear();
+  sessionStorage.clear();
+  
+  if (theme) localStorage.setItem('nexusfx_theme', theme);
+  if (sidebar) localStorage.setItem('nexusfx_sidebar_collapsed', sidebar);
 }
 
 async function request(endpoint, options = {}) {

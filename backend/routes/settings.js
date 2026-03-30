@@ -32,18 +32,23 @@ router.get('/', async (req, res) => {
 
     // Decrypt sensitive fields for display (masked)
     const settings = result.rows[0];
-    const decrypted = { ...settings };
+    const response = { ...settings };
 
-    // Return masked versions for display, not raw keys
-    if (settings.metaapi_token) decrypted.metaapi_token_masked = mask(decrypt(settings.metaapi_token));
-    if (settings.binance_api_key) decrypted.binance_api_key_masked = mask(decrypt(settings.binance_api_key));
-    if (settings.binance_api_secret) decrypted.binance_api_secret_masked = mask(decrypt(settings.binance_api_secret));
-    if (settings.twelvedata_api_key) decrypted.twelvedata_api_key_masked = mask(decrypt(settings.twelvedata_api_key));
-    if (settings.line_notify_token) decrypted.line_notify_token_masked = mask(decrypt(settings.line_notify_token));
-    if (settings.telegram_bot_token) decrypted.telegram_bot_token_masked = mask(decrypt(settings.telegram_bot_token));
-    if (settings.telegram_chat_id) decrypted.telegram_chat_id = settings.telegram_chat_id; // Un-encrypted or simple string
+    // Decrypt actual values for the frontend to use (copy feature)
+    const sensitiveFields = ['metaapi_token', 'binance_api_key', 'binance_api_secret', 'twelvedata_api_key', 'line_notify_token', 'telegram_bot_token'];
+    for (const field of sensitiveFields) {
+      if (settings[field]) {
+        const decryptedVal = decrypt(settings[field]);
+        response[`${field}_masked`] = mask(decryptedVal);
+        response[`${field}_actual`] = decryptedVal; // actual value for copy
+      }
+      // Remove the raw encrypted value from response to prevent leaking ciphertext
+      delete response[field];
+    }
+    // telegram_chat_id is not encrypted
+    response.telegram_chat_id = settings.telegram_chat_id || '';
 
-    res.json(decrypted);
+    res.json(response);
   } catch (err) {
     console.error('Get settings error:', err);
     res.status(500).json({ error: 'Internal server error' });
