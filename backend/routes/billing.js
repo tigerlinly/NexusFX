@@ -99,10 +99,12 @@ router.post('/upgrade', auditLog('PURCHASE_SUBSCRIPTION', 'BILLING'), async (req
       [walletId, req.user.id, 'FEE', -selectedPlan.monthly_price, 'COMPLETED', `Subscription: ${selectedPlan.plan_name}`]
     );
 
+    const days = planId === 'free' ? 15 : 30;
+
     // Record subscription history
     await client.query(
-      `INSERT INTO subscription_history (user_id, plan_id, amount, payment_status, payment_method)
-       VALUES ($1, $2, $3, 'COMPLETED', 'WALLET')`,
+      `INSERT INTO subscription_history (user_id, plan_id, amount, payment_status, payment_method, period_end)
+       VALUES ($1, $2, $3, 'COMPLETED', 'WALLET', NOW() + INTERVAL '${days} days')`,
       [req.user.id, selectedPlan.id, selectedPlan.monthly_price]
     );
 
