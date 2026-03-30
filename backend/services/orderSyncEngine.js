@@ -61,7 +61,7 @@ class OrderSyncEngine {
     );
     const dbOpenTrades = dbOpenTradesResult.rows;
 
-    // 2. Fetch live MT5 positions
+    // 2. Fetch live MT5 positions + account info
     let livePositions = [];
     try {
       const api = metaApiService.getApi(metaapi_token);
@@ -73,6 +73,31 @@ class OrderSyncEngine {
       await connection.waitSynchronized();
       
       livePositions = await connection.getPositions();
+
+      // Also sync account info (name, type, balance, equity)
+      try {
+        const info = await connection.getAccountInformation();
+        const accountName = mt5account.name || '';
+        const accountType = mt5account.accountType || info.type || info.tradeMode || '';
+        
+        await pool.query(
+          `UPDATE accounts SET 
+            balance = $1, equity = $2,
+            leverage = COALESCE($3, leverage),
+            server = COALESCE(NULLIF($4, ''), server),
+            currency = COALESCE(NULLIF($5, ''), currency),
+            account_name = COALESCE(NULLIF($6, ''), account_name),
+            account_type = COALESCE(NULLIF($7, ''), account_type),
+            is_connected = true, last_sync_at = NOW()
+          WHERE id = $8`,
+          [info.balance, info.equity, info.leverage, info.server || mt5account.server, 
+           info.currency, accountName, accountType, account_id]
+        );
+      } catch (infoErr) {
+        console.warn(`[OrderSyncEngine] Could not sync account info for ${account_id}:`, infoErr.message);
+      }
+
+      try { await connection.close(); } catch (e) { /* ignore */ }
       
     } catch (apiErr) {
        console.warn(`[OrderSyncEngine] Could not pull positions from MetaAPI for acct ${metaapi_account_id}`);
