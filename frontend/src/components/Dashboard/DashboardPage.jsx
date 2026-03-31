@@ -418,7 +418,7 @@ export default function DashboardPage() {
             </div>
           );
           return (
-            <div className="chart-card">
+            <div className="chart-card" style={{ marginTop: 24, marginBottom: 24 }}>
               <h3 className="chart-title" style={{ marginBottom: 'var(--space-lg)' }}>สรุปแยกบัญชี</h3>
               <div className="data-table-wrapper" style={{ border: 'none' }}>
                 <table className="data-table">
