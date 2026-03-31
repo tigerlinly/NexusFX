@@ -220,11 +220,12 @@ export default function NotificationBell() {
         .notif-item .notif-title {
           font-size: 12px; font-weight: 600;
           color: var(--text-primary);
-          margin-bottom: 2px;
+          margin-bottom: 4px;
         }
         .notif-item .notif-message {
           font-size: 11px; color: var(--text-secondary);
-          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+          line-height: 1.4;
+          word-break: break-word; /* Allows long messages to wrap gracefully */
         }
         .notif-item .notif-time {
           font-size: 10px; color: var(--text-tertiary);

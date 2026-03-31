@@ -395,7 +395,7 @@ a:hover { text-decoration: underline; }
   flex-direction: column;
   transition: width var(--transition-base), min-width var(--transition-base);
   z-index: var(--z-sticky);
-  overflow-x: hidden;
+  /* overflow-x: hidden; removed to allow notification panel to overflow */
 }
 
 .sidebar.collapsed {
