@@ -384,8 +384,13 @@ export default function DashboardPage() {
             });
 
             Object.entries(groupedByMonth).forEach(([monthKey, days]) => {
-              const midIndex = Math.floor(days.length / 2);
-              monthLabels.push({ date: days[midIndex].date, label: monthKey });
+              // พยายามหาวันที่ 15 ของเดือน ถ้ายาวเต็มเดือน จะได้อยู่ตรงกลางเป๊ะๆ
+              let targetDay = days[Math.floor(days.length / 2)];
+              const fifteenth = days.find(d => new Date(d.date).getDate() === 15);
+              if (fifteenth) {
+                targetDay = fifteenth;
+              }
+              monthLabels.push({ date: targetDay.date, label: monthKey });
             });
           }
 
@@ -421,8 +426,8 @@ export default function DashboardPage() {
                   </div>
                 </div>
               </div>
-              <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={chartData} margin={{ top: 35, right: 15, left: -20, bottom: 0 }}>
+              <ResponsiveContainer width="100%" height={320}>
+                <AreaChart data={chartData} margin={{ top: 55, right: 30, left: -20, bottom: 5 }}>
                   <defs>
                     <linearGradient id="pnlGradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="var(--accent-primary)" stopOpacity={0.3} />
@@ -439,7 +444,7 @@ export default function DashboardPage() {
                   ))}
                   {monthLabels.map(m => (
                     <ReferenceLine key={`label-${m.date}`} x={m.date} stroke="none">
-                      <Label value={m.label} position="top" fill="var(--accent-secondary)" fontSize={11} offset={10} />
+                      <Label value={m.label} position="top" fill="var(--accent-secondary)" fontSize={12} offset={25} />
                     </ReferenceLine>
                   ))}
                   <Area type="monotone" dataKey="pnl" stroke="var(--accent-primary)" fill="url(#pnlGradient)" strokeWidth={2} />
