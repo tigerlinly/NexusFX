@@ -162,7 +162,8 @@ export default function TradeHistoryPage() {
       alert('กรุณาเลือก "บัญชี" (Account) ที่ต้องการอัพเดตข้อมูลจากการตั้งค่าด้านบนก่อน');
       return;
     }
-    if (!window.confirm('ระบบจะดึงข้อมูลประวัติการเทรดล่าสุดจาก Broker\nต้องการดำเนินการต่อหรือไม่?')) return;
+    const confirmed = await window.customConfirm('ระบบจะดึงข้อมูลประวัติการเทรดล่าสุดจาก Broker\nต้องการดำเนินการต่อหรือไม่?');
+    if (!confirmed) return;
     
     setSyncing(true);
     try {

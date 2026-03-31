@@ -141,8 +141,10 @@ class MetaApiService {
       await connection.waitSynchronized();
 
       console.log(`📥 [MetaAPI] Fetching deals for ${accountId} from ${startTimeStr} to ${endTimeStr}`);
-      const history = await connection.getDealsByTimeRange(startTimeStr, endTimeStr);
-      return history || [];
+      const historyData = await connection.getDealsByTimeRange(startTimeStr, endTimeStr);
+      // Depending on the MetaApi version and specific endpoint, this may return an array directly or an object like { deals: [...] }
+      const history = Array.isArray(historyData) ? historyData : (historyData?.deals || historyData?.history || []);
+      return history;
     } catch (err) {
       console.error(`❌ [MetaAPI] getTradeHistory Error for ${accountId}:`, err.message);
       throw err;
