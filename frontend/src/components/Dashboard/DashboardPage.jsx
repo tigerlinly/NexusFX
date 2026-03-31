@@ -362,16 +362,30 @@ export default function DashboardPage() {
           );
 
         case 'chart': {
-          const monthMarkers = [];
+          const boundaryLines = [];
+          const monthLabels = [];
           if (chartData && chartData.length > 0) {
             let currentMonth = null;
+            const groupedByMonth = {};
+            
             chartData.forEach((d) => {
               const dateObj = new Date(d.date);
               const monthKey = `${dateObj.getFullYear()}/${(dateObj.getMonth() + 1).toString().padStart(2, '0')}`;
+              
+              if (!groupedByMonth[monthKey]) groupedByMonth[monthKey] = [];
+              groupedByMonth[monthKey].push(d);
+
               if (monthKey !== currentMonth) {
-                monthMarkers.push({ date: d.date, label: monthKey });
+                if (currentMonth !== null) {
+                  boundaryLines.push({ date: d.date });
+                }
                 currentMonth = monthKey;
               }
+            });
+
+            Object.entries(groupedByMonth).forEach(([monthKey, days]) => {
+              const midIndex = Math.floor(days.length / 2);
+              monthLabels.push({ date: days[midIndex].date, label: monthKey });
             });
           }
 
@@ -408,7 +422,7 @@ export default function DashboardPage() {
                 </div>
               </div>
               <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={chartData} margin={{ top: 35, right: 0, left: -20, bottom: 0 }}>
+                <AreaChart data={chartData} margin={{ top: 35, right: 15, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="pnlGradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="var(--accent-primary)" stopOpacity={0.3} />
@@ -420,9 +434,12 @@ export default function DashboardPage() {
                   <YAxis tickCount={10} tick={{ fill: 'var(--text-tertiary)', fontSize: 11 }} tickFormatter={(val) => { const abs = Math.abs(val); return abs >= 1000 ? (val / 1000).toLocaleString() + 'K' : val; }} />
                   <Tooltip content={<CustomTooltip />} />
                   <ReferenceLine y={0} stroke="#ffffff" strokeDasharray="3 3" />
-                  {monthMarkers.map(m => (
-                    <ReferenceLine key={m.date} x={m.date} stroke="var(--accent-secondary)" strokeOpacity={0.6} strokeDasharray="4 4">
-                      <Label value={m.label} position="insideTopLeft" fill="var(--accent-secondary)" fontSize={11} offset={8} dy={-25} />
+                  {boundaryLines.map(m => (
+                    <ReferenceLine key={`bound-${m.date}`} x={m.date} stroke="var(--accent-secondary)" strokeOpacity={0.6} strokeDasharray="4 4" />
+                  ))}
+                  {monthLabels.map(m => (
+                    <ReferenceLine key={`label-${m.date}`} x={m.date} stroke="none">
+                      <Label value={m.label} position="top" fill="var(--accent-secondary)" fontSize={11} offset={10} />
                     </ReferenceLine>
                   ))}
                   <Area type="monotone" dataKey="pnl" stroke="var(--accent-primary)" fill="url(#pnlGradient)" strokeWidth={2} />
