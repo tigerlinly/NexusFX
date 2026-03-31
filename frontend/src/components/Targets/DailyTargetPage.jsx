@@ -197,9 +197,11 @@ export default function DailyTargetPage() {
                     fontSize: 22, fontWeight: 700,
                     color: currentPnl >= 0 ? 'var(--profit)' : 'var(--loss)'
                   }}>
-                    {currentPnl >= 0 ? '+' : ''}${Math.abs(currentPnl).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {currentPnl > 0 ? '+' : currentPnl < 0 ? '-' : ''}${Math.abs(currentPnl).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
-                  <span className="font-mono" style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
+                  <span className="font-mono" style={{
+                    fontSize: 22, fontWeight: 700, color: 'var(--text-secondary)'
+                  }}>
                     / ${parseFloat(t.target_amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>

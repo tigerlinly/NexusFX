@@ -294,10 +294,14 @@ export default function DashboardPage() {
                         เป้ากำไรวันนี้ {t.account_name ? `(${t.account_name})` : '(รวมทั้งหมด)'} <span style={{ color: 'var(--text-tertiary)', fontWeight: 'normal', marginLeft: 6 }}>{t.progress.toFixed(1)}%</span>
                       </span>
                     </div>
-                    <div>
-                      <span className="target-pnl" style={{ color: t.current_pnl >= 0 ? 'var(--profit)' : 'var(--loss)' }}>{formatCurrency(t.current_pnl)}</span>
-                      <span style={{ color: 'var(--text-tertiary)', fontSize: 14, margin: '0 6px' }}>/</span>
-                      <span className="target-amount" style={{ color: 'var(--text-primary)', fontSize: 20 }}>${parseFloat(t.target_amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <div className="flex items-baseline">
+                      <span className="target-pnl" style={{ color: t.current_pnl >= 0 ? 'var(--profit)' : 'var(--loss)' }}>
+                        {t.current_pnl > 0 ? '+' : t.current_pnl < 0 ? '-' : ''}{formatCurrency(Math.abs(t.current_pnl))}
+                      </span>
+                      <span style={{ color: 'var(--text-tertiary)', fontSize: 24, margin: '0 8px', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>/</span>
+                      <span className="target-amount" style={{ color: 'var(--text-secondary)', fontSize: 24, fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>
+                        ${parseFloat(t.target_amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
                     </div>
                   </div>
                   <div className="progress-bar">
