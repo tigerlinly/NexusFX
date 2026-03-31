@@ -259,7 +259,7 @@ router.get('/heatmap', async (req, res) => {
     const { view = 'all', broker_id, account_id, days = 30 } = req.query;
     const accountIds = await getFilteredAccountIds(req.user.id, view, broker_id, account_id);
 
-    if (accountIds.length === 0) return res.json({ symbols: [], accounts: [] });
+    if (accountIds.length === 0) return res.json({ symbols: [], accounts: [], hourly: [] });
 
     // 1. Symbol-level aggregation (open + recent closed)
     const symbolData = await pool.query(`

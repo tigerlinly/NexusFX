@@ -48,9 +48,13 @@ export default function HeatmapPage() {
     return Math.max(1, Math.min(3, Math.ceil((lots / maxLots) * 3)));
   };
 
-  const maxLots = data.symbols.length > 0 ? Math.max(...data.symbols.map(s => s.total_lots), 1) : 1;
-  const maxPnl = data.symbols.length > 0 ? Math.max(...data.symbols.map(s => Math.abs(s.total_pnl)), 1) : 1;
-  const maxHourlyTrades = data.hourly.length > 0 ? Math.max(...data.hourly.map(h => h.trade_count), 1) : 1;
+  const symbols = data?.symbols || [];
+  const hourly = data?.hourly || [];
+  const accounts = data?.accounts || [];
+
+  const maxLots = symbols.length > 0 ? Math.max(...symbols.map(s => s.total_lots), 1) : 1;
+  const maxPnl = symbols.length > 0 ? Math.max(...symbols.map(s => Math.abs(s.total_pnl)), 1) : 1;
+  const maxHourlyTrades = hourly.length > 0 ? Math.max(...hourly.map(h => h.trade_count), 1) : 1;
 
   return (
     <>
@@ -100,7 +104,7 @@ export default function HeatmapPage() {
                 </div>
               </div>
 
-              {data.symbols.length === 0 ? (
+              {symbols.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: 'var(--space-xl)', color: 'var(--text-tertiary)' }}>ไม่มีข้อมูลเทรดในช่วงเวลานี้</div>
               ) : (
                 <div style={{
@@ -108,7 +112,7 @@ export default function HeatmapPage() {
                   gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
                   gap: 'var(--space-sm)',
                 }}>
-                  {data.symbols.map(sym => {
+                  {symbols.map(sym => {
                     const intensity = Math.abs(sym.total_pnl) / maxPnl;
                     const sizeClass = getBlockSize(sym.total_lots, maxLots);
                     const hasOpen = sym.open_lots > 0;
@@ -197,7 +201,7 @@ export default function HeatmapPage() {
                 gridTemplateColumns: 'repeat(24, 1fr)',
                 gap: 3,
               }}>
-                {data.hourly.map(h => {
+                {hourly.map(h => {
                   const intensity = h.trade_count / maxHourlyTrades;
                   return (
                     <div
@@ -241,7 +245,7 @@ export default function HeatmapPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {data.accounts.map(acc => {
+                    {accounts.map(acc => {
                       const riskLevel = acc.total_exposure > 10 ? 'high' : acc.total_exposure > 5 ? 'medium' : 'low';
                       const riskColors = { high: 'var(--loss)', medium: 'var(--warning)', low: 'var(--profit)' };
                       const riskLabels = { high: 'สูง', medium: 'ปานกลาง', low: 'ต่ำ' };
@@ -268,7 +272,7 @@ export default function HeatmapPage() {
                         </tr>
                       );
                     })}
-                    {data.accounts.length === 0 && (
+                    {accounts.length === 0 && (
                       <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-tertiary)' }}>ไม่มีบัญชีที่ใช้งาน</td></tr>
                     )}
                   </tbody>
