@@ -2,6 +2,7 @@ const { pool } = require('../config/database');
 const crypto = require('crypto');
 const LineNotify = require('./lineNotify');
 const TelegramNotify = require('./telegramNotify');
+const riskCalculator = require('./riskCalculator');
 
 class ExecutionEngine {
   constructor() {
@@ -59,11 +60,15 @@ class ExecutionEngine {
           const metaApiAccountId = order.metaapi_account_id;
 
           let executionResult = false;
-          let executionPrice = order.price || 'Market';
+          let executionPrice = order.price || null;
           let filled_qty = order.quantity;
-          
+          let exchangeOrderId = null;
+
           if (order.broker_name && order.broker_name.toLowerCase() === 'binance') {
             executionResult = await this.executeBinance(order, userKey, userSecret);
+            if (executionResult && executionResult.price) {
+              executionPrice = parseFloat(executionResult.price);
+            }
           } else {
             // MT5 Broker (e.g. Exness, IC Markets)
             const metaApiService = require('./metaApiService');
@@ -71,19 +76,66 @@ class ExecutionEngine {
               throw new Error('MetaApi Token or Account ID is missing');
             }
             const mt5Result = await metaApiService.executeTrade(metaApiAccountId, metaApiToken, order);
-            executionResult = mt5Result ? true : false;
+            if (mt5Result) {
+              executionResult = true;
+              exchangeOrderId = mt5Result.positionId || mt5Result.orderId || null;
+              executionPrice = mt5Result.openPrice || mt5Result.price || null;
+            }
           }
 
           if (executionResult) {
+            // คำนวณ SL/TP จาก entry price ที่รู้ตอน fill
+            let finalSL = order.stop_loss;
+            let finalTP = order.take_profit;
+
+            if (executionPrice && executionPrice > 0) {
+              const strategyType = order.strategy_type || 'Custom';
+              const recalculated = riskCalculator.calculate(
+                strategyType,
+                order.symbol,
+                order.side,
+                executionPrice,
+                {
+                  sl_pips: order.sl_pips,
+                  tp_ratio: order.tp_pips && order.sl_pips ? (order.tp_pips / order.sl_pips) : undefined,
+                  trail_trigger_pips: order.trail_trigger_pips,
+                  trail_distance_pips: order.trailing_distance_pips,
+                  breakeven_trigger_pips: order.breakeven_trigger_pips,
+                }
+              );
+              finalSL = recalculated.stop_loss;
+              finalTP = recalculated.take_profit;
+            }
+
             await pool.query(
-              `UPDATE orders SET status = 'FILLED', filled_at = NOW(), filled_quantity = quantity WHERE id = $1`,
-              [order.id]
+              `UPDATE orders SET
+                 status = 'FILLED',
+                 filled_at = NOW(),
+                 filled_quantity = quantity,
+                 entry_price = COALESCE($2, price),
+                 stop_loss = COALESCE($3, stop_loss),
+                 take_profit = COALESCE($4, take_profit),
+                 current_sl = COALESCE($3, stop_loss),
+                 current_tp = COALESCE($4, take_profit),
+                 peak_price = COALESCE($2, price),
+                 exchange_order_id = COALESCE($5, exchange_order_id),
+                 updated_at = NOW()
+               WHERE id = $1`,
+              [order.id, executionPrice, finalSL, finalTP, exchangeOrderId]
             );
-            
+
+            const slInfo = finalSL ? `\nSL: ${finalSL}` : '';
+            const tpInfo = finalTP ? `\nTP: ${finalTP}` : '';
+            const rrInfo = order.risk_reward ? ` [${order.risk_reward}]` : '';
+
             // Notify user via LINE & Telegram + In-App
             await Promise.all([
-              LineNotify.sendAlert(order.user_id, `✅ Trade Executed!\nSymbol: ${order.symbol}\nSide: ${order.side}\nPrice: ${executionPrice}\nQuantity: ${filled_qty}`),
-              TelegramNotify.sendAlert(order.user_id, `✅ Trade Executed!\nSymbol: ${order.symbol}\nSide: ${order.side}\nPrice: ${executionPrice}\nQuantity: ${filled_qty}`),
+              LineNotify.sendAlert(order.user_id,
+                `✅ Trade Executed!\nSymbol: ${order.symbol}\nSide: ${order.side}\nEntry: ${executionPrice || 'Market'}\nQty: ${filled_qty}${slInfo}${tpInfo}${rrInfo}\n📈 Trailing Stop: ON`
+              ),
+              TelegramNotify.sendAlert(order.user_id,
+                `✅ Trade Executed!\nSymbol: ${order.symbol}\nSide: ${order.side}\nEntry: ${executionPrice || 'Market'}\nQty: ${filled_qty}${slInfo}${tpInfo}${rrInfo}\n📈 Trailing Stop: ON`
+              ),
               this.notificationService ? this.notificationService.tradeExecuted(order.user_id, order) : Promise.resolve()
             ]).catch(err => console.warn('Notification error:', err));
           }

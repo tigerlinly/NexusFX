@@ -265,13 +265,28 @@ async function initDatabase() {
         price DECIMAL(18,6),
         quantity DECIMAL(18,6),
         filled_quantity DECIMAL(18,6) DEFAULT 0,
+        entry_price DECIMAL(18,6),
         stop_loss DECIMAL(18,6),
         take_profit DECIMAL(18,6),
+        current_sl DECIMAL(18,6),
+        current_tp DECIMAL(18,6),
+        pip_size DECIMAL(12,6) DEFAULT 0.0001,
+        trailing_stop_enabled BOOLEAN DEFAULT false,
+        trailing_distance_pips DECIMAL(10,2),
+        trail_trigger_pips DECIMAL(10,2),
+        breakeven_trigger_pips DECIMAL(10,2),
+        breakeven_triggered BOOLEAN DEFAULT false,
+        peak_price DECIMAL(18,6),
+        trailing_log JSONB DEFAULT '[]'::jsonb,
+        sl_pips DECIMAL(10,2),
+        tp_pips DECIMAL(10,2),
+        risk_reward VARCHAR(20),
         status VARCHAR(20) DEFAULT 'PENDING',
         error_message TEXT,
         filled_at TIMESTAMPTZ,
         cancelled_at TIMESTAMPTZ,
-        created_at TIMESTAMPTZ DEFAULT NOW()
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
 
@@ -279,10 +294,25 @@ async function initDatabase() {
     try {
       await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE SET NULL;`);
       await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS bot_id INTEGER REFERENCES trading_bots(id) ON DELETE SET NULL;`);
+      await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS entry_price DECIMAL(18,6);`);
       await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS stop_loss DECIMAL(18,6);`);
       await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS take_profit DECIMAL(18,6);`);
+      await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS current_sl DECIMAL(18,6);`);
+      await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS current_tp DECIMAL(18,6);`);
+      await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS pip_size DECIMAL(12,6) DEFAULT 0.0001;`);
+      await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS trailing_stop_enabled BOOLEAN DEFAULT false;`);
+      await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS trailing_distance_pips DECIMAL(10,2);`);
+      await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS trail_trigger_pips DECIMAL(10,2);`);
+      await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS breakeven_trigger_pips DECIMAL(10,2);`);
+      await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS breakeven_triggered BOOLEAN DEFAULT false;`);
+      await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS peak_price DECIMAL(18,6);`);
+      await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS trailing_log JSONB DEFAULT '[]'::jsonb;`);
+      await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS sl_pips DECIMAL(10,2);`);
+      await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS tp_pips DECIMAL(10,2);`);
+      await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS risk_reward VARCHAR(20);`);
       await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS type VARCHAR(20);`);
       await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS error_message TEXT;`);
+      await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();`);
     } catch (e) { /* ignore */ }
 
     // =============================================

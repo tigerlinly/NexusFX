@@ -17,6 +17,7 @@ const metrics = require('./services/metrics');
 const FeeTracker = require('./services/feeTracker');
 const mockBotEngine = require('./services/mockBotEngine');
 const orderSyncEngine = require('./services/orderSyncEngine');
+const trailingStopEngine = require('./services/trailingStopEngine');
 
 const app = express();
 app.set('trust proxy', 1); // Trust first proxy (Nginx) to get correct Client IP for rate limiting
@@ -242,6 +243,8 @@ async function start() {
     riskEngine.start();
     mockBotEngine.setIo(io);
     mockBotEngine.start();
+    trailingStopEngine.setIo(io);
+    trailingStopEngine.start();
 
     server.listen(PORT, () => {
       console.log(`\n🚀 NexusFX Backend running on http://localhost:${PORT}`);
