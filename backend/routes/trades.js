@@ -293,4 +293,84 @@ router.post('/', auditLog('PLACE_TRADE', 'ORDER'), async (req, res) => {
   }
 });
 
+// POST /api/trades/sync/:accountId
+router.post('/sync/:accountId', auditLog('SYNC_TRADES', 'ACCOUNT'), async (req, res) => {
+  try {
+    const accountId = req.params.accountId;
+    
+    // Get account and metaapi_token
+    const accQuery = await pool.query(`
+      SELECT a.id, a.metaapi_account_id, us.metaapi_token
+      FROM accounts a
+      LEFT JOIN user_settings us ON us.user_id = a.user_id
+      WHERE a.id = $1 AND a.user_id = $2 AND a.is_active = true
+    `, [accountId, req.user.id]);
+
+    if (accQuery.rows.length === 0) {
+      return res.status(404).json({ error: 'Account not found' });
+    }
+
+    const { metaapi_account_id, metaapi_token } = accQuery.rows[0];
+    const token = metaapi_token || process.env.METAAPI_TOKEN;
+
+    if (!metaapi_account_id || !token) {
+      return res.status(400).json({ error: 'Missing MetaAPI configuration' });
+    }
+
+    // Default to last 30 days
+    const startTime = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+    const endTime = new Date().toISOString();
+
+    const metaApiService = require('../services/metaApiService');
+    const history = await metaApiService.getTradeHistory(metaapi_account_id, token, startTime, endTime);
+
+    const closedDeals = history.filter(d => 
+      d.entryType === 'DEAL_ENTRY_OUT' || d.entryType === 'DEAL_ENTRY_OUT_BY'
+    );
+
+    let syncedCount = 0;
+    for (const deal of closedDeals) {
+      // For OUT deals, type SELL means long position closed.
+      const isSellDeal = deal.type === 'DEAL_TYPE_SELL'; 
+      const originalSide = isSellDeal ? 'BUY' : 'SELL';
+
+      const ticket = (deal.id || deal.positionId || '').toString();
+      const symbol = deal.symbol || 'Unknown';
+      const lotSize = deal.volume || 0;
+      const pnl = deal.profit || 0;
+      const commission = deal.commission || 0;
+      const swap = deal.swap || 0;
+      const exitPrice = deal.price || 0;
+      // Default to slightly in the past if deal time is missing
+      const closedAt = deal.time || deal.brokerTime || new Date().toISOString();
+      const magic = deal.magic || deal.magicNumber || null;
+      
+      const insertQuery = `
+        INSERT INTO trades (
+          account_id, ticket, symbol, side, lot_size, exit_price, pnl, commission, swap, 
+          closed_at, opened_at, status, magic_number
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10, 'CLOSED', $11)
+        ON CONFLICT (account_id, ticket) DO UPDATE SET
+          pnl = EXCLUDED.pnl,
+          exit_price = EXCLUDED.exit_price,
+          commission = EXCLUDED.commission,
+          swap = EXCLUDED.swap,
+          status = 'CLOSED'
+      `;
+      await pool.query(insertQuery, [
+        accountId, ticket, symbol, originalSide, lotSize, exitPrice, pnl, commission, swap, closedAt, magic
+      ]);
+      syncedCount++;
+    }
+
+    // Update last_sync_at
+    await pool.query(`UPDATE accounts SET last_sync_at = NOW() WHERE id = $1`, [accountId]);
+
+    res.json({ success: true, message: `Synced ${syncedCount} closed trades from broker`, synced_count: syncedCount });
+  } catch (err) {
+    console.error('Sync trades error:', err);
+    res.status(500).json({ error: 'Failed to sync trades from broker: ' + err.message });
+  }
+});
+
 module.exports = router;

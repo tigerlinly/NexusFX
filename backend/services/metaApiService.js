@@ -124,6 +124,34 @@ class MetaApiService {
       }
     }
   }
+
+  // Get historical trade records
+  async getTradeHistory(accountId, token, startTimeStr, endTimeStr) {
+    let connection;
+    try {
+      const api = this.getApi(token);
+      const account = await api.metatraderAccountApi.getAccount(accountId);
+      
+      if (account.state !== 'DEPLOYED') {
+        await account.deploy();
+      }
+
+      connection = account.getRPCConnection();
+      await connection.connect();
+      await connection.waitSynchronized();
+
+      console.log(`📥 [MetaAPI] Fetching deals for ${accountId} from ${startTimeStr} to ${endTimeStr}`);
+      const history = await connection.getDealsByTimeRange(startTimeStr, endTimeStr);
+      return history || [];
+    } catch (err) {
+      console.error(`❌ [MetaAPI] getTradeHistory Error for ${accountId}:`, err.message);
+      throw err;
+    } finally {
+      if (connection) {
+        try { await connection.close(); } catch(e) {}
+      }
+    }
+  }
 }
 
 module.exports = new MetaApiService();

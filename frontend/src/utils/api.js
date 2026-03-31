@@ -73,6 +73,7 @@ export const api = {
   getTradeStats: (params) => request(`/trades/stats?${new URLSearchParams(params)}`),
   getSymbols: () => request('/trades/symbols'),
   placeManualTrade: (body) => request('/trades', { method: 'POST', body: JSON.stringify(body) }),
+  syncTrades: (accountId) => request(`/trades/sync/${accountId}`, { method: 'POST' }),
 
   // Bots
   getBots: () => request('/bots'),

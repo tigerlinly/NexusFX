@@ -3,7 +3,7 @@ import { useAccounts } from '../../context/AccountContext';
 import { api } from '../../utils/api';
 import AccountFilter from '../Dashboard/AccountFilter';
 import {
-  Search, Download, ArrowUpDown, Filter,
+  Search, Download, ArrowUpDown, Filter, RefreshCw,
   TrendingUp, TrendingDown, BarChart3, Award, Bot, Hand
 } from 'lucide-react';
 
@@ -16,13 +16,28 @@ export default function TradeHistoryPage() {
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+
+  // Function to get "today" string YYYY-MM-DD
+  const getTodayStr = () => {
+    const d = new Date();
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    return d.toISOString().split('T')[0];
+  };
 
   // Filters
   const [symbolFilter, setSymbolFilter] = useState('');
   const [sideFilter, setSideFilter] = useState('');
   const [sourceFilter, setSourceFilter] = useState('');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  
+  // Date Filters
+  const [dateMode, setDateMode] = useState('day'); // 'day', 'week', 'month'
+  const [dateFrom, setDateFrom] = useState(getTodayStr());
+  const [dateTo, setDateTo] = useState(getTodayStr());
+
+  const [dateWeek, setDateWeek] = useState(''); // e.g., '2023-W01'
+  const [dateMonth, setDateMonth] = useState(''); // e.g., '2023-01'
+
   const [sortBy, setSortBy] = useState('closed_at');
   const [sortDir, setSortDir] = useState('DESC');
 
@@ -64,6 +79,84 @@ export default function TradeHistoryPage() {
 
   useEffect(() => { fetchData(); }, [viewMode, selectedBrokerId, selectedAccountId, page, sortBy, sortDir, symbolFilter, sideFilter, sourceFilter, dateFrom, dateTo]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Handle date mode shifts
+  useEffect(() => {
+    if (dateMode === 'day') {
+      const today = getTodayStr();
+      setDateFrom(today);
+      setDateTo(today);
+    } else if (dateMode === 'week') {
+      // Sets the week based on current date
+      const d = new Date();
+      d.setHours(0, 0, 0, 0);
+      d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
+      const week1 = new Date(d.getFullYear(), 0, 4);
+      const w = 1 + Math.round(((d.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+      const weekStr = `${d.getFullYear()}-W${w.toString().padStart(2, '0')}`;
+      setDateWeek(weekStr);
+      handleWeekChange(weekStr);
+    } else if (dateMode === 'month') {
+      // Sets the month based on current date
+      const d = new Date();
+      const monthStr = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`;
+      setDateMonth(monthStr);
+      handleMonthChange(monthStr);
+    }
+  }, [dateMode]);
+
+  const handleWeekChange = (val) => {
+    setDateWeek(val);
+    if (!val) {
+       setDateFrom(''); setDateTo(''); return;
+    }
+    const [year, week] = val.split('-W');
+    const simple = new Date(year, 0, 1 + (week - 1) * 7);
+    const dow = simple.getDay();
+    const ISOweekStart = simple;
+    if (dow <= 4) ISOweekStart.setDate(simple.getDate() - simple.getDay() + 1);
+    else ISOweekStart.setDate(simple.getDate() + 8 - simple.getDay());
+    
+    const ISOweekEnd = new Date(ISOweekStart);
+    ISOweekEnd.setDate(ISOweekStart.getDate() + 6);
+    
+    setDateFrom(ISOweekStart.toISOString().split('T')[0]);
+    setDateTo(ISOweekEnd.toISOString().split('T')[0]);
+    setPage(1);
+  };
+
+  const handleMonthChange = (val) => {
+    setDateMonth(val);
+    if (!val) {
+       setDateFrom(''); setDateTo(''); return;
+    }
+    const [year, month] = val.split('-');
+    const firstDay = new Date(year, month - 1, 1);
+    const lastDay = new Date(year, month, 0);
+    
+    setDateFrom(firstDay.toISOString().split('T')[0]);
+    setDateTo(lastDay.toISOString().split('T')[0]);
+    setPage(1);
+  };
+
+  const handleSyncBroker = async () => {
+    if (viewMode !== 'account' || !selectedAccountId) {
+      alert('กรุณาเลือก "บัญชี" (Account) ที่ต้องการอัพเดตข้อมูลจากการตั้งค่าด้านบนก่อน');
+      return;
+    }
+    if (!window.confirm('ระบบจะดึงข้อมูลประวัติการเทรดล่าสุดจาก Broker\nต้องการดำเนินการต่อหรือไม่?')) return;
+    
+    setSyncing(true);
+    try {
+      await api.syncTrades(selectedAccountId);
+      alert('อัพเดตข้อมูลสำเร็จ!');
+      fetchData();
+    } catch (err) {
+      alert(`การอัพเดตล้มเหลว: ${err.message}`);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const handleSort = (col) => {
     if (sortBy === col) {
       setSortDir(d => d === 'ASC' ? 'DESC' : 'ASC');
@@ -87,6 +180,15 @@ export default function TradeHistoryPage() {
           <h1 className="page-title">ประวัติการเทรด</h1>
         </div>
         <div className="header-right">
+          <button 
+            className="btn btn-primary" 
+            onClick={handleSyncBroker} 
+            disabled={syncing || loading}
+            style={{ marginRight: 'var(--space-md)' }}
+          >
+            {syncing ? <RefreshCw className="spin" size={16} /> : <Download size={16} />}
+            อัพเดตข้อมูลกับโบรกเกอร์
+          </button>
           <AccountFilter />
         </div>
       </div>
@@ -156,11 +258,31 @@ export default function TradeHistoryPage() {
             <option value="manual">✋ เทรดมือ</option>
           </select>
 
-          <input type="date" className="form-input" style={{ padding: '6px 10px', fontSize: 12 }}
-            value={dateFrom} onChange={e => { setDateFrom(e.target.value); setPage(1); }} />
-          <span style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>ถึง</span>
-          <input type="date" className="form-input" style={{ padding: '6px 10px', fontSize: 12 }}
-            value={dateTo} onChange={e => { setDateTo(e.target.value); setPage(1); }} />
+          <select className="filter-select" value={dateMode} onChange={e => { setDateMode(e.target.value); setPage(1); }}>
+            <option value="day">📅 รูปแบบ: วัน</option>
+            <option value="week">📅 รูปแบบ: สัปดาห์</option>
+            <option value="month">📅 รูปแบบ: เดือน</option>
+          </select>
+
+          {dateMode === 'day' && (
+            <>
+              <input type="date" className="filter-select" style={{ padding: '6px 10px', fontSize: 12 }}
+                value={dateFrom} onChange={e => { setDateFrom(e.target.value); setPage(1); }} />
+              <span style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>ถึง</span>
+              <input type="date" className="filter-select" style={{ padding: '6px 10px', fontSize: 12 }}
+                value={dateTo} onChange={e => { setDateTo(e.target.value); setPage(1); }} />
+            </>
+          )}
+
+          {dateMode === 'week' && (
+            <input type="week" className="filter-select" style={{ padding: '6px 10px', fontSize: 12 }}
+              value={dateWeek} onChange={e => handleWeekChange(e.target.value)} />
+          )}
+
+          {dateMode === 'month' && (
+            <input type="month" className="filter-select" style={{ padding: '6px 10px', fontSize: 12 }}
+              value={dateMonth} onChange={e => handleMonthChange(e.target.value)} />
+          )}
 
           {(symbolFilter || sideFilter || sourceFilter || dateFrom || dateTo) && (
             <button className="btn btn-ghost btn-sm" onClick={() => {

@@ -16,8 +16,23 @@ export default function BotsPage() {
   const socketRef = useRef(null);
   
   const [formData, setFormData] = useState({
-    bot_name: '', account_id: '', strategy_type: 'Scalper'
+    bot_name: '', account_id: '', strategy_type: 'Scalper',
+    primary_timeframe: '5m',
+    analysis_timeframes: ['5m', '15m'],
+    indicators_config: [{ name: 'RSI', weight: 40 }],
+    min_confidence: 60,
+    symbols: ['XAUUSD'], // from parameters usually, but lifted up for ui
+    sl_pips: 15,
+    tp_ratio: 1.5,
+    trail_trigger_pips: 10,
+    trail_distance_pips: 8,
+    breakeven_trigger_pips: 12
   });
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingBotId, setEditingBotId] = useState(null);
+
+  const availableIndicators = ['RSI', 'MACD', 'EMA', 'BollingerBands', 'Engulfing', 'PinBar'];
+  const timeframes = ['1m', '5m', '15m', '1h', '4h', '1d'];
 
   const fetchData = async () => {
     try {
@@ -69,16 +84,12 @@ export default function BotsPage() {
       }));
 
       setBotLogs(prev => {
-        // Keep only log-worthy events
         if (data.event_type === 'SCANNING') return prev;
-        
-        // If a specific bot is selected and the event is for another bot, ignore it
         if (selectedBot && selectedBot.id !== data.bot_id) return prev;
         
         return [{
           id: Date.now(),
           bot_id: data.bot_id,
-          // Extract bot_name roughly from state if possible, though it defaults to basic info
           bot_name: data.bot_name || `Bot #${data.bot_id}`,
           created_at: data.timestamp,
           event_type: data.event_type,
@@ -90,10 +101,65 @@ export default function BotsPage() {
     return () => socket.disconnect();
   }, [user?.id, selectedBot]);
 
-  const handleCreateBot = async (e) => {
+  const openCreateModal = () => {
+    setIsEditMode(false);
+    setEditingBotId(null);
+    setFormData({
+      bot_name: '', account_id: '', strategy_type: 'Scalper',
+      primary_timeframe: '5m',
+      analysis_timeframes: ['5m', '15m'],
+      indicators_config: [{ name: 'RSI', weight: 40 }],
+      min_confidence: 60,
+      symbols: ['XAUUSD'],
+      sl_pips: 15,
+      tp_ratio: 1.5,
+      trail_trigger_pips: 10,
+      trail_distance_pips: 8,
+      breakeven_trigger_pips: 12
+    });
+    setShowModal(true);
+  };
+
+  const openEditModal = (bot) => {
+    setIsEditMode(true);
+    setEditingBotId(bot.id);
+    setFormData({
+      bot_name: bot.bot_name || '',
+      account_id: bot.account_id || '',
+      strategy_type: bot.strategy_type || 'Custom',
+      primary_timeframe: bot.primary_timeframe || '5m',
+      analysis_timeframes: bot.analysis_timeframes || ['5m'],
+      indicators_config: bot.indicators_config || [],
+      min_confidence: bot.min_confidence || 60,
+      symbols: bot.parameters?.symbols || ['XAUUSD'],
+      sl_pips: bot.parameters?.sl_pips || 15,
+      tp_ratio: bot.parameters?.tp_ratio || 1.5,
+      trail_trigger_pips: bot.parameters?.trail_trigger_pips || 10,
+      trail_distance_pips: bot.parameters?.trail_distance_pips || 8,
+      breakeven_trigger_pips: bot.parameters?.breakeven_trigger_pips || 12
+    });
+    setShowModal(true);
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await api.createBot(formData);
+      const payload = {
+        ...formData,
+        parameters: {
+          symbols: formData.symbols,
+          sl_pips: parseFloat(formData.sl_pips),
+          tp_ratio: parseFloat(formData.tp_ratio),
+          trail_trigger_pips: parseFloat(formData.trail_trigger_pips),
+          trail_distance_pips: parseFloat(formData.trail_distance_pips),
+          breakeven_trigger_pips: parseFloat(formData.breakeven_trigger_pips)
+        }
+      };
+      if (isEditMode) {
+        await api.updateBot(editingBotId, payload);
+      } else {
+        await api.createBot(payload);
+      }
       setShowModal(false);
       fetchData();
     } catch (err) {
@@ -126,7 +192,6 @@ export default function BotsPage() {
       handleCloseLogs();
       return;
     }
-    
     setSelectedBot(bot);
     try {
       const logs = await api.getBotLogs(bot.id);
@@ -146,15 +211,40 @@ export default function BotsPage() {
     try {
       await api.clearBotLogs(botId);
       setBotLogs([]);
-      fetchData(); // refresh recent_events count
+      fetchData();
     } catch (err) {
       alert(err.message);
     }
   };
 
+  // Helpers for multi-select arrays
+  const handleToggleAnalysisTF = (tf) => {
+    const arr = formData.analysis_timeframes;
+    if (arr.includes(tf)) setFormData({ ...formData, analysis_timeframes: arr.filter(x => x !== tf) });
+    else setFormData({ ...formData, analysis_timeframes: [...arr, tf] });
+  };
+
+  const handleAddIndicator = () => {
+    setFormData({
+      ...formData,
+      indicators_config: [...formData.indicators_config, { name: availableIndicators[0], weight: 20 }]
+    });
+  };
+
+  const handleRemoveIndicator = (idx) => {
+    const list = [...formData.indicators_config];
+    list.splice(idx, 1);
+    setFormData({ ...formData, indicators_config: list });
+  };
+
+  const handleIndicatorChange = (idx, field, value) => {
+    const list = [...formData.indicators_config];
+    list[idx][field] = field === 'weight' ? parseInt(value) || 0 : value;
+    setFormData({ ...formData, indicators_config: list });
+  };
+
   return (
     <>
-      {/* Pulse animation for active bot log buttons */}
       <style>{`
         @keyframes logPulse {
           0% { box-shadow: 0 0 4px rgba(0, 230, 118, 0.4); }
@@ -170,13 +260,33 @@ export default function BotsPage() {
         .btn-log-active:hover {
           background: rgba(0, 230, 118, 0.25) !important;
         }
+        .modal-body-scroll {
+          max-height: 70vh;
+          overflow-y: auto;
+          padding-right: 8px;
+        }
+        .tag-toggle {
+          padding: 4px 12px;
+          border-radius: 16px;
+          border: 1px solid var(--border-primary);
+          background: var(--bg-tertiary);
+          color: var(--text-secondary);
+          font-size: 12px;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .tag-toggle.active {
+          background: rgba(0, 230, 118, 0.15);
+          border-color: var(--profit);
+          color: var(--profit);
+        }
       `}</style>
       <div className="header">
         <div className="header-left">
           <h1 className="page-title">เครื่องมือเทรดอัตโนมัติ (Bots)</h1>
         </div>
         <div className="header-right">
-          <button className="btn btn-primary btn-sm" onClick={() => setShowModal(true)}>
+          <button className="btn btn-primary btn-sm" onClick={openCreateModal}>
             <Plus size={14} /> สร้าง Bot
           </button>
         </div>
@@ -212,23 +322,20 @@ export default function BotsPage() {
                   </span>
                 </div>
                 
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, fontSize: 12, color: 'var(--text-secondary)' }}>
-                  <div>
-                    กลยุทธ์: <strong style={{ color: 'var(--accent-secondary)' }}>{bot.strategy_type}</strong>
-                  </div>
-                  <div>อัปเดต: {new Date(bot.updated_at).toLocaleDateString('th-TH')}</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10, fontSize: 12, color: 'var(--text-secondary)' }}>
+                  <div>กลยุทธ์: <strong style={{ color: 'var(--accent-secondary)' }}>{bot.strategy_type}</strong></div>
+                  <div>TF หลัก: <strong>{bot.primary_timeframe}</strong></div>
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
+                  <span>ดู TF: {bot.analysis_timeframes?.join(', ')}</span>
+                  <span>ความเชื่อมั่นขั้นต่ำ: {bot.min_confidence}%</span>
                 </div>
 
                 {liveActivities[bot.id] && (
                   <div style={{ 
-                    padding: '8px 12px', 
-                    borderRadius: 'var(--radius-sm)', 
+                    padding: '8px 12px', borderRadius: 'var(--radius-sm)', 
                     background: liveActivities[bot.id].event_type === 'SCANNING' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(0, 230, 118, 0.1)',
-                    marginBottom: 16,
-                    fontSize: 11,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
+                    marginBottom: 16, fontSize: 11, display: 'flex', alignItems: 'center', gap: 8,
                     animation: 'logPulse 2s ease-in-out'
                   }}>
                     <Activity size={12} style={{ color: liveActivities[bot.id].event_type === 'SCANNING' ? 'var(--info)' : 'var(--profit)' }} />
@@ -243,6 +350,9 @@ export default function BotsPage() {
                     onClick={() => handleToggleStatus(bot)}
                   >
                     {bot.is_active ? <><Square size={14} fill="currentColor" /> หยุด</> : <><Play size={14} fill="currentColor" /> เริ่ม</>}
+                  </button>
+                  <button className="btn btn-secondary btn-sm" onClick={() => openEditModal(bot)}>
+                    <Settings size={14} />ตั้งค่า
                   </button>
                   <button
                     className={`btn btn-sm ${bot.recent_events > 0 ? 'btn-log-active' : 'btn-secondary'}`}
@@ -259,8 +369,8 @@ export default function BotsPage() {
             ))}
           </div>
 
-          {/* Bot Event Logs */}
-          <div className="chart-card" style={{ display: 'flex', flexDirection: 'column', height: '100%', maxHeight: 'calc(100vh - 150px)', position: 'sticky', top: 'var(--space-lg)' }}>
+           {/* Bot Event Logs */}
+           <div className="chart-card" style={{ display: 'flex', flexDirection: 'column', height: '100%', maxHeight: 'calc(100vh - 150px)', position: 'sticky', top: 'var(--space-lg)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <h3 className="chart-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Activity size={16} style={{ color: 'var(--accent-secondary)' }} />
@@ -308,37 +418,151 @@ export default function BotsPage() {
         </div>
       </div>
 
-      {/* Create Modal */}
+      {/* Create / Edit Modal */}
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <h2 className="modal-title">🤖 สร้าง Trading Bot ใหม่</h2>
-            <form onSubmit={handleCreateBot}>
-              <div className="form-group" style={{ marginBottom: 16 }}>
-                <label className="form-label">ชื่อ Bot</label>
-                <input className="form-input" required value={formData.bot_name} onChange={e => setFormData({ ...formData, bot_name: e.target.value })} placeholder="เช่น Sniper V1" />
+          <div className="modal" style={{ width: 600, maxWidth: '90vw' }} onClick={e => e.stopPropagation()}>
+            <h2 className="modal-title">🤖 {isEditMode ? 'ตั้งค่า Trading Bot' : 'สร้าง Trading Bot ใหม่'}</h2>
+            <form onSubmit={handleSubmit} className="modal-body-scroll">
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+                <div className="form-group">
+                  <label className="form-label">ชื่อ Bot</label>
+                  <input className="form-input" required value={formData.bot_name} onChange={e => setFormData({ ...formData, bot_name: e.target.value })} placeholder="เช่น Sniper V1" />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">ผูกกับบัญชีเทรด</label>
+                  <select className="filter-select" required value={formData.account_id} onChange={e => setFormData({ ...formData, account_id: e.target.value })} style={{ width: '100%' }}>
+                    <option value="">-- เลือกบัญชี --</option>
+                    {accounts.map(acc => (
+                      <option key={acc.id} value={acc.id}>{acc.account_name} ({acc.account_number})</option>
+                    ))}
+                  </select>
+                </div>
               </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+                <div className="form-group">
+                  <label className="form-label">ประเภทกลยุทธ์พื้นฐาน</label>
+                  <select className="filter-select" value={formData.strategy_type} onChange={e => setFormData({ ...formData, strategy_type: e.target.value })} style={{ width: '100%' }}>
+                    <option value="Scalper">Scalper (เก็บสั้น)</option>
+                    <option value="Swing">Swing Trade</option>
+                    <option value="Grid">Grid Trading</option>
+                    <option value="Martingale">Martingale</option>
+                    <option value="Custom">Custom (ปรับแต่งเอง)</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Timeframe หลัก (ในการเข้าไม้)</label>
+                  <select className="filter-select" value={formData.primary_timeframe} onChange={e => setFormData({ ...formData, primary_timeframe: e.target.value })} style={{ width: '100%' }}>
+                    {timeframes.map(tf => <option key={tf} value={tf}>{tf}</option>)}
+                  </select>
+                </div>
+              </div>
+
               <div className="form-group" style={{ marginBottom: 16 }}>
-                <label className="form-label">ผูกกับบัญชีเทรด</label>
-                <select className="filter-select" required value={formData.account_id} onChange={e => setFormData({ ...formData, account_id: e.target.value })} style={{ width: '100%' }}>
-                  <option value="">-- เลือกบัญชี --</option>
-                  {accounts.map(acc => (
-                    <option key={acc.id} value={acc.id}>{acc.account_name} ({acc.account_number})</option>
+                <label className="form-label">คู่เงินที่เทรด (Symbols - คั่นด้วยจุลภาค)</label>
+                <input className="form-input" required value={formData.symbols.join(', ')} onChange={e => setFormData({ ...formData, symbols: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })} placeholder="XAUUSD, EURUSD" />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: 16 }}>
+                <label className="form-label">ต้องวิเคราะห์จากกราฟใดบ้าง (Analysis Timeframes)</label>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {timeframes.map(tf => (
+                    <button 
+                      key={tf} type="button" 
+                      className={`tag-toggle ${formData.analysis_timeframes.includes(tf) ? 'active' : ''}`}
+                      onClick={() => handleToggleAnalysisTF(tf)}
+                    >
+                      {tf}
+                    </button>
                   ))}
-                </select>
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4 }}>
+                  เลือก Timeframe ให้อัลกอริทึมวิเคราะห์เทรนด์และสัญญาณประกอบการตัดสินใจ
+                </div>
               </div>
-              <div className="form-group" style={{ marginBottom: 16 }}>
-                <label className="form-label">ประเภทกลยุทธ์</label>
-                <select className="filter-select" value={formData.strategy_type} onChange={e => setFormData({ ...formData, strategy_type: e.target.value })} style={{ width: '100%' }}>
-                  <option value="Scalper">Scalper (เก็บสั้น)</option>
-                  <option value="Swing">Swing Trade</option>
-                  <option value="Grid">Grid Trading</option>
-                  <option value="Martingale">Martingale</option>
-                </select>
+
+              <div className="form-group" style={{ marginBottom: 16, borderTop: '1px solid var(--border-primary)', paddingTop: 16 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  <label className="form-label" style={{ margin: 0 }}>ตั้งค่า Indicators (กำหนดน้ำหนักคะแนนรวม = 100%)</label>
+                  <button type="button" className="btn btn-sm btn-ghost" onClick={handleAddIndicator}>
+                    <Plus size={14} /> เพิ่ม Indicator
+                  </button>
+                </div>
+                {formData.indicators_config.length === 0 && (
+                  <div style={{ color: 'var(--text-tertiary)', fontSize: 12, textAlign: 'center', padding: 10 }}>ไม่มีการตั้งค่า Indicator ใช้การตัดสินใจพื้นฐาน</div>
+                )}
+                {formData.indicators_config.map((ind, idx) => (
+                  <div key={idx} style={{ display: 'flex', gap: 10, marginBottom: 8, alignItems: 'center' }}>
+                    <select className="filter-select" value={ind.name} onChange={e => handleIndicatorChange(idx, 'name', e.target.value)} style={{ flex: 1 }}>
+                      {availableIndicators.map(a => <option key={a} value={a}>{a}</option>)}
+                    </select>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>น้ำหนัก:</span>
+                      <input 
+                        type="number" min="0" max="100" 
+                        className="form-input" 
+                        style={{ width: 80, padding: '4px 8px', height: 'auto' }} 
+                        value={ind.weight} 
+                        onChange={e => handleIndicatorChange(idx, 'weight', e.target.value)} 
+                      />
+                      <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>%</span>
+                    </div>
+                    <button type="button" className="btn-icon" onClick={() => handleRemoveIndicator(idx)} style={{ color: 'var(--loss)' }}><Trash2 size={16} /></button>
+                  </div>
+                ))}
               </div>
-              <div className="modal-actions">
+
+              <div className="form-group" style={{ marginBottom: 24 }}>
+                <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>ความเชื่อมั่นขั้นต่ำในการออกไม้ (Min Confidence)</span>
+                  <span style={{ color: 'var(--profit)' }}>{formData.min_confidence}%</span>
+                </label>
+                <input 
+                  type="range" 
+                  min="0" max="100" step="5"
+                  style={{ width: '100%', accentColor: 'var(--profit)' }}
+                  value={formData.min_confidence}
+                  onChange={e => setFormData({ ...formData, min_confidence: parseInt(e.target.value) })}
+                />
+                <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4 }}>
+                  คะแนนที่คำนวณจาก Indicators ต้องถึงเป้าหมายจึงจะเปิดออเดอร์
+                </div>
+              </div>
+
+              <div style={{ borderTop: '1px solid var(--border-primary)', paddingTop: 16, marginBottom: 16 }}>
+                <h4 style={{ marginBottom: 12, fontSize: 13, color: 'var(--text-primary)' }}>ตั้งค่าความเสี่ยง และ Trailing Stop / TP</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 12 }}>
+                  <div className="form-group">
+                    <label className="form-label">Stop Loss (Pips)</label>
+                    <input type="number" step="0.1" min="1" className="form-input" required value={formData.sl_pips} onChange={e => setFormData({ ...formData, sl_pips: e.target.value })} placeholder="15" />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">TP Ratio (Risk:Reward)</label>
+                    <input type="number" step="0.1" min="0.1" className="form-input" required value={formData.tp_ratio} onChange={e => setFormData({ ...formData, tp_ratio: e.target.value })} placeholder="1.5 = 1.5x ของ SL" />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
+                  <div className="form-group" title="เลื่อน SL มาคุ้มทุนเมื่อกำไรถึง (Pips)">
+                    <label className="form-label">Breakeven Pips</label>
+                    <input type="number" step="0.1" min="0" className="form-input" required value={formData.breakeven_trigger_pips} onChange={e => setFormData({ ...formData, breakeven_trigger_pips: e.target.value })} />
+                  </div>
+                  <div className="form-group" title="เริ่ม Trailing เมื่อกำไรถึง (Pips)">
+                    <label className="form-label">Trail Start Pips</label>
+                    <input type="number" step="0.1" min="0" className="form-input" required value={formData.trail_trigger_pips} onChange={e => setFormData({ ...formData, trail_trigger_pips: e.target.value })} />
+                  </div>
+                  <div className="form-group" title="ระยะ SL จากจุดราคาสูงสุด (Pips)">
+                    <label className="form-label">Trail Distance</label>
+                    <input type="number" step="0.1" min="1" className="form-input" required value={formData.trail_distance_pips} onChange={e => setFormData({ ...formData, trail_distance_pips: e.target.value })} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="modal-actions" style={{ borderTop: '1px solid var(--border-primary)', paddingTop: 16 }}>
                 <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>ยกเลิก</button>
-                <button type="submit" className="btn btn-primary">บันทึก</button>
+                <button type="submit" className="btn btn-primary">{isEditMode ? 'บันทึกการแก้ไข' : 'สร้าง Bot'}</button>
               </div>
             </form>
           </div>
