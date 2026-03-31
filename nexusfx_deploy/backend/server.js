@@ -72,7 +72,7 @@ const generalLimiter = rateLimit({
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 500, // Increased for dev/testing
+  max: process.env.NODE_ENV === 'production' ? 30 : 500,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many auth attempts, please try again later.' },
@@ -114,6 +114,7 @@ const brokersRoutes = require('./routes/brokers');
 const billingRoutes = require('./routes/billing');
 const strategiesRoutes = require('./routes/strategies');
 const forumsRoutes = require('./routes/forums');
+const notificationsRoutes = require('./routes/notifications');
 
 // Apply stricter rate limits to sensitive routes
 app.use('/api/auth', authLimiter, authRoutes);
@@ -135,6 +136,7 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/store', storeRoutes);
 app.use('/api/strategies', strategiesRoutes);
 app.use('/api/forums', forumsRoutes);
+app.use('/api/notifications', notificationsRoutes);
 
 // =============================================
 // Swagger API Docs (Level 3)
@@ -212,6 +214,12 @@ const feeTracker = new FeeTracker();
 const binanceFeed = new BinanceFeed(io);
 const executionEngine = new ExecutionEngine();
 const riskEngine = new RiskEngine(io);
+
+// Notification Service (in-app + socket.io)
+const NotificationService = require('./services/notificationService');
+const notificationService = new NotificationService(io);
+executionEngine.setNotificationService(notificationService);
+orderSyncEngine.setNotificationService(notificationService);
 
 // Store services for route access
 app.set('mt5Service', ms);

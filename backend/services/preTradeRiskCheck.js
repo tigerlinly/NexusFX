@@ -142,9 +142,8 @@ class PreTradeRiskCheck {
 
     } catch (err) {
       console.error('[PreTradeRiskCheck] Error:', err);
-      // On error, allow trade but add warning (fail-open)
-      warnings.push('Risk check encountered an error — trade allowed with caution');
-      return { allowed: true, warnings };
+      // Fail-closed: block trade when risk check fails (safer for financial applications)
+      return { allowed: false, reason: 'Risk check system error — trade blocked for safety. Please try again.', warnings };
     }
   }
 }

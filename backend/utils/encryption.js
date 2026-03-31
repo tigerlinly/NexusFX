@@ -12,8 +12,9 @@ const TAG_LENGTH = 16;
 function getEncryptionKey() {
   const secret = process.env.ENCRYPTION_KEY || process.env.JWT_SECRET;
   if (!secret) throw new Error('No encryption key configured');
-  // Derive a 32-byte key using scrypt
-  return crypto.scryptSync(secret, 'nexusfx-salt-v1', 32);
+  // Derive a 32-byte key using scrypt with deployment-specific salt
+  const salt = process.env.ENCRYPTION_SALT || 'nexusfx-salt-v1';
+  return crypto.scryptSync(secret, salt, 32);
 }
 
 /**

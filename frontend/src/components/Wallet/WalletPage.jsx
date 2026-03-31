@@ -85,6 +85,23 @@ export default function WalletPage() {
     }
   };
 
+  const handleTestDeposit = async () => {
+    if (!amount || parseFloat(amount) <= 0) return;
+    setProcessing(true);
+    try {
+      await api.topup({ amount: parseFloat(amount), currency: 'USD' });
+      setShowModal(null);
+      setAmount('');
+      setNote('');
+      fetchData();
+      alert('เติมเงินทดสอบสำเร็จ!');
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   const formatCurrency = (val) => {
     if (!val && val !== 0) return '$0.00';
     return `$${parseFloat(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -307,8 +324,19 @@ export default function WalletPage() {
               </div>
               <div className="modal-actions">
                 <button type="button" className="btn btn-secondary" onClick={() => setShowModal(null)}>ยกเลิก</button>
+                {showModal === 'deposit' && (
+                  <button 
+                    type="button" 
+                    className="btn" 
+                    style={{ background: 'var(--profit)', color: '#fff' }} 
+                    onClick={handleTestDeposit}
+                    disabled={processing}
+                  >
+                    ทดสอบเติมเงิน
+                  </button>
+                )}
                 <button type="submit" className={`btn ${showModal === 'deposit' ? 'btn-primary' : 'btn-danger'}`} disabled={processing}>
-                  {processing ? 'กำลังดำเนินการ...' : showModal === 'deposit' ? 'ฝากเงิน' : 'ถอนเงิน'}
+                  {processing ? 'กำลังดำเนินการ...' : showModal === 'deposit' ? 'ฝากเงิน Stripe' : 'ถอนเงิน'}
                 </button>
               </div>
             </form>

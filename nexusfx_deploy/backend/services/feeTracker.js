@@ -52,17 +52,24 @@ class FeeTracker {
         );
 
         // Get or Create user wallet
-        const walletResult = await pool.query('SELECT id FROM wallets WHERE user_id = $1 AND currency = $2', [trade.user_id, 'USD']);
+        const walletResult = await pool.query('SELECT id, balance FROM wallets WHERE user_id = $1 AND currency = $2', [trade.user_id, 'USD']);
         let walletId = null;
+        let currentBalance = 0;
         if (walletResult.rows.length > 0) {
           walletId = walletResult.rows[0].id;
+          currentBalance = parseFloat(walletResult.rows[0].balance);
         } else {
           const newWallet = await pool.query('INSERT INTO wallets (user_id, currency, balance) VALUES ($1, $2, 0) RETURNING id', [trade.user_id, 'USD']);
           walletId = newWallet.rows[0].id;
         }
 
-        // Deduct from user's internal wallet (negative value or transfer out)
-        // Here we just record a FEEE transaction in their wallet
+        // Skip if wallet balance is insufficient (prevent negative balance)
+        if (currentBalance < parseFloat(feeAmount)) {
+          console.log(`⚠️ [FeeTracker] Skipping fee for trade #${trade.id} - insufficient balance ($${currentBalance} < $${feeAmount})`);
+          continue;
+        }
+
+        // Record FEE transaction in their wallet
         await pool.query(
           `INSERT INTO financial_transactions (wallet_id, user_id, type, amount, status, note)
            VALUES ($1, $2, 'FEE', $3, 'COMPLETED', $4)`,

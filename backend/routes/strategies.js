@@ -306,9 +306,9 @@ router.post('/:id/signal', auditLog('PUBLISH_SIGNAL', 'STRATEGY'), async (req, r
         if (finalLot > parseFloat(sub.max_lot)) finalLot = parseFloat(sub.max_lot);
 
         await pool.query(
-          `INSERT INTO orders (user_id, account_id, symbol, side, type, price, quantity, status)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING')`,
-          [sub.subscriber_id, sub.account_id, symbol, side, signal_type, entry_price || null, finalLot.toFixed(2)]
+          `INSERT INTO orders (user_id, account_id, symbol, side, order_type, price, quantity, stop_loss, take_profit, status)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'PENDING')`,
+          [sub.subscriber_id, sub.account_id, symbol, side, signal_type, entry_price || null, finalLot.toFixed(2), sl || null, tp || null]
         );
 
         // Notify Subscriber

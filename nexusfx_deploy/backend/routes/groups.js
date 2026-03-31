@@ -114,6 +114,20 @@ router.post('/', requirePermission('group.create'), async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { group_name, description, max_members } = req.body;
+
+    // Check if user is admin (for max_members update)
+    let isAdmin = false;
+    try {
+      const roleResult = await pool.query(
+        `SELECT r.role_name FROM users u JOIN roles r ON r.id = u.role_id WHERE u.id = $1`,
+        [req.user.id]
+      );
+      isAdmin = roleResult.rows[0]?.role_name === 'admin';
+    } catch (e) { /* ignore */ }
+
+    // Non-admin users cannot change max_members
+    const effectiveMaxMembers = isAdmin ? max_members : undefined;
+
     const result = await pool.query(
       `UPDATE groups SET
         group_name = COALESCE($1, group_name),
@@ -121,7 +135,7 @@ router.put('/:id', async (req, res) => {
         max_members = COALESCE($3, max_members),
         updated_at = NOW()
        WHERE id = $4 AND lead_user_id = $5 RETURNING *`,
-      [group_name, description, max_members, req.params.id, req.user.id]
+      [group_name, description, effectiveMaxMembers, req.params.id, req.user.id]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Group not found or not authorized' });

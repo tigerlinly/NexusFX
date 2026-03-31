@@ -79,6 +79,8 @@ async function initDatabase() {
       await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS mfa_enabled BOOLEAN DEFAULT false;`);
       await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token VARCHAR(255);`);
       await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expires TIMESTAMPTZ;`);
+      await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS current_plan_id INTEGER REFERENCES membership_plans(id);`);
+      await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS plan_expires_at TIMESTAMPTZ;`);
     } catch (e) { /* ignore */ }
 
     // =============================================
@@ -223,6 +225,7 @@ async function initDatabase() {
       CREATE TABLE IF NOT EXISTS trades (
         id SERIAL PRIMARY KEY,
         account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+        bot_id INTEGER,
         ticket VARCHAR(50),
         symbol VARCHAR(20) NOT NULL,
         side VARCHAR(10) NOT NULL,
@@ -303,15 +306,7 @@ async function initDatabase() {
       );
     `);
 
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS bot_events (
-        id SERIAL PRIMARY KEY,
-        bot_id INTEGER NOT NULL REFERENCES trading_bots(id) ON DELETE CASCADE,
-        event_type VARCHAR(50) NOT NULL,
-        message TEXT,
-        created_at TIMESTAMPTZ DEFAULT NOW()
-      );
-    `);
+    // bot_events table is created below (after dashboard_widgets)
 
     // =============================================
     // DAILY TARGETS
@@ -516,7 +511,7 @@ async function initDatabase() {
     `);
 
     // =============================================
-    // BOT EVENTS
+    // BOT EVENTS (unified definition)
     // =============================================
     await client.query(`
       CREATE TABLE IF NOT EXISTS bot_events (
@@ -529,6 +524,12 @@ async function initDatabase() {
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
+
+    // Ensure bot_events has all columns for existing databases
+    try {
+      await client.query(`ALTER TABLE bot_events ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE SET NULL;`);
+      await client.query(`ALTER TABLE bot_events ADD COLUMN IF NOT EXISTS payload JSONB DEFAULT '{}';`);
+    } catch (e) { /* ignore */ }
 
     // =============================================
     // WITHDRAWALS
@@ -588,6 +589,29 @@ async function initDatabase() {
     `);
 
     // =============================================
+    // SYSTEM CONFIGURATION
+    // =============================================
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS system_config (
+        id SERIAL PRIMARY KEY,
+        key VARCHAR(255) UNIQUE NOT NULL,
+        value TEXT NOT NULL,
+        description TEXT,
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    
+    // Insert defaults if not exists
+    await client.query(`
+      INSERT INTO system_config (key, value, description)
+      VALUES 
+        ('STRIPE_SECRET_KEY', '', 'Stripe API Secret Key (สำหรับการรับชำระเงิน)'),
+        ('CRYPTO_WALLET_ADDRESS', '', 'ที่อยู่กระเป๋าเงินคริปโต (TRC20 USD หรือ USDT)'),
+        ('BANK_ACCOUNT_INFO', '', 'ข้อมูลบัญชีธนาคาร (เช่น ธ.กสิกรไทย 123-4-56789-0)')
+      ON CONFLICT (key) DO NOTHING;
+    `);
+
+    // =============================================
     // PROFIT SHARING LOGS (Level 2 — Profit Sharing Calculator)
     // =============================================
     await client.query(`
@@ -612,6 +636,9 @@ async function initDatabase() {
     await client.query(`
       INSERT INTO membership_plans (plan_key, plan_name, description, monthly_price, max_bots, max_accounts, features, is_popular, sort_order)
       VALUES 
+        ('free', 'Free Trial', 'สำหรับทดลองใช้งาน 15 วัน', 0, 1, 1, 
+         '["รันบอทสูงสุด 1 ตัว", "ระยะเวลาใช้งาน 15 วัน", "อัปเดตราคาแบบ Real-time", "อีเมลแจ้งเตือนเมื่อออเดอร์เข้า", "ประวัติย้อนหลัง 30 วัน"]', 
+         false, 0),
         ('basic', 'Starter Trader', 'เหมาะสำหรับเทรดเดอร์มือใหม่', 29, 2, 3, 
          '["รันบอทสูงสุด 2 ตัว", "อัปเดตราคาแบบ Real-time", "อีเมลแจ้งเตือนเมื่อออเดอร์เข้า", "ประวัติย้อนหลัง 30 วัน"]', 
          false, 1),
@@ -857,8 +884,26 @@ async function initDatabase() {
     // Safe to run outside transaction:
     try {
       await client.query(`ALTER TABLE trades ADD COLUMN IF NOT EXISTS current_price DECIMAL(18,6);`);
+      await client.query(`ALTER TABLE trades ADD COLUMN IF NOT EXISTS bot_id INTEGER;`);
       await client.query(`ALTER TABLE trades ADD CONSTRAINT unique_account_ticket UNIQUE (account_id, ticket);`);
     } catch (e) { /* ignore constraint errors if already exists */ }
+
+    // Notifications table (in-app notifications)
+    try {
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS notifications (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          type VARCHAR(50) NOT NULL DEFAULT 'info',
+          title VARCHAR(255) NOT NULL,
+          message TEXT,
+          data JSONB DEFAULT '{}',
+          is_read BOOLEAN DEFAULT false,
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, is_read, created_at DESC);
+      `);
+    } catch (e) { /* ignore if exists */ }
 
     console.log('✅ Database schema initialized successfully');
   } catch (err) {

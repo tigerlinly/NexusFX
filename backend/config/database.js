@@ -225,6 +225,7 @@ async function initDatabase() {
       CREATE TABLE IF NOT EXISTS trades (
         id SERIAL PRIMARY KEY,
         account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+        bot_id INTEGER,
         ticket VARCHAR(50),
         symbol VARCHAR(20) NOT NULL,
         side VARCHAR(10) NOT NULL,
@@ -253,20 +254,36 @@ async function initDatabase() {
     await client.query(`
       CREATE TABLE IF NOT EXISTS orders (
         id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
         account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+        bot_id INTEGER REFERENCES trading_bots(id) ON DELETE SET NULL,
         exchange_order_id VARCHAR(100),
         symbol VARCHAR(20) NOT NULL,
         side VARCHAR(10) NOT NULL,
         order_type VARCHAR(20) DEFAULT 'MARKET',
+        type VARCHAR(20),
         price DECIMAL(18,6),
         quantity DECIMAL(18,6),
         filled_quantity DECIMAL(18,6) DEFAULT 0,
+        stop_loss DECIMAL(18,6),
+        take_profit DECIMAL(18,6),
         status VARCHAR(20) DEFAULT 'PENDING',
+        error_message TEXT,
         filled_at TIMESTAMPTZ,
         cancelled_at TIMESTAMPTZ,
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
+
+    // Add missing columns for existing orders table (backward-compat migration)
+    try {
+      await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE SET NULL;`);
+      await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS bot_id INTEGER REFERENCES trading_bots(id) ON DELETE SET NULL;`);
+      await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS stop_loss DECIMAL(18,6);`);
+      await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS take_profit DECIMAL(18,6);`);
+      await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS type VARCHAR(20);`);
+      await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS error_message TEXT;`);
+    } catch (e) { /* ignore */ }
 
     // =============================================
     // SERVICE FEE LOGS
@@ -305,15 +322,7 @@ async function initDatabase() {
       );
     `);
 
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS bot_events (
-        id SERIAL PRIMARY KEY,
-        bot_id INTEGER NOT NULL REFERENCES trading_bots(id) ON DELETE CASCADE,
-        event_type VARCHAR(50) NOT NULL,
-        message TEXT,
-        created_at TIMESTAMPTZ DEFAULT NOW()
-      );
-    `);
+    // bot_events table is created below (after dashboard_widgets)
 
     // =============================================
     // DAILY TARGETS
@@ -518,7 +527,7 @@ async function initDatabase() {
     `);
 
     // =============================================
-    // BOT EVENTS
+    // BOT EVENTS (unified definition)
     // =============================================
     await client.query(`
       CREATE TABLE IF NOT EXISTS bot_events (
@@ -531,6 +540,12 @@ async function initDatabase() {
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
+
+    // Ensure bot_events has all columns for existing databases
+    try {
+      await client.query(`ALTER TABLE bot_events ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE SET NULL;`);
+      await client.query(`ALTER TABLE bot_events ADD COLUMN IF NOT EXISTS payload JSONB DEFAULT '{}';`);
+    } catch (e) { /* ignore */ }
 
     // =============================================
     // WITHDRAWALS
@@ -907,8 +922,26 @@ async function initDatabase() {
     // Safe to run outside transaction:
     try {
       await client.query(`ALTER TABLE trades ADD COLUMN IF NOT EXISTS current_price DECIMAL(18,6);`);
+      await client.query(`ALTER TABLE trades ADD COLUMN IF NOT EXISTS bot_id INTEGER;`);
       await client.query(`ALTER TABLE trades ADD CONSTRAINT unique_account_ticket UNIQUE (account_id, ticket);`);
     } catch (e) { /* ignore constraint errors if already exists */ }
+
+    // Notifications table (in-app notifications)
+    try {
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS notifications (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          type VARCHAR(50) NOT NULL DEFAULT 'info',
+          title VARCHAR(255) NOT NULL,
+          message TEXT,
+          data JSONB DEFAULT '{}',
+          is_read BOOLEAN DEFAULT false,
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, is_read, created_at DESC);
+      `);
+    } catch (e) { /* ignore if exists */ }
 
     console.log('✅ Database schema initialized successfully');
   } catch (err) {

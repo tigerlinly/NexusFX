@@ -1,6 +1,5 @@
 const { pool } = require('../config/database');
 const crypto = require('crypto');
-const axios = require('axios');
 const LineNotify = require('./lineNotify');
 const TelegramNotify = require('./telegramNotify');
 
@@ -9,6 +8,11 @@ class ExecutionEngine {
     this.running = false;
     this.pollIntervalMs = 2000; // Poll every 2 seconds
     this.binanceApiUrl = 'https://testnet.binance.vision/api/v3/order'; // Use Testnet
+    this.notificationService = null;
+  }
+
+  setNotificationService(ns) {
+    this.notificationService = ns;
   }
 
   start() {
@@ -72,26 +76,28 @@ class ExecutionEngine {
 
           if (executionResult) {
             await pool.query(
-              `UPDATE orders SET status = 'FILLED' WHERE id = $1`,
+              `UPDATE orders SET status = 'FILLED', filled_at = NOW(), filled_quantity = quantity WHERE id = $1`,
               [order.id]
             );
             
-            // Notify user via LINE & Telegram
+            // Notify user via LINE & Telegram + In-App
             await Promise.all([
               LineNotify.sendAlert(order.user_id, `✅ Trade Executed!\nSymbol: ${order.symbol}\nSide: ${order.side}\nPrice: ${executionPrice}\nQuantity: ${filled_qty}`),
-              TelegramNotify.sendAlert(order.user_id, `✅ Trade Executed!\nSymbol: ${order.symbol}\nSide: ${order.side}\nPrice: ${executionPrice}\nQuantity: ${filled_qty}`)
+              TelegramNotify.sendAlert(order.user_id, `✅ Trade Executed!\nSymbol: ${order.symbol}\nSide: ${order.side}\nPrice: ${executionPrice}\nQuantity: ${filled_qty}`),
+              this.notificationService ? this.notificationService.tradeExecuted(order.user_id, order) : Promise.resolve()
             ]).catch(err => console.warn('Notification error:', err));
           }
         } catch (orderErr) {
           console.error(`❌ [ExecutionEngine] Order ${order.id} failed:`, orderErr.message);
           await pool.query(
-            `UPDATE orders SET status = 'FAILED' WHERE id = $1`,
-            [order.id]
+            `UPDATE orders SET status = 'FAILED', error_message = $2 WHERE id = $1`,
+            [order.id, orderErr.message]
           );
           
           await Promise.all([
             LineNotify.sendAlert(order.user_id, `❌ Order Failed\nSymbol: ${order.symbol}\nReason: ${orderErr.message}`),
-            TelegramNotify.sendAlert(order.user_id, `❌ Order Failed\nSymbol: ${order.symbol}\nReason: ${orderErr.message}`)
+            TelegramNotify.sendAlert(order.user_id, `❌ Order Failed\nSymbol: ${order.symbol}\nReason: ${orderErr.message}`),
+            this.notificationService ? this.notificationService.tradeFailed(order.user_id, order, orderErr.message) : Promise.resolve()
           ]).catch(e => console.error(e));
         }
       }

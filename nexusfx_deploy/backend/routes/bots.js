@@ -9,7 +9,8 @@ router.use(authMiddleware);
 router.get('/', async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT b.*, a.account_name, a.account_number 
+      `SELECT b.*, a.account_name, a.account_number,
+              (SELECT COUNT(*) FROM bot_events be WHERE be.bot_id = b.id AND be.event_type IN ('TRADE','SIGNAL_RECEIVED','ORDER_PLACED','STATE_CHANGE') AND be.created_at >= NOW() - INTERVAL '24 hours')::int AS recent_events
        FROM trading_bots b
        LEFT JOIN accounts a ON a.id = b.account_id
        WHERE b.user_id = $1

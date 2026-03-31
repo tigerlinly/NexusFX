@@ -99,11 +99,19 @@ router.post('/upgrade', auditLog('PURCHASE_SUBSCRIPTION', 'BILLING'), async (req
       [walletId, req.user.id, 'FEE', -selectedPlan.monthly_price, 'COMPLETED', `Subscription: ${selectedPlan.plan_name}`]
     );
 
+    const days = planId === 'free' ? 15 : 30;
+
     // Record subscription history
     await client.query(
-      `INSERT INTO subscription_history (user_id, plan_id, amount, payment_status, payment_method)
-       VALUES ($1, $2, $3, 'COMPLETED', 'WALLET')`,
+      `INSERT INTO subscription_history (user_id, plan_id, amount, payment_status, payment_method, period_end)
+       VALUES ($1, $2, $3, 'COMPLETED', 'WALLET', NOW() + INTERVAL '${days} days')`,
       [req.user.id, selectedPlan.id, selectedPlan.monthly_price]
+    );
+
+    // Update current plan on user record
+    await client.query(
+      `UPDATE users SET current_plan_id = $1, plan_expires_at = NOW() + INTERVAL '${days} days' WHERE id = $2`,
+      [selectedPlan.id, req.user.id]
     );
 
     // Update user role if they buy enterprise
@@ -115,13 +123,44 @@ router.post('/upgrade', auditLog('PURCHASE_SUBSCRIPTION', 'BILLING'), async (req
     }
 
     await client.query('COMMIT');
-    res.json({ success: true, message: `Successfully upgraded to ${selectedPlan.plan_name}!` });
+    res.json({ success: true, message: `อัปเกรดเป็น ${selectedPlan.plan_name} สำเร็จ! หมดอายุใน ${days} วัน` });
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('Subscription error:', err);
     res.status(400).json({ error: err.message || 'Payment processing failed' });
   } finally {
     client.release();
+  }
+});
+
+// GET /api/billing/current — get user's current active plan
+router.get('/current', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT mp.plan_key, mp.plan_name, mp.monthly_price, mp.max_bots, mp.max_accounts, mp.features,
+             u.plan_expires_at, u.current_plan_id,
+             CASE WHEN u.plan_expires_at > NOW() THEN true ELSE false END as is_active
+      FROM users u
+      LEFT JOIN membership_plans mp ON mp.id = u.current_plan_id
+      WHERE u.id = $1
+    `, [req.user.id]);
+
+    if (result.rows.length === 0 || !result.rows[0].current_plan_id) {
+      return res.json({
+        plan_key: 'free',
+        plan_name: 'Free Trial',
+        monthly_price: 0,
+        is_active: true,
+        plan_expires_at: null,
+        max_bots: 1,
+        max_accounts: 1,
+      });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Get current plan error:', err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 

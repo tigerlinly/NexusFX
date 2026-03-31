@@ -9,7 +9,8 @@ router.use(authMiddleware);
 router.get('/', async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT b.*, a.account_name, a.account_number 
+      `SELECT b.*, a.account_name, a.account_number,
+              (SELECT COUNT(*) FROM bot_events be WHERE be.bot_id = b.id AND be.event_type IN ('TRADE','SIGNAL_RECEIVED','ORDER_PLACED','SIGNAL_GENERATED','STATE_CHANGE') AND be.created_at >= NOW() - INTERVAL '24 hours')::int AS recent_events
        FROM trading_bots b
        LEFT JOIN accounts a ON a.id = b.account_id
        WHERE b.user_id = $1
@@ -19,6 +20,25 @@ router.get('/', async (req, res) => {
     res.json(result.rows);
   } catch (err) {
     console.error('Fetch bots error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/bots/logs/all — get all events from all user's bots
+router.get('/logs/all', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT be.*, b.bot_name 
+       FROM bot_events be
+       JOIN trading_bots b ON be.bot_id = b.id
+       WHERE b.user_id = $1
+       ORDER BY be.created_at DESC
+       LIMIT 100`,
+      [req.user.id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Fetch all bot logs error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -38,8 +58,8 @@ router.post('/', async (req, res) => {
     }
 
     const result = await pool.query(
-      `INSERT INTO trading_bots (user_id, account_id, bot_name, strategy_type, parameters)
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      `INSERT INTO trading_bots (user_id, account_id, bot_name, strategy_type, parameters, is_active, status)
+       VALUES ($1, $2, $3, $4, $5, false, 'STOPPED') RETURNING *`,
       [req.user.id, account_id, bot_name, strategy_type || 'Custom', parameters || {}]
     );
 
@@ -109,6 +129,24 @@ router.get('/:id/logs', async (req, res) => {
     res.json(result.rows);
   } catch (err) {
     console.error('Fetch bot logs error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// DELETE /api/bots/:id/logs — clear bot event logs
+router.delete('/:id/logs', async (req, res) => {
+  try {
+    // Check ownership
+    const botCheck = await pool.query('SELECT id FROM trading_bots WHERE id = $1 AND user_id = $2', [req.params.id, req.user.id]);
+    if (botCheck.rows.length === 0) return res.status(404).json({ error: 'Bot not found' });
+
+    const result = await pool.query(
+      `DELETE FROM bot_events WHERE bot_id = $1`,
+      [req.params.id]
+    );
+    res.json({ success: true, deleted: result.rowCount });
+  } catch (err) {
+    console.error('Clear bot logs error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

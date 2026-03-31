@@ -80,6 +80,8 @@ export const api = {
   updateBot: (id, body) => request(`/bots/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   deleteBot: (id) => request(`/bots/${id}`, { method: 'DELETE' }),
   getBotLogs: (id) => request(`/bots/${id}/logs`),
+  getAllBotLogs: () => request('/bots/logs/all'),
+  clearBotLogs: (id) => request(`/bots/${id}/logs`, { method: 'DELETE' }),
   // Store & Billing
   getStoreBots: () => request('/store/bots'),
   purchaseBot: (body) => request('/store/purchase', { method: 'POST', body: JSON.stringify(body) }),
@@ -127,7 +129,11 @@ export const api = {
   // =============================================
   getWallet: () => request('/wallet'),
   getWalletSummary: () => request('/wallet/summary'),
-  getTransactions: (params = {}) => request(`/wallet/transactions?${new URLSearchParams(params)}`),
+  getTransactions: (params = {}) => {
+    const cleaned = Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== '' && v !== null));
+    const qs = new URLSearchParams(cleaned).toString();
+    return request(`/wallet/transactions${qs ? '?' + qs : ''}`);
+  },
   deposit: (body) => request('/wallet/deposit', { method: 'POST', body: JSON.stringify(body) }),
   topup: (body) => request('/wallet/topup', { method: 'POST', body: JSON.stringify(body) }),
   withdraw: (body) => request('/wallet/withdraw', { method: 'POST', body: JSON.stringify(body) }),
@@ -192,10 +198,17 @@ export const api = {
   getLeaderboard: () => request('/forums/leaderboard'),
 
   // =============================================
-  // Brokers
+  // Brokers (CRUD)
   // =============================================
-  getBrokers: () => request('/brokers'),
   createBroker: (body) => request('/brokers', { method: 'POST', body: JSON.stringify(body) }),
   updateBroker: (id, body) => request(`/brokers/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   deleteBroker: (id) => request(`/brokers/${id}`, { method: 'DELETE' }),
+
+  // =============================================
+  // Notifications (In-App)
+  // =============================================
+  getNotifications: (limit = 30) => request(`/notifications?limit=${limit}`),
+  getUnreadCount: () => request('/notifications/unread-count'),
+  markAllRead: () => request('/notifications/read-all', { method: 'PUT' }),
+  markRead: (id) => request(`/notifications/${id}/read`, { method: 'PUT' }),
 };

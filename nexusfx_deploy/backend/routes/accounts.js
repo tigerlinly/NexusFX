@@ -113,19 +113,24 @@ router.post('/:id/sync', async (req, res) => {
     const info = await metaApiService.getAccountInfo(acct.metaapi_account_id, acct.metaapi_token);
 
     if (info.connected) {
+      // Update balance, equity AND account_name, account_type from MetaAPI
+      const newName = info.account_name || acct.account_name;
+      const newType = info.account_type || acct.account_type;
       await pool.query(
         `UPDATE accounts SET 
           balance = $1, equity = $2, 
           leverage = COALESCE($3, leverage),
           server = COALESCE(NULLIF($4, ''), server),
           currency = COALESCE(NULLIF($5, ''), currency),
+          account_name = COALESCE(NULLIF($6, ''), account_name),
+          account_type = COALESCE(NULLIF($7, ''), account_type),
           is_connected = true, last_sync_at = NOW() 
-        WHERE id = $6`,
-        [info.balance, info.equity, info.leverage, info.server, info.currency, acct.id]
+        WHERE id = $8`,
+        [info.balance, info.equity, info.leverage, info.server, info.currency, newName, newType, acct.id]
       );
       res.json({ 
         success: true, balance: info.balance, equity: info.equity,
-        account_name: acct.account_name, account_type: acct.account_type 
+        account_name: newName, account_type: newType 
       });
     } else {
       await pool.query(`UPDATE accounts SET is_connected = false WHERE id = $1`, [acct.id]);

@@ -1,14 +1,14 @@
 import { useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
-  LayoutDashboard, History, Target, Settings, LogOut, TrendingUp, User,
-  Building2, ChevronDown, Menu, Wallet, Users, BarChart3, Shield, Cpu, TerminalSquare, CreditCard, Store, Flame, Copy, MessageSquare, Globe, DollarSign
+  LayoutDashboard, History, Target, Settings, LogOut,
+  Building2, Menu, Wallet, Users, BarChart3, Shield, Cpu, TerminalSquare, CreditCard, Store, Flame, Copy, MessageSquare, Globe, DollarSign
 } from 'lucide-react';
+import NotificationBell from './NotificationBell';
 
 export default function Layout() {
   const { user, logout } = useAuth();
-  const navigate = useNavigate();
   const [isCollapsed, setIsCollapsed] = useState(() => {
     return localStorage.getItem('nexusfx_sidebar_collapsed') === 'true';
   });
@@ -69,7 +69,7 @@ export default function Layout() {
 
           <NavLink to="/store" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="สโตร์กลยุทธ์">
             <Store size={18} className="nav-icon" />
-            {!isCollapsed && <span>Trading Bots</span>}
+            {!isCollapsed && <span>สโตร์กลยุทธ์</span>}
           </NavLink>
 
           <NavLink to="/strategies" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="ตลาด Copy Trading">
@@ -166,21 +166,27 @@ export default function Layout() {
               </div>
             )}
           </div>
-          <button className="btn btn-ghost btn-icon" onClick={handleLogout} title="ออกจากระบบ">
-            <LogOut size={16} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <NotificationBell />
+            <button className="btn btn-ghost btn-icon" onClick={handleLogout} title="ออกจากระบบ">
+              <LogOut size={16} />
+            </button>
+          </div>
         </div>
       </aside>
 
       {/* Main content */}
       <main className="main-content" style={{ position: 'relative' }}>
-        <button 
-          className="sidebar-toggle-btn"
-          onClick={handleToggleCollapse}
-          title="ซ่อน/แสดง เมนู"
-        >
-          <Menu size={20} />
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'absolute', top: 12, left: 12, zIndex: 100 }}>
+          <button 
+            className="sidebar-toggle-btn"
+            onClick={handleToggleCollapse}
+            title="ซ่อน/แสดง เมนู"
+            style={{ position: 'static' }}
+          >
+            <Menu size={20} />
+          </button>
+        </div>
         <Outlet />
       </main>
     </div>

@@ -65,6 +65,14 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'username, email, password required' });
     }
 
+    // Password complexity validation
+    if (password.length < 8) {
+      return res.status(400).json({ error: 'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร' });
+    }
+    if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
+      return res.status(400).json({ error: 'รหัสผ่านต้องมีตัวพิมพ์ใหญ่ ตัวพิมพ์เล็ก และตัวเลขอย่างน้อยอย่างละ 1 ตัว' });
+    }
+
     const existing = await pool.query(
       'SELECT id FROM users WHERE username = $1 OR email = $2',
       [username, email]

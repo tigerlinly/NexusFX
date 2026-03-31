@@ -303,4 +303,45 @@ router.post('/kill-switch', async (req, res) => {
   }
 });
 
+// =============================================
+// SYSTEM CONFIGURATION
+// =============================================
+router.get('/system-config', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT key, value, description FROM system_config ORDER BY key');
+    res.json(result.rows);
+  } catch (err) {
+    if (err.code === '42P01') {
+      res.json([]); // Table doesn't exist yet
+    } else {
+      console.error('System config get error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+});
+
+router.put('/system-config', async (req, res) => {
+  try {
+    const { key, value } = req.body;
+    
+    await pool.query(
+      `INSERT INTO system_config (key, value) 
+       VALUES ($1, $2) 
+       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
+      [key, value]
+    );
+
+    await pool.query(
+      `INSERT INTO audit_logs (user_id, action, entity_type, details, ip_address)
+       VALUES ($1, 'admin.update_system_config', 'system', $2, $3)`,
+      [req.user.id, JSON.stringify({ key }), req.ip]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('System config update error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;

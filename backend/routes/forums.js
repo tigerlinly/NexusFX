@@ -3,6 +3,18 @@ const { pool } = require('../config/database');
 const { authMiddleware } = require('../middleware/auth');
 const router = express.Router();
 
+// Simple HTML/XSS sanitizer — strips HTML tags, trims whitespace
+function sanitize(str) {
+  if (!str || typeof str !== 'string') return '';
+  return str
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .replace(/\//g, '&#x2F;')
+    .trim();
+}
+
 router.use(authMiddleware);
 
 // GET /api/forums - list posts
@@ -55,7 +67,7 @@ router.post('/', async (req, res) => {
     const result = await pool.query(
       `INSERT INTO forums (author_id, title, content, category)
        VALUES ($1, $2, $3, $4) RETURNING *`,
-      [req.user.id, title, content, category || 'general']
+      [req.user.id, sanitize(title), sanitize(content), sanitize(category) || 'general']
     );
 
     res.status(201).json(result.rows[0]);
@@ -112,7 +124,7 @@ router.post('/:id/comments', async (req, res) => {
     const result = await pool.query(
       `INSERT INTO forum_comments (post_id, author_id, content)
        VALUES ($1, $2, $3) RETURNING *`,
-      [req.params.id, req.user.id, content]
+      [req.params.id, req.user.id, sanitize(content)]
     );
 
     res.status(201).json(result.rows[0]);

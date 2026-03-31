@@ -35,7 +35,7 @@ router.get('/', async (req, res) => {
   try {
     const {
       view = 'all', broker_id, account_id,
-      from, to, symbol, side, status,
+      from, to, symbol, side, status, source,
       page = 1, limit = 50, sort_by = 'closed_at', sort_dir = 'DESC'
     } = req.query;
 
@@ -71,6 +71,11 @@ router.get('/', async (req, res) => {
       conditions.push(`t.status = $${paramIdx}`);
       params.push(status.toUpperCase());
       paramIdx++;
+    }
+    if (source === 'bot') {
+      conditions.push(`t.bot_id IS NOT NULL`);
+    } else if (source === 'manual') {
+      conditions.push(`t.bot_id IS NULL`);
     }
 
     const whereClause = conditions.join(' AND ');
