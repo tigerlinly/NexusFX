@@ -37,6 +37,7 @@ export default function TradeHistoryPage() {
 
   const [dateWeek, setDateWeek] = useState(''); // e.g., '2023-W01'
   const [dateMonth, setDateMonth] = useState(''); // e.g., '2023-01'
+  const [dateYear, setDateYear] = useState(''); // e.g., '2023'
 
   const [sortBy, setSortBy] = useState('closed_at');
   const [sortDir, setSortDir] = useState('DESC');
@@ -101,6 +102,10 @@ export default function TradeHistoryPage() {
       const monthStr = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`;
       setDateMonth(monthStr);
       handleMonthChange(monthStr);
+    } else if (dateMode === 'year') {
+      const yStr = new Date().getFullYear().toString();
+      setDateYear(yStr);
+      handleYearChange(yStr);
     }
   }, [dateMode]);
 
@@ -116,11 +121,15 @@ export default function TradeHistoryPage() {
     if (dow <= 4) ISOweekStart.setDate(simple.getDate() - simple.getDay() + 1);
     else ISOweekStart.setDate(simple.getDate() + 8 - simple.getDay());
     
-    const ISOweekEnd = new Date(ISOweekStart);
-    ISOweekEnd.setDate(ISOweekStart.getDate() + 6);
+    // Shift back 1 day so week starts on Sunday instead of Monday
+    const targetWeekStart = new Date(ISOweekStart);
+    targetWeekStart.setDate(ISOweekStart.getDate() - 1);
     
-    setDateFrom(ISOweekStart.toISOString().split('T')[0]);
-    setDateTo(ISOweekEnd.toISOString().split('T')[0]);
+    const targetWeekEnd = new Date(targetWeekStart);
+    targetWeekEnd.setDate(targetWeekStart.getDate() + 6);
+    
+    setDateFrom(targetWeekStart.toISOString().split('T')[0]);
+    setDateTo(targetWeekEnd.toISOString().split('T')[0]);
     setPage(1);
   };
 
@@ -135,6 +144,16 @@ export default function TradeHistoryPage() {
     
     setDateFrom(firstDay.toISOString().split('T')[0]);
     setDateTo(lastDay.toISOString().split('T')[0]);
+    setPage(1);
+  };
+
+  const handleYearChange = (val) => {
+    setDateYear(val);
+    if (!val) {
+      setDateFrom(''); setDateTo(''); return;
+    }
+    setDateFrom(`${val}-01-01`);
+    setDateTo(`${val}-12-31`);
     setPage(1);
   };
 
@@ -262,6 +281,7 @@ export default function TradeHistoryPage() {
             <option value="day">📅 รูปแบบ: วัน</option>
             <option value="week">📅 รูปแบบ: สัปดาห์</option>
             <option value="month">📅 รูปแบบ: เดือน</option>
+            <option value="year">📅 รูปแบบ: ปี</option>
           </select>
 
           {dateMode === 'day' && (
@@ -282,6 +302,15 @@ export default function TradeHistoryPage() {
           {dateMode === 'month' && (
             <input type="month" className="filter-select" style={{ padding: '6px 10px', fontSize: 12 }}
               value={dateMonth} onChange={e => handleMonthChange(e.target.value)} />
+          )}
+
+          {dateMode === 'year' && (
+            <select className="filter-select" style={{ padding: '6px 10px', fontSize: 12 }}
+              value={dateYear} onChange={e => handleYearChange(e.target.value)}>
+              {Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i).map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
           )}
 
           {(symbolFilter || sideFilter || sourceFilter || dateFrom || dateTo) && (
