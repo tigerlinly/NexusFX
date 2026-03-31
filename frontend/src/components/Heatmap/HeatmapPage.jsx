@@ -27,8 +27,11 @@ export default function HeatmapPage() {
   }, [getFilterParams, days]);
 
   const formatCurrency = (val) => {
+    if (val === undefined || val === null || val === '') return '$0.00';
     const num = parseFloat(val || 0);
-    const prefix = num >= 0 ? '+' : '';
+    if (isNaN(num)) return '$0.00';
+    if (num === 0) return '$0.00';
+    const prefix = num > 0 ? '+' : '-';
     return `${prefix}$${Math.abs(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 

@@ -20,8 +20,8 @@ export default function DashboardPage() {
   const [targetStatus, setTargetStatus] = useState([]);
   const [chartFilterType, setChartFilterType] = useState('duration');
   const [chartPeriod, setChartPeriod] = useState('30');
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedMonth] = useState(new Date().getMonth());
+  const [selectedYear] = useState(new Date().getFullYear());
   const [loading, setLoading] = useState(true);
   const [layout, setLayout] = useState(['targets', 'summary', 'chart', 'breakdown']);
   const [editMode, setEditMode] = useState(false);
@@ -46,7 +46,7 @@ export default function DashboardPage() {
     breakdown: <PieChart size={16} />,
   };
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const formatDate = (d) => {
@@ -102,16 +102,18 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [chartFilterType, chartPeriod, selectedMonth, selectedYear, getFilterParams]);
 
   useEffect(() => {
     fetchData();
-  }, [viewMode, chartFilterType, chartPeriod, selectedMonth, selectedYear, getFilterParams]);
+  }, [fetchData, viewMode]);
 
   const formatCurrency = (val) => {
-    if (val === undefined || val === null) return '$0.00';
+    if (val === undefined || val === null || val === '') return '$0.00';
     const num = parseFloat(val);
-    const prefix = num >= 0 ? '+' : '';
+    if (isNaN(num)) return '$0.00';
+    if (num === 0) return '$0.00';
+    const prefix = num > 0 ? '+' : '-';
     return `${prefix}$${Math.abs(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
@@ -185,7 +187,7 @@ export default function DashboardPage() {
       await api.updateWidgets(payload);
       setLayout(editLayout);
       setEditMode(false);
-    } catch (err) {
+    } catch {
       alert('Failed to save layout');
     }
   };
@@ -467,8 +469,6 @@ export default function DashboardPage() {
   // =============================================
   const renderEditToolbar = () => {
     if (!editMode) return null;
-    
-    const hiddenWidgets = ALL_WIDGETS.filter(w => !editLayout.includes(w));
 
     return (
       <div className="edit-toolbar" style={{

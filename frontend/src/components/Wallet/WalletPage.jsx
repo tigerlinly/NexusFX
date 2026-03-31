@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { api } from '../../utils/api';
 import {
   Wallet, ArrowUpRight, ArrowDownRight, Plus, Minus, DollarSign,
@@ -11,15 +11,13 @@ export default function WalletPage() {
   const [totalTx, setTotalTx] = useState(0);
   const [page, setPage] = useState(1);
   const [filter, setFilter] = useState('');
-  const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(null); // 'deposit' | 'withdraw'
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
   const [processing, setProcessing] = useState(false);
   const [depositMethod, setDepositMethod] = useState('test');
 
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = useCallback(async () => {
     try {
       const params = { page, limit: 20 };
       if (filter) params.type = filter;
@@ -33,10 +31,8 @@ export default function WalletPage() {
       setTotalTx(txData.total);
     } catch (err) {
       console.error('Wallet fetch error:', err);
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [page, filter]);
 
   useEffect(() => { 
     fetchData(); 
@@ -48,7 +44,7 @@ export default function WalletPage() {
       alert('คุณได้ยกเลิกการทำรายการชำระเงิน');
       window.history.replaceState(null, '', window.location.pathname);
     }
-  }, [page, filter]);
+  }, [fetchData]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -103,8 +99,12 @@ export default function WalletPage() {
   };
 
   const formatCurrency = (val) => {
-    if (!val && val !== 0) return '$0.00';
-    return `$${parseFloat(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    if (val === undefined || val === null || val === '') return '$0.00';
+    const num = parseFloat(val);
+    if (isNaN(num)) return '$0.00';
+    if (num === 0) return '$0.00';
+    const prefix = num > 0 ? '+' : '-';
+    return `${prefix}$${Math.abs(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   const typeColors = {
@@ -232,7 +232,7 @@ export default function WalletPage() {
                         </div>
                       </td>
                       <td style={{ color: tx.type === 'DEPOSIT' ? 'var(--profit)' : tx.type === 'WITHDRAW' ? 'var(--loss)' : 'var(--text-primary)', fontWeight: 600 }}>
-                        {tx.type === 'DEPOSIT' ? '+' : '-'}{formatCurrency(tx.amount)}
+                        {formatCurrency(tx.type === 'DEPOSIT' ? parseFloat(tx.amount) : -parseFloat(tx.amount))}
                       </td>
                       <td>{tx.currency || 'USD'}</td>
                       <td>

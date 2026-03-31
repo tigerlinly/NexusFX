@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { api } from '../../utils/api';
 import {
   BarChart3, PieChart, Clock, Calendar, Download, FileText,
@@ -21,11 +21,9 @@ export default function ReportsPage() {
   const [monthlyData, setMonthlyData] = useState([]);
   const [exports, setExports] = useState([]);
   const [psychologyData, setPsychologyData] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
 
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = useCallback(async () => {
     try {
       if (activeTab === 'analytics') {
         const data = await api.getAnalytics({ period });
@@ -45,12 +43,10 @@ export default function ReportsPage() {
       }
     } catch (err) {
       console.error('Reports fetch error:', err);
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [activeTab, period]);
 
-  useEffect(() => { fetchData(); }, [activeTab, period]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   const handleExport = async (reportType) => {
     setExporting(true);
@@ -71,9 +67,12 @@ export default function ReportsPage() {
   };
 
   const formatCurrency = (val) => {
-    if (!val && val !== 0) return '$0.00';
+    if (val === undefined || val === null || val === '') return '$0.00';
     const num = parseFloat(val);
-    return `${num >= 0 ? '+' : ''}$${Math.abs(num).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+    if (isNaN(num)) return '$0.00';
+    if (num === 0) return '$0.00';
+    const prefix = num > 0 ? '+' : '-';
+    return `${prefix}$${Math.abs(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   const tabs = [

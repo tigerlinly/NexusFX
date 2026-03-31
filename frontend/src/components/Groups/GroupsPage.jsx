@@ -10,7 +10,6 @@ export default function GroupsPage() {
   const [groups, setGroups] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [performance, setPerformance] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showAddMember, setShowAddMember] = useState(false);
   const [showEditGroup, setShowEditGroup] = useState(false);
@@ -23,14 +22,11 @@ export default function GroupsPage() {
   const isAdmin = currentUser?.role === 'admin';
 
   const fetchGroups = async () => {
-    setLoading(true);
     try {
       const data = await api.getGroups();
       setGroups(data);
     } catch (err) {
       console.error('Groups fetch error:', err);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -179,9 +175,12 @@ export default function GroupsPage() {
   };
 
   const formatCurrency = (val) => {
-    if (!val && val !== 0) return '$0.00';
+    if (val === undefined || val === null || val === '') return '$0.00';
     const num = parseFloat(val);
-    return `${num >= 0 ? '+' : ''}$${Math.abs(num).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+    if (isNaN(num)) return '$0.00';
+    if (num === 0) return '$0.00';
+    const prefix = num > 0 ? '+' : '-';
+    return `${prefix}$${Math.abs(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   return (

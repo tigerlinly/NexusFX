@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { api } from '../../utils/api';
 import { useAccounts } from '../../context/AccountContext';
 import {
@@ -14,6 +14,15 @@ export default function AccountsPage() {
     broker_id: '', account_number: '', account_name: '', account_type: 'Real',
     currency: 'USD', server: '', metaapi_account_id: ''
   });
+
+  const formatCurrency = (val) => {
+    if (val === undefined || val === null || val === '') return '$0.00';
+    const num = parseFloat(val);
+    if (isNaN(num)) return '$0.00';
+    if (num === 0) return '$0.00';
+    const prefix = num > 0 ? '+' : '-';
+    return `${prefix}$${Math.abs(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
 
   const handleSave = async () => {
     try {
@@ -271,11 +280,11 @@ export default function AccountsPage() {
                   <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>สกุล</div>
                 </div>
                 <div>
-                  <span className="font-mono" style={{ fontWeight: 600, fontSize: 12 }}>${parseFloat(acc.balance).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                  <span className="font-mono" style={{ fontWeight: 600, fontSize: 12 }}>{formatCurrency(acc.balance)}</span>
                   <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>Balance</div>
                 </div>
                 <div>
-                  <span className="font-mono" style={{ fontWeight: 600, fontSize: 12 }}>${parseFloat(acc.equity).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                  <span className="font-mono" style={{ fontWeight: 600, fontSize: 12 }}>{formatCurrency(acc.equity)}</span>
                   <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>Equity</div>
                 </div>
                 <div>

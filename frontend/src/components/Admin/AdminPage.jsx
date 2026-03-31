@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../utils/api';
 import {
@@ -18,11 +18,9 @@ export default function AdminPage() {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState(null);
 
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = useCallback(async () => {
     try {
       if (activeTab === 'overview') {
         const [ov, rl] = await Promise.all([
@@ -42,13 +40,12 @@ export default function AdminPage() {
       }
     } catch (err) {
       console.error('Admin fetch error:', err);
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [activeTab, search, roleFilter, page]);
 
-  useEffect(() => { fetchData(); }, [activeTab, page]);
-  useEffect(() => { if (activeTab === 'users') fetchData(); }, [search, roleFilter]);
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleUpdateUser = async (userId, updates) => {
     try {
@@ -61,8 +58,12 @@ export default function AdminPage() {
   };
 
   const formatCurrency = (val) => {
-    if (!val && val !== 0) return '$0.00';
-    return `$${parseFloat(val).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+    if (val === undefined || val === null || val === '') return '$0.00';
+    const num = parseFloat(val);
+    if (isNaN(num)) return '$0.00';
+    if (num === 0) return '$0.00';
+    const prefix = num > 0 ? '+' : '-';
+    return `${prefix}$${Math.abs(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   const [showKillModal, setShowKillModal] = useState(false);

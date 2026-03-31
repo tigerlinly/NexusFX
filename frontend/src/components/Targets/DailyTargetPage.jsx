@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { api } from '../../utils/api';
 import { useAccounts } from '../../context/AccountContext';
 import {
@@ -14,7 +14,7 @@ export default function DailyTargetPage() {
   const [formData, setFormData] = useState({ account_id: '', target_amount: '', action_on_reach: 'NOTIFY' });
   const [showModal, setShowModal] = useState(null); // target that reached
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [t, s, h] = await Promise.all([
         api.getTargets(),
@@ -27,17 +27,19 @@ export default function DailyTargetPage() {
     } catch (err) {
       console.error('Targets error:', err);
     }
-  };
+  }, []);
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { 
+    fetchData(); 
+  }, [fetchData]);
 
   // Check for newly reached targets
   useEffect(() => {
     const reached = targetStatus.find(s => s.reached);
     if (reached && !showModal) {
-      setShowModal(reached);
+      setTimeout(() => setShowModal(reached), 0);
     }
-  }, [targetStatus]);
+  }, [targetStatus, showModal]);
 
   const handleCreate = async () => {
     try {
@@ -72,8 +74,12 @@ export default function DailyTargetPage() {
   };
 
   const formatCurrency = (val) => {
+    if (val === undefined || val === null || val === '') return '$0.00';
     const num = parseFloat(val);
-    return `$${Math.abs(num).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+    if (isNaN(num)) return '$0.00';
+    if (num === 0) return '$0.00';
+    const prefix = num > 0 ? '+' : '-';
+    return `${prefix}$${Math.abs(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   return (
