@@ -207,8 +207,7 @@ export default function DailyTargetPage() {
                   <div className={`progress-fill ${reached ? 'reached' : ''}`} style={{ width: `${Math.min(100, Math.max(0, progress))}%` }} />
                 </div>
 
-                <div className="flex justify-between" style={{ fontSize: 11 }}>
-                  <span style={{ color: 'var(--text-tertiary)' }}>{progress.toFixed(1)}%</span>
+                <div className="flex justify-end" style={{ fontSize: 11 }}>
                   <span style={{ color: 'var(--text-tertiary)' }}>
                     {t.action_on_reach === 'AUTO_STOP' ? '🔴 หยุดอัตโนมัติ' : '🔔 แจ้งเตือน'}
                   </span>

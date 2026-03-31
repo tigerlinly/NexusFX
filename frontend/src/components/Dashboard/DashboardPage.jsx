@@ -421,8 +421,8 @@ export default function DashboardPage() {
                   <Tooltip content={<CustomTooltip />} />
                   <ReferenceLine y={0} stroke="#ffffff" strokeDasharray="3 3" />
                   {monthMarkers.map(m => (
-                    <ReferenceLine key={m.date} x={m.date} stroke="rgba(255, 255, 255, 0.15)">
-                      <Label value={m.label} position="insideTopLeft" fill="rgba(255, 255, 255, 0.5)" fontSize={11} offset={10} />
+                    <ReferenceLine key={m.date} x={m.date} stroke="var(--accent-secondary)" strokeOpacity={0.6} strokeDasharray="4 4">
+                      <Label value={m.label} position="insideTopLeft" fill="var(--accent-secondary)" fontSize={11} offset={8} />
                     </ReferenceLine>
                   ))}
                   <Area type="monotone" dataKey="pnl" stroke="var(--accent-primary)" fill="url(#pnlGradient)" strokeWidth={2} />
