@@ -53,8 +53,8 @@ router.get('/summary', async (req, res) => {
       [accountIds]
     );
 
-    // Today's aggregate
-    const today = new Date().toISOString().split('T')[0];
+    // Use Bangkok timezone for "today"
+    const today = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' })).toISOString().split('T')[0];
     const todayAgg = await pool.query(
       `SELECT 
         COALESCE(SUM(total_pnl), 0) as total_pnl_today,

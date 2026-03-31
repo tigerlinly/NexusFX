@@ -34,7 +34,8 @@ class AggregationService {
   // Compute today's daily aggregates for all accounts
   async computeDailyAggregates() {
     try {
-      const today = new Date().toISOString().split('T')[0];
+      // Use Bangkok timezone for "today"
+      const today = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' })).toISOString().split('T')[0];
       
       const accounts = await pool.query('SELECT id FROM accounts WHERE is_active = true');
       

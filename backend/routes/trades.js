@@ -47,14 +47,20 @@ router.get('/', async (req, res) => {
     let params = [accountIds];
     let paramIdx = 2;
 
+    // Convert date-only strings to Bangkok timezone boundaries
+    // e.g. "2026-03-31" → start: "2026-03-31T00:00:00+07:00", end: "2026-03-31T23:59:59+07:00"
     if (from) {
+      const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(from);
+      const fromValue = isDateOnly ? `${from}T00:00:00+07:00` : from;
       conditions.push(`t.closed_at >= $${paramIdx}`);
-      params.push(from);
+      params.push(fromValue);
       paramIdx++;
     }
     if (to) {
+      const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(to);
+      const toValue = isDateOnly ? `${to}T23:59:59+07:00` : to;
       conditions.push(`t.closed_at <= $${paramIdx}`);
-      params.push(to);
+      params.push(toValue);
       paramIdx++;
     }
     if (symbol) {
@@ -135,13 +141,17 @@ router.get('/stats', async (req, res) => {
     let paramIdx = 2;
 
     if (from) {
+      const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(from);
+      const fromValue = isDateOnly ? `${from}T00:00:00+07:00` : from;
       dateFilter += ` AND closed_at >= $${paramIdx}`;
-      params.push(from);
+      params.push(fromValue);
       paramIdx++;
     }
     if (to) {
+      const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(to);
+      const toValue = isDateOnly ? `${to}T23:59:59+07:00` : to;
       dateFilter += ` AND closed_at <= $${paramIdx}`;
-      params.push(to);
+      params.push(toValue);
       paramIdx++;
     }
 
