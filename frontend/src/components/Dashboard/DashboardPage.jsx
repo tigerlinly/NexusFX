@@ -289,7 +289,7 @@ export default function DashboardPage() {
                     <div className="flex items-center gap-sm">
                       <Target size={18} style={{ color: t.reached ? 'var(--profit)' : 'var(--accent-primary)' }} />
                       <span style={{ fontSize: 13, fontWeight: 600 }}>
-                        เป้ากำไรวันนี้ {t.account_name ? `(${t.account_name})` : '(รวมทั้งหมด)'}
+                        เป้ากำไรวันนี้ {t.account_name ? `(${t.account_name})` : '(รวมทั้งหมด)'} <span style={{ color: 'var(--text-tertiary)', fontWeight: 'normal', marginLeft: 6 }}>{t.progress.toFixed(1)}%</span>
                       </span>
                     </div>
                     <div>
@@ -301,10 +301,11 @@ export default function DashboardPage() {
                   <div className="progress-bar">
                     <div className={`progress-fill ${t.reached ? 'reached' : ''}`} style={{ width: `${Math.min(100, Math.max(0, t.progress))}%` }} />
                   </div>
-                  <div className="flex justify-between mt-md" style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
-                    <span>{t.progress.toFixed(1)}%</span>
-                    {t.reached && <span style={{ color: 'var(--profit)', fontWeight: 600 }}>🎯 ถึงเป้าแล้ว!</span>}
-                  </div>
+                  {t.reached && (
+                    <div className="flex justify-end mt-md" style={{ fontSize: 11 }}>
+                      <span style={{ color: 'var(--profit)', fontWeight: 600 }}>🎯 ถึงเป้าแล้ว!</span>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
