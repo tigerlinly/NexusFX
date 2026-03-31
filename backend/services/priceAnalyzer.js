@@ -43,8 +43,30 @@ async function fetchCandles(symbol, interval = '5m', limit = 100) {
   throw new Error(`Unsupported symbol: ${symbol}`);
 }
 
+function mapToBinanceInterval(interval) {
+  const map = {
+    'M1': '1m', 'M2': '1m', 'M3': '3m', 'M4': '3m', 'M5': '5m', 'M6': '5m', 
+    'M10': '5m', 'M12': '5m', 'M15': '15m', 'M20': '15m', 'M30': '30m',
+    'H1': '1h', 'H2': '2h', 'H3': '2h', 'H4': '4h', 'H6': '6h', 'H8': '8h', 'H12': '12h',
+    'D1': '1d', 'W1': '1w', 'WN': '1M'
+  };
+  return map[interval.toUpperCase()] || interval;
+}
+
+function mapToYahooInterval(interval) {
+  const map = {
+    'M1': '1m', 'M2': '2m', 'M3': '2m', 'M4': '2m', 'M5': '5m', 'M6': '5m', 
+    'M10': '5m', 'M12': '5m', 'M15': '15m', 'M20': '15m', 'M30': '30m',
+    'H1': '60m', 'H2': '60m', 'H3': '60m', 'H4': '60m', 'H6': '60m', 'H8': '60m', 'H12': '60m',
+    'D1': '1d', 'W1': '1wk', 'WN': '1mo',
+    '1m': '1m', '5m': '5m', '15m': '15m', '1h': '60m', '4h': '1h', '1d': '1d'
+  };
+  return map[interval.toUpperCase()] || map[interval] || '5m';
+}
+
 async function fetchFromBinance(symbol, interval, limit) {
-  const url = `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`;
+  const binanceInt = mapToBinanceInterval(interval);
+  const url = `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${binanceInt}&limit=${limit}`;
   const resp = await fetch(url, { signal: AbortSignal.timeout(8000) });
   if (!resp.ok) throw new Error(`Binance API error: ${resp.status}`);
   const data = await resp.json();
@@ -61,7 +83,7 @@ async function fetchFromBinance(symbol, interval, limit) {
 
 async function fetchFromYahoo(symbol, interval, limit) {
   // Map to Yahoo intervals
-  const yahooInterval = { '1m': '1m', '5m': '5m', '15m': '15m', '1h': '60m', '4h': '1h', '1d': '1d' }[interval] || '5m';
+  const yahooInterval = mapToYahooInterval(interval);
   const range = limit <= 100 ? '1d' : limit <= 500 ? '5d' : '1mo';
 
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=${yahooInterval}&range=${range}`;

@@ -1428,3 +1428,10 @@ input:-webkit-autofill:active{
   .stat-card { padding: var(--space-md); }
   h1, h2, .h1, .h2 { font-size: 1.3rem; }
 }
+
+.modal-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+.modal-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px; }
+
+@media (max-width: 768px) { 
+  .modal-grid-3, .modal-grid-2 { grid-template-columns: 1fr; } 
+}

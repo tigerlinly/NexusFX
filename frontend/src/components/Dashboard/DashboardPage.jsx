@@ -294,12 +294,12 @@ export default function DashboardPage() {
                         เป้ากำไรวันนี้ {t.account_name ? `(${t.account_name})` : '(รวมทั้งหมด)'} <span style={{ color: 'var(--text-tertiary)', fontWeight: 'normal', marginLeft: 6 }}>{t.progress.toFixed(1)}%</span>
                       </span>
                     </div>
-                    <div className="flex items-baseline">
-                      <span className="target-pnl" style={{ color: t.current_pnl >= 0 ? 'var(--profit)' : 'var(--loss)' }}>
-                        {t.current_pnl > 0 ? '+' : t.current_pnl < 0 ? '-' : ''}{formatCurrency(Math.abs(t.current_pnl))}
+                    <div className="flex items-baseline" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                      <span className="target-pnl" style={{ color: t.current_pnl >= 0 ? 'var(--profit)' : 'var(--loss)', fontSize: 24, fontWeight: 700 }}>
+                        {formatCurrency(t.current_pnl)}
                       </span>
-                      <span style={{ color: 'var(--text-tertiary)', fontSize: 24, margin: '0 8px', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>/</span>
-                      <span className="target-amount" style={{ color: 'var(--text-secondary)', fontSize: 24, fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>
+                      <span style={{ color: 'var(--text-tertiary)', fontSize: 24, margin: '0 8px', fontWeight: 700 }}>/</span>
+                      <span className="target-amount" style={{ color: 'var(--text-secondary)', fontSize: 24, fontWeight: 700 }}>
                         ${parseFloat(t.target_amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                     </div>
@@ -431,7 +431,7 @@ export default function DashboardPage() {
                 </div>
               </div>
               <ResponsiveContainer width="100%" height={320}>
-                <AreaChart data={chartData} margin={{ top: 55, right: 30, left: -20, bottom: 5 }}>
+                <AreaChart data={chartData} margin={{ top: 70, right: 35, left: -20, bottom: 5 }}>
                   <defs>
                     <linearGradient id="pnlGradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="var(--accent-primary)" stopOpacity={0.3} />
@@ -439,7 +439,7 @@ export default function DashboardPage() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border-primary)" />
-                  <XAxis dataKey="date" interval={0} tick={{ fill: 'var(--text-tertiary)', fontSize: 11 }} tickFormatter={(val) => new Date(val).getDate().toString()} />
+                  <XAxis dataKey="date" interval={0} padding={{ left: 10, right: 25 }} tick={{ fill: 'var(--text-tertiary)', fontSize: 11 }} tickFormatter={(val) => new Date(val).getDate().toString()} />
                   <YAxis tickCount={10} tick={{ fill: 'var(--text-tertiary)', fontSize: 11 }} tickFormatter={(val) => { const abs = Math.abs(val); return abs >= 1000 ? (val / 1000).toLocaleString() + 'K' : val; }} />
                   <Tooltip content={<CustomTooltip />} />
                   <ReferenceLine y={0} stroke="#ffffff" strokeDasharray="3 3" />
@@ -448,7 +448,7 @@ export default function DashboardPage() {
                   ))}
                   {monthLabels.map(m => (
                     <ReferenceLine key={`label-${m.date}`} x={m.date} stroke="none">
-                      <Label value={m.label} position="top" fill="var(--accent-secondary)" fontSize={12} offset={25} />
+                      <Label value={m.label} position="top" fill="var(--text-primary)" fontSize={13} fontWeight="bold" offset={40} />
                     </ReferenceLine>
                   ))}
                   <Area type="monotone" dataKey="pnl" stroke="var(--accent-primary)" fill="url(#pnlGradient)" strokeWidth={2} />

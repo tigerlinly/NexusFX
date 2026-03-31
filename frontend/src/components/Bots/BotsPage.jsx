@@ -17,8 +17,8 @@ export default function BotsPage() {
   
   const [formData, setFormData] = useState({
     bot_name: '', account_id: '', strategy_type: 'Scalper',
-    primary_timeframe: '5m',
-    analysis_timeframes: ['5m', '15m'],
+    primary_timeframe: 'M5',
+    analysis_timeframes: ['M5', 'M15'],
     indicators_config: [{ name: 'RSI', weight: 40 }],
     min_confidence: 60,
     symbols: ['XAUUSD'], // from parameters usually, but lifted up for ui
@@ -32,7 +32,7 @@ export default function BotsPage() {
   const [editingBotId, setEditingBotId] = useState(null);
 
   const availableIndicators = ['RSI', 'MACD', 'EMA', 'BollingerBands', 'Engulfing', 'PinBar'];
-  const timeframes = ['1m', '5m', '15m', '1h', '4h', '1d'];
+  const timeframes = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M10', 'M12', 'M15', 'M20', 'M30', 'H1', 'H2', 'H3', 'H4', 'H6', 'H8', 'H12', 'D1', 'W1', 'WN'];
 
   const fetchData = async () => {
     try {
@@ -425,7 +425,7 @@ export default function BotsPage() {
             <h2 className="modal-title">🤖 {isEditMode ? 'ตั้งค่า Trading Bot' : 'สร้าง Trading Bot ใหม่'}</h2>
             <form onSubmit={handleSubmit} className="modal-body-scroll">
               
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+              <div className="modal-grid-3">
                 <div className="form-group">
                   <label className="form-label">ชื่อ Bot</label>
                   <input className="form-input" required value={formData.bot_name} onChange={e => setFormData({ ...formData, bot_name: e.target.value })} placeholder="เช่น Sniper V1" />
@@ -439,9 +439,6 @@ export default function BotsPage() {
                     ))}
                   </select>
                 </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
                 <div className="form-group">
                   <label className="form-label">ประเภทกลยุทธ์พื้นฐาน</label>
                   <select className="filter-select" value={formData.strategy_type} onChange={e => setFormData({ ...formData, strategy_type: e.target.value })} style={{ width: '100%' }}>
@@ -452,20 +449,22 @@ export default function BotsPage() {
                     <option value="Custom">Custom (ปรับแต่งเอง)</option>
                   </select>
                 </div>
+              </div>
+
+              <div className="modal-grid-2">
                 <div className="form-group">
                   <label className="form-label">Timeframe หลัก (ในการเข้าไม้)</label>
                   <select className="filter-select" value={formData.primary_timeframe} onChange={e => setFormData({ ...formData, primary_timeframe: e.target.value })} style={{ width: '100%' }}>
                     {timeframes.map(tf => <option key={tf} value={tf}>{tf}</option>)}
                   </select>
                 </div>
+                <div className="form-group">
+                  <label className="form-label">คู่เงินที่เทรด (Symbols - คั่นด้วยจุลภาค)</label>
+                  <input className="form-input" required value={formData.symbols.join(', ')} onChange={e => setFormData({ ...formData, symbols: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })} placeholder="XAUUSD, EURUSD" />
+                </div>
               </div>
 
-              <div className="form-group" style={{ marginBottom: 16 }}>
-                <label className="form-label">คู่เงินที่เทรด (Symbols - คั่นด้วยจุลภาค)</label>
-                <input className="form-input" required value={formData.symbols.join(', ')} onChange={e => setFormData({ ...formData, symbols: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })} placeholder="XAUUSD, EURUSD" />
-              </div>
-
-              <div className="form-group" style={{ marginBottom: 16 }}>
+              <div className="form-group" style={{ marginBottom: 24 }}>
                 <label className="form-label">ต้องวิเคราะห์จากกราฟใดบ้าง (Analysis Timeframes)</label>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   {timeframes.map(tf => (
