@@ -87,7 +87,9 @@ export default function ReportsPage() {
     if (!active || !payload?.length) return null;
     return (
       <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', borderRadius: 'var(--radius-md)', padding: 12, fontSize: 12 }}>
-        <div style={{ color: 'var(--text-tertiary)', marginBottom: 4 }}>{label}</div>
+        <div style={{ color: 'var(--text-tertiary)', marginBottom: 4 }}>
+          {typeof label === 'string' && label.includes('T') ? label.split('T')[0] : label}
+        </div>
         {payload.map((p, i) => (
           <div key={i} style={{ color: p.color || 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
             {p.name}: {typeof p.value === 'number' ? formatCurrency(p.value) : p.value}

@@ -211,7 +211,9 @@ export default function DashboardPage() {
         background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)',
         borderRadius: 'var(--radius-md)', padding: '12px', fontSize: 12
       }}>
-        <div style={{ color: 'var(--text-tertiary)', marginBottom: 4 }}>{label}</div>
+        <div style={{ color: 'var(--text-tertiary)', marginBottom: 4 }}>
+          {typeof label === 'string' && label.includes('T') ? label.split('T')[0] : label}
+        </div>
         <div style={{ color: payload[0].value >= 0 ? 'var(--profit)' : 'var(--loss)', fontWeight: 600, fontFamily: 'var(--font-mono)' }}>
           กำไร/ขาดทุน: {formatCurrency(payload[0].value)}
         </div>
