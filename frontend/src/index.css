@@ -753,6 +753,7 @@ a:hover { text-decoration: underline; }
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-lg);
   padding: var(--space-lg);
+  margin: 0px 0px 24px;
 }
 
 .chart-header {
