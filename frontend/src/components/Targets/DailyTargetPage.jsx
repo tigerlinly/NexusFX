@@ -196,10 +196,10 @@ export default function DailyTargetPage() {
                     fontSize: 22, fontWeight: 700,
                     color: currentPnl >= 0 ? 'var(--profit)' : 'var(--loss)'
                   }}>
-                    {currentPnl >= 0 ? '+' : ''}${Math.abs(currentPnl).toFixed(2)}
+                    {currentPnl >= 0 ? '+' : ''}${Math.abs(currentPnl).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                   <span className="font-mono" style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
-                    / ${parseFloat(t.target_amount).toFixed(2)}
+                    / ${parseFloat(t.target_amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
 
@@ -288,13 +288,13 @@ export default function DailyTargetPage() {
               <div className="flex justify-between items-center">
                 <span style={{ color: 'var(--text-tertiary)' }}>กำไรปัจจุบัน</span>
                 <span className="font-mono" style={{ fontSize: 24, fontWeight: 700, color: 'var(--profit)' }}>
-                  +${showModal.current_pnl?.toFixed(2)}
+                  +${showModal.current_pnl?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
               <div className="flex justify-between items-center mt-md">
                 <span style={{ color: 'var(--text-tertiary)' }}>เป้าหมาย</span>
                 <span className="font-mono" style={{ fontSize: 18, color: 'var(--text-primary)' }}>
-                  ${parseFloat(showModal.target_amount).toFixed(2)}
+                  ${parseFloat(showModal.target_amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
             </div>

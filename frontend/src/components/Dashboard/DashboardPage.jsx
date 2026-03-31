@@ -295,7 +295,7 @@ export default function DashboardPage() {
                     <div>
                       <span className="target-pnl" style={{ color: t.current_pnl >= 0 ? 'var(--profit)' : 'var(--loss)' }}>{formatCurrency(t.current_pnl)}</span>
                       <span style={{ color: 'var(--text-tertiary)', fontSize: 14, margin: '0 6px' }}>/</span>
-                      <span className="target-amount" style={{ color: 'var(--text-primary)', fontSize: 20 }}>${parseFloat(t.target_amount).toFixed(2)}</span>
+                      <span className="target-amount" style={{ color: 'var(--text-primary)', fontSize: 20 }}>${parseFloat(t.target_amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
                   </div>
                   <div className="progress-bar">
@@ -359,7 +359,20 @@ export default function DashboardPage() {
             </div>
           );
 
-        case 'chart':
+        case 'chart': {
+          const monthMarkers = [];
+          if (chartData && chartData.length > 0) {
+            let currentMonth = null;
+            chartData.forEach((d) => {
+              const dateObj = new Date(d.date);
+              const monthKey = `${dateObj.getFullYear()}/${(dateObj.getMonth() + 1).toString().padStart(2, '0')}`;
+              if (monthKey !== currentMonth) {
+                monthMarkers.push({ date: d.date, label: monthKey });
+                currentMonth = monthKey;
+              }
+            });
+          }
+
           return (
             <div className="chart-card" style={{ marginBottom: 'var(--space-lg)' }}>
               <div className="chart-header">
@@ -393,7 +406,7 @@ export default function DashboardPage() {
                 </div>
               </div>
               <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={chartData}>
+                <AreaChart data={chartData} margin={{ top: 25, right: 0, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="pnlGradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="var(--accent-primary)" stopOpacity={0.3} />
@@ -405,12 +418,18 @@ export default function DashboardPage() {
                   <YAxis tickCount={10} tick={{ fill: 'var(--text-tertiary)', fontSize: 11 }} tickFormatter={(val) => { const abs = Math.abs(val); return abs >= 1000 ? (val / 1000).toLocaleString() + 'K' : val; }} />
                   <Tooltip content={<CustomTooltip />} />
                   <ReferenceLine y={0} stroke="#ffffff" strokeDasharray="3 3" />
+                  {monthMarkers.map(m => (
+                    <ReferenceLine key={m.date} x={m.date} stroke="rgba(255, 255, 255, 0.15)">
+                      <Label value={m.label} position="insideTopLeft" fill="rgba(255, 255, 255, 0.5)" fontSize={11} offset={10} />
+                    </ReferenceLine>
+                  ))}
                   <Area type="monotone" dataKey="pnl" stroke="var(--accent-primary)" fill="url(#pnlGradient)" strokeWidth={2} />
                   <Area type="monotone" dataKey="cumulative_pnl" stroke="#00b4d8" fill="none" strokeWidth={3} strokeDasharray="8 6" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
           );
+        }
 
         case 'breakdown':
           if (breakdown.length === 0) return (

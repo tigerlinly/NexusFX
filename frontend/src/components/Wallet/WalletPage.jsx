@@ -55,7 +55,7 @@ export default function WalletPage() {
         if (depositMethod === 'test') {
           // Direct topup — skip payment gateway
           await api.topup({ amount: parseFloat(amount), currency: 'USD' });
-          alert(`ฝากเงิน $${parseFloat(amount).toFixed(2)} ยอดเข้าสู่กระเป๋า USD แล้ว! (โหมดทดสอบ)`);
+          alert(`ฝากเงิน $${parseFloat(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ยอดเข้าสู่กระเป๋า USD แล้ว! (โหมดทดสอบ)`);
         } else {
           // Stripe checkout
           const res = await api.createCheckout({ amountUSD: parseFloat(amount) });
@@ -66,7 +66,7 @@ export default function WalletPage() {
         }
       } else {
         await api.withdraw({ amount: parseFloat(amount), note });
-        alert(`ทำรายการถอนเงิน $${parseFloat(amount).toFixed(2)} สำเร็จ!`);
+        alert(`ทำรายการถอนเงิน $${parseFloat(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} สำเร็จ!`);
       }
       setShowModal(null);
       setAmount('');

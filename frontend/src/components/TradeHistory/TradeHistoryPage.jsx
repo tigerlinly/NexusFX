@@ -385,8 +385,8 @@ export default function TradeHistoryPage() {
                     <td className={parseFloat(trade.pnl) >= 0 ? 'pnl-positive' : 'pnl-negative'}>
                       {formatCurrency(trade.pnl)}
                     </td>
-                    <td style={{ color: 'var(--text-tertiary)' }}>{parseFloat(trade.commission).toFixed(2)}</td>
-                    <td style={{ color: 'var(--text-tertiary)' }}>{parseFloat(trade.swap).toFixed(2)}</td>
+                    <td style={{ color: 'var(--text-tertiary)' }}>{parseFloat(trade.commission).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td style={{ color: 'var(--text-tertiary)' }}>{parseFloat(trade.swap).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                   </tr>
                 ))}
               </tbody>
