@@ -171,6 +171,7 @@ export default function DailyTargetPage() {
                 <div className="flex items-center justify-between" style={{ marginBottom: 'var(--space-sm)' }}>
                   <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
                     {t.account_name ? `${t.broker_name} — ${t.account_name}` : 'รวมทุกบัญชี'}
+                    <span style={{ color: 'var(--text-tertiary)', fontWeight: 'normal', marginLeft: 12, fontSize: 14 }}>{progress.toFixed(1)}%</span>
                   </div>
                   <div className="flex gap-xs">
                     <button
