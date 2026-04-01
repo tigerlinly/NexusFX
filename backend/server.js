@@ -19,6 +19,7 @@ const mockBotEngine = require('./services/mockBotEngine');
 const orderSyncEngine = require('./services/orderSyncEngine');
 const trailingStopEngine = require('./services/trailingStopEngine');
 const scheduleSyncEngine = require('./services/scheduleSyncEngine');
+const commissionEngine = require('./services/commissionEngine');
 
 const app = express();
 app.set('trust proxy', 1); // Trust first proxy (Nginx) to get correct Client IP for rate limiting
@@ -249,6 +250,7 @@ async function start() {
     mockBotEngine.start();
     trailingStopEngine.setIo(io);
     trailingStopEngine.start();
+    commissionEngine.start();
 
     server.listen(PORT, () => {
       console.log(`\n🚀 NexusFX Backend running on http://localhost:${PORT}`);

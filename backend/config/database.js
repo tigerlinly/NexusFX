@@ -1052,6 +1052,17 @@ async function initDatabase() {
       CREATE INDEX IF NOT EXISTS idx_users_tenant ON users(tenant_id);
     `);
 
+    // Add commission engine columns (safe to re-run)
+    try {
+      await client.query(`
+        ALTER TABLE agent_commissions ADD COLUMN IF NOT EXISTS source_trade_id INTEGER;
+        ALTER TABLE agent_commissions ADD COLUMN IF NOT EXISTS base_amount DECIMAL(18,2) DEFAULT 0;
+        ALTER TABLE agent_commissions ADD COLUMN IF NOT EXISTS trade_closed_at TIMESTAMPTZ;
+        CREATE INDEX IF NOT EXISTS idx_agent_commissions_trade ON agent_commissions(source_trade_id);
+        CREATE INDEX IF NOT EXISTS idx_agent_commissions_status ON agent_commissions(status);
+      `);
+    } catch (e) { /* columns may already exist */ }
+
     // =============================================
     // DATA MIGRATION: Merge USDT wallets into USD wallets
     // =============================================

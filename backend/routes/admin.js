@@ -558,4 +558,67 @@ router.get('/agents/:userId/stats', async (req, res) => {
   }
 });
 
+// =============================================
+// POST /api/admin/agents/:userId/settle — Settle commissions for agent
+// =============================================
+router.post('/agents/:userId/settle', authMiddleware, requireRole('admin'), async (req, res) => {
+  try {
+    const commissionEngine = require('../services/commissionEngine');
+    const result = await commissionEngine.settlePendingCommissions(parseInt(req.params.userId));
+    
+    // Audit log
+    await pool.query(
+      `INSERT INTO audit_logs (user_id, action, details, ip_address) VALUES ($1, 'settle_commissions', $2, $3)`,
+      [req.user.id, JSON.stringify({ agent_user_id: req.params.userId, ...result }), req.ip]
+    );
+
+    res.json(result);
+  } catch (err) {
+    console.error('Settle commissions error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// =============================================
+// POST /api/admin/commissions/calculate — Trigger manual commission calc
+// =============================================
+router.post('/commissions/calculate', authMiddleware, requireRole('admin'), async (req, res) => {
+  try {
+    const commissionEngine = require('../services/commissionEngine');
+    await commissionEngine.run();
+    res.json({ message: 'คำนวณค่าคอมมิชชั่นเรียบร้อยแล้ว', status: commissionEngine.getStatus() });
+  } catch (err) {
+    console.error('Manual commission calc error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// =============================================
+// GET /api/admin/commissions/status — Commission engine status
+// =============================================
+router.get('/commissions/status', authMiddleware, requireRole('admin'), async (req, res) => {
+  try {
+    const commissionEngine = require('../services/commissionEngine');
+    const dbStats = await pool.query(`
+      SELECT 
+        COUNT(*) as total_commissions,
+        COALESCE(SUM(amount), 0) as total_amount,
+        COALESCE(SUM(CASE WHEN status = 'PENDING' THEN amount ELSE 0 END), 0) as pending_amount,
+        COALESCE(SUM(CASE WHEN status = 'SETTLED' THEN amount ELSE 0 END), 0) as settled_amount,
+        COUNT(CASE WHEN status = 'PENDING' THEN 1 END) as pending_count,
+        COUNT(CASE WHEN status = 'SETTLED' THEN 1 END) as settled_count
+      FROM agent_commissions
+    `);
+
+    res.json({
+      engine: commissionEngine.getStatus(),
+      stats: dbStats.rows[0],
+    });
+  } catch (err) {
+    console.error('Commission status error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;
+
