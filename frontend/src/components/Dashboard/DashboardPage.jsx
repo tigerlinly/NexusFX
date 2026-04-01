@@ -403,10 +403,9 @@ export default function DashboardPage() {
                 }
               });
 
-              // For 1D: show ticks every hour (24 ticks)
-              // For 2D: show ticks every 2 hours
-              // For 3D: show ticks every 3 hours
-              const tickInterval = chartPeriod === '1' ? 1 : chartPeriod === '2' ? 2 : 3;
+              // For 1D, 2D, 3D: always show 24 ticks per day (interval = 1 hour)
+              // This ensures that 1D shows 24 ticks, 2D shows 48 ticks, 3D shows 72 ticks
+              const tickInterval = 1;
               customTicks = chartData
                 .filter(d => {
                   const h = new Date(d.date).getHours();
