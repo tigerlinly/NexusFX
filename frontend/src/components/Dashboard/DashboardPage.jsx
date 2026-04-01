@@ -364,17 +364,21 @@ export default function DashboardPage() {
           const labels = [];
           const isHourly = ['1', '2', '3'].includes(String(chartPeriod));
 
+          // Calculate custom ticks for x-axis
+          let customTicks = [];
+
           if (chartData && chartData.length > 0) {
             if (isHourly) {
+              // For hourly mode: show every hour tick, boundary lines between days, date labels at noon
               let currentDay = null;
-              const groupedByDay = {};
+              const dayMap = {};
 
-              chartData.forEach((d) => {
+              chartData.forEach((d, i) => {
                 const dateObj = new Date(d.date);
                 const dayKey = `${dateObj.getFullYear()}/${(dateObj.getMonth() + 1).toString().padStart(2, '0')}/${dateObj.getDate().toString().padStart(2, '0')}`;
                 
-                if (!groupedByDay[dayKey]) groupedByDay[dayKey] = [];
-                groupedByDay[dayKey].push(d);
+                if (!dayMap[dayKey]) dayMap[dayKey] = { start: i, items: [] };
+                dayMap[dayKey].items.push(d);
 
                 if (dayKey !== currentDay) {
                   if (currentDay !== null) {
@@ -382,19 +386,33 @@ export default function DashboardPage() {
                   }
                   currentDay = dayKey;
                 }
+
+                // Add tick for every hour
+                customTicks.push(d.date);
               });
 
-              Object.entries(groupedByDay).forEach(([dayKey, hours]) => {
-                // Find nearest hour to 12:00 for the label
-                let targetHour = hours[0]; // fallback
+              // Add date labels at the 12:00 hour (midpoint) of each day
+              Object.entries(dayMap).forEach(([dayKey, info]) => {
+                const hours = info.items;
+                // Find 12:00 for label placement
                 const twelve = hours.find(h => new Date(h.date).getHours() === 12);
                 if (twelve) {
-                  targetHour = twelve;
+                  labels.push({ date: twelve.date, label: dayKey });
                 } else if (hours.length > 0) {
-                  targetHour = hours[Math.floor(hours.length / 2)];
+                  labels.push({ date: hours[Math.floor(hours.length / 2)].date, label: dayKey });
                 }
-                labels.push({ date: targetHour.date, label: dayKey });
               });
+
+              // For 1D: show ticks every hour (24 ticks)
+              // For 2D: show ticks every 2 hours
+              // For 3D: show ticks every 3 hours
+              const tickInterval = chartPeriod === '1' ? 1 : chartPeriod === '2' ? 2 : 3;
+              customTicks = chartData
+                .filter(d => {
+                  const h = new Date(d.date).getHours();
+                  return h % tickInterval === 0;
+                })
+                .map(d => d.date);
 
             } else {
               let currentMonth = null;
@@ -464,16 +482,19 @@ export default function DashboardPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border-primary)" />
                   <XAxis 
                     dataKey="date" 
-                    interval={0} 
+                    ticks={isHourly ? customTicks : undefined}
+                    interval={isHourly ? 0 : 'preserveStartEnd'}
                     padding={{ left: 10, right: 25 }} 
-                    tick={{ fill: 'var(--text-tertiary)', fontSize: 11 }} 
+                    tick={{ fill: 'var(--text-tertiary)', fontSize: 10 }} 
                     tickFormatter={(val) => {
                       const d = new Date(val);
                       if (isHourly) {
-                        return d.getHours().toString().padStart(2, '0') + ':00';
+                        return d.getHours().toString().padStart(2, '0');
                       }
                       return d.getDate().toString();
                     }} 
+                    angle={0}
+                    textAnchor="middle"
                   />
                   <YAxis tickCount={10} tick={{ fill: 'var(--text-tertiary)', fontSize: 11 }} tickFormatter={(val) => { const abs = Math.abs(val); return abs >= 1000 ? (val / 1000).toLocaleString() + 'K' : val; }} />
                   <Tooltip content={<CustomTooltip />} />
