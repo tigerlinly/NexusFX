@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ShoppingCart, Star, BarChart2, CheckCircle2, TrendingUp, Zap } from 'lucide-react';
+import { ShoppingCart, Star, BarChart2, CheckCircle2, TrendingUp, Zap, Shield } from 'lucide-react';
 import { api } from '../../utils/api';
 
 export default function StorePage() {
@@ -48,6 +48,21 @@ export default function StorePage() {
     }
   };
 
+  // Risk level color based on drawdown percentage
+  const getRiskColor = (dd) => {
+    const val = parseFloat(dd);
+    if (val <= 5) return 'var(--profit)';
+    if (val <= 15) return 'var(--warning)';
+    return 'var(--loss)';
+  };
+
+  const getRiskLabel = (dd) => {
+    const val = parseFloat(dd);
+    if (val <= 5) return 'ความเสี่ยงต่ำ';
+    if (val <= 15) return 'ความเสี่ยงปานกลาง';
+    return 'ความเสี่ยงสูง';
+  };
+
   return (
     <>
       <div className="header">
@@ -75,7 +90,23 @@ export default function StorePage() {
         </div>
       </div>
 
-      <div className="content-area">
+      {/* Free Strategy Banner */}
+      <div className="content-area" style={{ paddingBottom: 0 }}>
+        <div style={{ 
+          background: 'linear-gradient(135deg, rgba(0,255,136,0.08), rgba(0,200,255,0.05))', 
+          border: '1px solid rgba(0,255,136,0.15)', 
+          borderRadius: 12, padding: '16px 24px', marginBottom: 24,
+          display: 'flex', alignItems: 'center', gap: 12
+        }}>
+          <Shield size={24} style={{ color: 'var(--profit)', flexShrink: 0 }} />
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--profit)', marginBottom: 2 }}>กลยุทธ์พื้นฐาน — ฟรีสำหรับสมาชิกทุกคน</div>
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>ระบบจัดเตรียมกลยุทธ์พื้นฐาน 4 รูปแบบ ได้แก่ Scalper, Swing Trade, Grid Trading และ Martingale ให้ใช้งานได้ฟรีไม่มีค่าใช้จ่าย</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="content-area" style={{ paddingTop: 0 }}>
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
@@ -91,10 +122,18 @@ export default function StorePage() {
                   </div>
                 )}
                 
-                <h3 style={{ fontSize: 18, marginBottom: 4, paddingRight: 60 }}>{bot.name}</h3>
-                <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 16 }}>โดย: <span style={{ color: 'var(--accent-primary)' }}>{bot.author}</span></div>
+                <h3 style={{ fontSize: 18, marginBottom: 4, paddingRight: 100 }}>{bot.name}</h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                  <span style={{ 
+                    fontSize: 11, background: 'rgba(0,200,255,0.1)', color: 'var(--accent-primary)', 
+                    padding: '2px 8px', borderRadius: 4, fontWeight: 600, border: '1px solid rgba(0,200,255,0.2)'
+                  }}>
+                    {bot.type}
+                  </span>
+                  <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>โดย: <span style={{ color: 'var(--accent-primary)' }}>{bot.author}</span></span>
+                </div>
                 
-                <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 20, minHeight: 40 }}>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 20, minHeight: 60 }}>
                   {bot.description}
                 </p>
 
@@ -107,9 +146,10 @@ export default function StorePage() {
                   </div>
                   <div style={{ background: 'var(--bg-secondary)', padding: 12, borderRadius: 8, border: '1px solid var(--border-primary)' }}>
                     <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4 }}>ความเสี่ยง (DD)</div>
-                    <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--loss)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <div style={{ fontSize: 18, fontWeight: 600, color: getRiskColor(bot.drawdown), display: 'flex', alignItems: 'center', gap: 4 }}>
                       <BarChart2 size={16} /> -{bot.drawdown}
                     </div>
+                    <div style={{ fontSize: 10, color: getRiskColor(bot.drawdown), marginTop: 2 }}>{getRiskLabel(bot.drawdown)}</div>
                   </div>
                 </div>
 
@@ -118,12 +158,14 @@ export default function StorePage() {
                     <Star size={14} style={{ color: '#FAAD14' }} fill="#FAAD14" />
                     <span>{bot.rating} ({bot.users} ผู้ติดตาม)</span>
                   </div>
-                  <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text-primary)' }}>{bot.price}</div>
+                  <div style={{ fontWeight: 700, fontSize: 16, color: bot.price === 0 ? 'var(--profit)' : 'var(--text-primary)' }}>
+                    {bot.price === 0 ? '🆓 ฟรี' : `$${bot.price}`}
+                  </div>
                 </div>
 
                 <button 
                   className="btn" 
-                  disabled={isOwned}
+                  disabled={isOwned || processing}
                   style={{ 
                     width: '100%', 
                     background: isOwned ? 'var(--bg-secondary)' : 'var(--gradient-primary)',
@@ -131,7 +173,7 @@ export default function StorePage() {
                     border: 'none',
                     fontWeight: 600
                   }}
-                  onClick={() => handlePurchase(bot.id)}
+                  onClick={() => handlePurchase(bot)}
                 >
                   {isOwned ? (
                     <><CheckCircle2 size={16} style={{ marginRight: 6 }} /> ติดตั้งลงพอร์ตแล้ว</>

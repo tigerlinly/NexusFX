@@ -108,14 +108,14 @@ router.post('/upgrade', auditLog('PURCHASE_SUBSCRIPTION', 'BILLING'), async (req
     // Record subscription history
     await client.query(
       `INSERT INTO subscription_history (user_id, plan_id, amount, payment_status, payment_method, period_end)
-       VALUES ($1, $2, $3, 'COMPLETED', 'WALLET', NOW() + INTERVAL '${days} days')`,
-      [req.user.id, selectedPlan.id, selectedPlan.monthly_price]
+       VALUES ($1, $2, $3, 'COMPLETED', 'WALLET', NOW() + ($4 || ' days')::interval)`,
+      [req.user.id, selectedPlan.id, selectedPlan.monthly_price, days]
     );
 
     // Update current plan on user record
     await client.query(
-      `UPDATE users SET current_plan_id = $1, plan_expires_at = NOW() + INTERVAL '${days} days' WHERE id = $2`,
-      [selectedPlan.id, req.user.id]
+      `UPDATE users SET current_plan_id = $1, plan_expires_at = NOW() + ($3 || ' days')::interval WHERE id = $2`,
+      [selectedPlan.id, req.user.id, days]
     );
 
     // Update user role if they buy enterprise

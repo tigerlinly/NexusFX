@@ -198,14 +198,29 @@ app.get('/metrics', async (req, res) => {
   }
 });
 
-// Socket.io
-io.on('connection', (socket) => {
-  console.log(`🔌 Socket connected: ${socket.id}`);
+// Socket.io Authentication Middleware
+io.use((socket, next) => {
+  const token = socket.handshake.auth?.token || socket.handshake.query?.token;
+  if (!token) {
+    return next(new Error('Authentication required'));
+  }
+  try {
+    const decoded = require('jsonwebtoken').verify(token, process.env.JWT_SECRET);
+    socket.user = decoded;
+    next();
+  } catch (err) {
+    next(new Error('Invalid or expired token'));
+  }
+});
 
-  socket.on('join', (userId) => {
-    socket.join(`user:${userId}`);
-    console.log(`   User ${userId} joined room`);
-  });
+io.on('connection', (socket) => {
+  console.log(`🔌 Socket connected: ${socket.id} (User: ${socket.user?.id})`);
+
+  // Auto-join user's own room using verified identity
+  if (socket.user?.id) {
+    socket.join(`user:${socket.user.id}`);
+    console.log(`   User ${socket.user.id} joined room`);
+  }
 
   socket.on('disconnect', () => {
     console.log(`🔌 Socket disconnected: ${socket.id}`);

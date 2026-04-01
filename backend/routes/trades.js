@@ -94,9 +94,9 @@ router.get('/', async (req, res) => {
     }
 
     const whereClause = conditions.join(' AND ');
-    const allowedSorts = ['closed_at', 'opened_at', 'pnl', 'symbol', 'lot_size'];
-    const sortCol = allowedSorts.includes(sort_by) ? sort_by : 'closed_at';
-    const sortDirection = sort_dir.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+    const SORT_MAP = { closed_at: 't.closed_at', opened_at: 't.opened_at', pnl: 't.pnl', symbol: 't.symbol', lot_size: 't.lot_size' };
+    const sortExpr = SORT_MAP[sort_by] || 't.closed_at';
+    const sortDir = sort_dir.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
 
     const offset = (parseInt(page) - 1) * parseInt(limit);
 
@@ -113,7 +113,7 @@ router.get('/', async (req, res) => {
        JOIN accounts a ON a.id = t.account_id
        JOIN brokers b ON b.id = a.broker_id
        WHERE ${whereClause}
-       ORDER BY t.${sortCol} ${sortDirection}
+       ORDER BY ${sortExpr} ${sortDir}
        LIMIT $${paramIdx} OFFSET $${paramIdx + 1}`,
       [...params, parseInt(limit), offset]
     );

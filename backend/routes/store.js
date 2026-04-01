@@ -5,28 +5,37 @@ const router = express.Router();
 
 router.use(authMiddleware);
 
-// Hardcoded store bots for simplicity (could be moved to DB table 'strategies')
+// =============================================
+// 4 FREE Basic Strategies — ระบบจัดให้ฟรีสำหรับผู้ใช้ทุกคน
+// =============================================
 const storeBots = [
   {
-    id: 1, name: 'Nexus Alpha Scalper', type: 'Scalping AI', price: 0,
+    id: 1, name: 'Nexus Alpha Scalper', type: 'Scalper (เก็บสั้น)', price: 0,
     author: 'NexusFX Labs', roi: '+142%', drawdown: '2.4%', rating: 4.8, users: 1240,
-    description: 'บอทเทรดระดับความถี่สูง (HFT) สำหรับเล่นรอบสั้น เน้นทำกำไรจากความผันผวนของ XAUUSD',
+    description: 'บอทเทรดแบบ Scalping เน้นเก็บสั้นรอบ 1-15 นาที ทำกำไรจากความผันผวนของราคา XAUUSD ในช่วง London/NY Session ความเสี่ยงต่ำ เหมาะสำหรับผู้เริ่มต้น',
     isHot: true,
-    config: { strategy: 'scalper', timeframe: '1m', sl_pct: 1.0, tp_pct: 2.0 }
+    config: { strategy: 'scalper', timeframe: '1m', sl_pct: 1.0, tp_pct: 2.0, symbols: ['XAUUSD'], session: 'london_ny' }
   },
   {
-    id: 2, name: 'Trend Follower Pro', type: 'Swing Trade', price: 49,
-    author: 'Trader Joe', roi: '+85%', drawdown: '10.5%', rating: 4.5, users: 450,
-    description: 'จับเทรนด์ขาขึ้นของคู่เงินหลัก EURUSD, GBPUSD ทิ้งออเดอร์ยาวระยะเวลาข้ามคืน (Swing)',
+    id: 2, name: 'Trend Follower Pro', type: 'Swing Trade', price: 0,
+    author: 'NexusFX Labs', roi: '+85%', drawdown: '10.5%', rating: 4.5, users: 890,
+    description: 'กลยุทธ์ Swing Trade จับเทรนด์ขาขึ้น-ขาลงของคู่เงินหลัก EURUSD, GBPUSD ทิ้งออเดอร์ข้ามคืน 1-5 วัน ใช้ Moving Average + RSI ยืนยันทิศทาง เหมาะกับตลาดที่มีเทรนด์ชัดเจน',
     isHot: false,
-    config: { strategy: 'trend', timeframe: '1h', sl_pct: 2.0, tp_pct: 5.0 }
+    config: { strategy: 'swing', timeframe: '1h', sl_pct: 2.0, tp_pct: 5.0, symbols: ['EURUSD', 'GBPUSD'], indicators: ['MA200', 'RSI14'] }
   },
   {
-    id: 3, name: 'Grid Master Recovery', type: 'Grid System', price: 99,
-    author: 'Mr. Grid Bot', roi: '+210%', drawdown: '25.0%', rating: 4.9, users: 2100,
-    description: 'ระบบแก้พอร์ตอัตโนมัติ ใช้วิธี Grid ระยะห่างตาราง (Spacing) ช่วยฟื้นฟูเงินทุน เหมาะสำหรับตลาด Sideway',
+    id: 3, name: 'Grid Master Recovery', type: 'Grid Trading', price: 0,
+    author: 'NexusFX Labs', roi: '+210%', drawdown: '25.0%', rating: 4.9, users: 2100,
+    description: 'ระบบ Grid Trading วางออเดอร์เป็นตาราง (Grid Spacing) ทุกระยะราคาที่กำหนด ทำกำไรจากตลาด Sideway โดยอัตโนมัติ มีระบบ Recovery ฟื้นฟูเงินทุนในกรณีราคาวิ่งทิศทางเดียว',
     isHot: true,
-    config: { strategy: 'grid', grid_spacing: 10, sl_pct: 5.0, tp_pct: 3.0 }
+    config: { strategy: 'grid', grid_spacing: 10, sl_pct: 5.0, tp_pct: 3.0, grid_levels: 10, symbols: ['XAUUSD', 'EURUSD'] }
+  },
+  {
+    id: 4, name: 'Martingale Bouncer', type: 'Martingale', price: 0,
+    author: 'NexusFX Labs', roi: '+320%', drawdown: '35.0%', rating: 4.3, users: 1680,
+    description: 'ระบบ Martingale เพิ่มขนาด Lot ทุกครั้งที่ขาดทุน เพื่อรอให้กำไรหนึ่งครั้งเอาคืนทุกออเดอร์ที่แพ้ เหมาะกับผู้ที่กล้ารับความเสี่ยงสูง มีระบบ Max Step จำกัดการเพิ่ม Lot ไม่ให้เกินที่ตั้ง',
+    isHot: false,
+    config: { strategy: 'martingale', multiplier: 2.0, max_steps: 5, sl_pct: 3.0, tp_pct: 1.5, symbols: ['XAUUSD'], base_lot: 0.01 }
   }
 ];
 

@@ -127,19 +127,22 @@ router.get('/transactions', async (req, res) => {
 
 // POST /api/wallet/deposit — create deposit
 router.post('/deposit', requirePermission('finance.deposit'), auditLog('DEPOSIT', 'WALLET'), async (req, res) => {
+  const client = await pool.connect();
   try {
     const { amount, currency = 'USD', note, reference_id } = req.body;
     if (!amount || amount <= 0) {
       return res.status(400).json({ error: 'Valid amount required' });
     }
 
-    // Get or create wallet
-    let wallet = await pool.query(
-      'SELECT * FROM wallets WHERE user_id = $1 AND currency = $2',
+    await client.query('BEGIN');
+
+    // Get or create wallet (lock row for update)
+    let wallet = await client.query(
+      'SELECT * FROM wallets WHERE user_id = $1 AND currency = $2 FOR UPDATE',
       [req.user.id, currency]
     );
     if (wallet.rows.length === 0) {
-      wallet = await pool.query(
+      wallet = await client.query(
         'INSERT INTO wallets (user_id, currency) VALUES ($1, $2) RETURNING *',
         [req.user.id, currency]
       );
@@ -148,22 +151,26 @@ router.post('/deposit', requirePermission('finance.deposit'), auditLog('DEPOSIT'
     const walletId = wallet.rows[0].id;
 
     // Create transaction
-    const tx = await pool.query(
+    const tx = await client.query(
       `INSERT INTO financial_transactions (wallet_id, user_id, type, amount, status, reference_id, note, completed_at)
        VALUES ($1, $2, 'DEPOSIT', $3, 'COMPLETED', $4, $5, NOW()) RETURNING *`,
       [walletId, req.user.id, amount, reference_id, note]
     );
 
     // Update wallet balance
-    await pool.query(
+    await client.query(
       'UPDATE wallets SET balance = balance + $1, updated_at = NOW() WHERE id = $2',
       [amount, walletId]
     );
 
+    await client.query('COMMIT');
     res.status(201).json(tx.rows[0]);
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error('Deposit error:', err);
     res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    client.release();
   }
 });
 
@@ -218,43 +225,52 @@ router.post('/topup', requirePermission('finance.deposit'), auditLog('TOPUP', 'W
 
 // POST /api/wallet/withdraw — create withdrawal
 router.post('/withdraw', requirePermission('finance.withdraw'), auditLog('WITHDRAW', 'WALLET'), async (req, res) => {
+  const client = await pool.connect();
   try {
     const { amount, currency = 'USD', note, reference_id } = req.body;
     if (!amount || amount <= 0) {
       return res.status(400).json({ error: 'Valid amount required' });
     }
 
-    const wallet = await pool.query(
-      'SELECT * FROM wallets WHERE user_id = $1 AND currency = $2',
+    await client.query('BEGIN');
+
+    const wallet = await client.query(
+      'SELECT * FROM wallets WHERE user_id = $1 AND currency = $2 FOR UPDATE',
       [req.user.id, currency]
     );
     if (wallet.rows.length === 0) {
+      await client.query('ROLLBACK');
       return res.status(400).json({ error: 'Wallet not found' });
     }
     const availableBalance = parseFloat(wallet.rows[0].balance) - parseFloat(wallet.rows[0].locked_balance || 0);
     if (availableBalance < amount) {
+      await client.query('ROLLBACK');
       return res.status(400).json({ error: 'Insufficient balance' });
     }
 
     const walletId = wallet.rows[0].id;
 
     // Create transaction
-    const tx = await pool.query(
+    const tx = await client.query(
       `INSERT INTO financial_transactions (wallet_id, user_id, type, amount, status, reference_id, note, completed_at)
        VALUES ($1, $2, 'WITHDRAW', $3, 'COMPLETED', $4, $5, NOW()) RETURNING *`,
       [walletId, req.user.id, amount, reference_id, note]
     );
 
     // Update wallet balance
-    await pool.query(
+    await client.query(
       'UPDATE wallets SET balance = balance - $1, updated_at = NOW() WHERE id = $2',
       [amount, walletId]
     );
 
+    await client.query('COMMIT');
     res.status(201).json(tx.rows[0]);
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error('Withdraw error:', err);
     res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    client.release();
   }
 });
 
