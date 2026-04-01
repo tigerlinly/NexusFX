@@ -2,7 +2,10 @@ const express = require('express');
 const { pool } = require('../config/database');
 const { authMiddleware, auditLog } = require('../middleware/auth');
 const TelegramNotify = require('../services/telegramNotify');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_mock_secret');
+if (!process.env.STRIPE_SECRET_KEY) {
+  console.warn('⚠️ [Billing] STRIPE_SECRET_KEY is not set. Stripe endpoints will be unavailable.');
+}
+const stripe = process.env.STRIPE_SECRET_KEY ? require('stripe')(process.env.STRIPE_SECRET_KEY) : null;
 const router = express.Router();
 
 router.use(authMiddleware);
@@ -207,6 +210,9 @@ router.get('/history', async (req, res) => {
  *         description: Stripe Session URL returned
  */
 router.post('/checkout', async (req, res) => {
+  if (!stripe) {
+    return res.status(503).json({ error: 'Payment gateway is not configured. Please contact support.' });
+  }
   try {
     const { amountUSD, planId } = req.body;
     let lineItems = [];

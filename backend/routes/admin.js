@@ -174,9 +174,9 @@ router.post('/users/:id/adjust-balance', async (req, res) => {
 
       const type = adjustAmount > 0 ? 'DEPOSIT' : 'WITHDRAW';
       await client.query(
-        `INSERT INTO transactions (wallet_id, type, amount, status, note, created_at) 
-         VALUES ($1, $2, $3, 'COMPLETED', $4, NOW())`,
-        [walletId, type, Math.abs(adjustAmount), `Manual Adjustment: ${reason}`]
+        `INSERT INTO financial_transactions (wallet_id, user_id, type, amount, status, note, completed_at) 
+         VALUES ($1, $2, $3, $4, 'COMPLETED', $5, NOW())`,
+        [walletId, req.params.id, type, Math.abs(adjustAmount), `Manual Adjustment (Admin): ${reason}`]
       );
 
       await client.query(
@@ -277,9 +277,9 @@ router.post('/adjustments/:id/approve', async (req, res) => {
 
         const type = adjustAmount > 0 ? 'DEPOSIT' : 'WITHDRAW';
         await client.query(
-          `INSERT INTO transactions (wallet_id, type, amount, status, note, created_at) 
-           VALUES ($1, $2, $3, 'COMPLETED', $4, NOW())`,
-          [walletId, type, Math.abs(adjustAmount), `Manual Adjustment: ${adjustment.reason}`]
+          `INSERT INTO financial_transactions (wallet_id, user_id, type, amount, status, note, completed_at) 
+           VALUES ($1, $2, $3, $4, 'COMPLETED', $5, NOW())`,
+          [walletId, adjustment.user_id, type, Math.abs(adjustAmount), `Manual Adjustment (Approved): ${adjustment.reason}`]
         );
       }
     }
