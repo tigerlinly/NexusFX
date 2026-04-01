@@ -192,12 +192,12 @@ export default function DashboardPage() {
     let displayLabel = String(label);
     if (isHourly && label) {
       const d = new Date(label);
-      displayLabel = `${d.getFullYear()}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getDate().toString().padStart(2, '0')} ${d.getHours().toString().padStart(2, '0')}:00`;
+      displayLabel = `${d.getUTCFullYear()}/${(d.getUTCMonth() + 1).toString().padStart(2, '0')}/${d.getUTCDate().toString().padStart(2, '0')} ${d.getUTCHours().toString().padStart(2, '0')}:00`;
     } else if (typeof label === 'string' && label.includes('T')) {
       displayLabel = label.split('T')[0];
     } else if (label) {
       const d = new Date(label);
-      displayLabel = `${d.getFullYear()}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getDate().toString().padStart(2, '0')}`;
+      displayLabel = `${d.getUTCFullYear()}/${(d.getUTCMonth() + 1).toString().padStart(2, '0')}/${d.getUTCDate().toString().padStart(2, '0')}`;
     }
 
     return (
@@ -375,7 +375,7 @@ export default function DashboardPage() {
 
               chartData.forEach((d, i) => {
                 const dateObj = new Date(d.date);
-                const dayKey = `${dateObj.getFullYear()}/${(dateObj.getMonth() + 1).toString().padStart(2, '0')}/${dateObj.getDate().toString().padStart(2, '0')}`;
+                const dayKey = `${dateObj.getUTCFullYear()}/${(dateObj.getUTCMonth() + 1).toString().padStart(2, '0')}/${dateObj.getUTCDate().toString().padStart(2, '0')}`;
                 
                 if (!dayMap[dayKey]) dayMap[dayKey] = { start: i, items: [] };
                 dayMap[dayKey].items.push(d);
@@ -395,7 +395,7 @@ export default function DashboardPage() {
               Object.entries(dayMap).forEach(([dayKey, info]) => {
                 const hours = info.items;
                 // Find 12:00 for label placement
-                const twelve = hours.find(h => new Date(h.date).getHours() === 12);
+                const twelve = hours.find(h => new Date(h.date).getUTCHours() === 12);
                 if (twelve) {
                   labels.push({ date: twelve.date, label: dayKey });
                 } else if (hours.length > 0) {
@@ -408,7 +408,7 @@ export default function DashboardPage() {
               const tickInterval = 1;
               customTicks = chartData
                 .filter(d => {
-                  const h = new Date(d.date).getHours();
+                  const h = new Date(d.date).getUTCHours();
                   return h % tickInterval === 0;
                 })
                 .map(d => d.date);
@@ -488,9 +488,9 @@ export default function DashboardPage() {
                     tickFormatter={(val) => {
                       const d = new Date(val);
                       if (isHourly) {
-                        return d.getHours().toString().padStart(2, '0');
+                        return d.getUTCHours().toString().padStart(2, '0');
                       }
-                      return d.getDate().toString();
+                      return d.getUTCDate().toString();
                     }} 
                     angle={0}
                     textAnchor="middle"
