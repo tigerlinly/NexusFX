@@ -109,7 +109,7 @@ class CommissionEngine {
       SELECT t.id as trade_id, t.pnl, t.commission as trade_fee, t.swap, 
              t.closed_at, a.user_id as trader_user_id,
              u.display_name as trader_name, u.username as trader_username,
-             t.symbol, t.volume
+             t.symbol, t.lot_size
       FROM trades t
       JOIN accounts a ON a.id = t.account_id
       JOIN users u ON u.id = a.user_id

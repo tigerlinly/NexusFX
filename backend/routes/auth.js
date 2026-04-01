@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { pool } = require('../config/database');
 const { authMiddleware, auditLog } = require('../middleware/auth');
+const speakeasy = require('speakeasy');
 const router = express.Router();
 
 /**
@@ -243,7 +244,6 @@ router.post('/login', async (req, res) => {
       }
 
       // Verify TOTP code
-      const speakeasy = require('speakeasy');
       const mfaValid = speakeasy.totp.verify({
         secret: user.mfa_secret,
         encoding: 'base32',
@@ -375,6 +375,14 @@ router.post('/reset-password', async (req, res) => {
   try {
     const { token, newPassword } = req.body;
     if (!token || !newPassword) return res.status(400).json({ error: 'Token and new password required' });
+
+    // Password complexity validation (same as register)
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: 'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร' });
+    }
+    if (!/[A-Z]/.test(newPassword) || !/[a-z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+      return res.status(400).json({ error: 'รหัสผ่านต้องมีตัวพิมพ์ใหญ่ ตัวพิมพ์เล็ก และตัวเลขอย่างน้อยอย่างละ 1 ตัว' });
+    }
 
     const userRes = await pool.query(
       'SELECT id FROM users WHERE reset_token = $1 AND reset_token_expires > NOW()',

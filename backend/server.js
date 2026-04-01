@@ -15,7 +15,7 @@ const ExecutionEngine = require('./services/executionEngine');
 const RiskEngine = require('./services/riskEngine');
 const metrics = require('./services/metrics');
 const FeeTracker = require('./services/feeTracker');
-const mockBotEngine = require('./services/mockBotEngine');
+// const mockBotEngine = require('./services/mockBotEngine'); // Disabled for production
 const orderSyncEngine = require('./services/orderSyncEngine');
 const trailingStopEngine = require('./services/trailingStopEngine');
 const scheduleSyncEngine = require('./services/scheduleSyncEngine');
@@ -269,3 +269,21 @@ async function start() {
 }
 
 start();
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('\n🛑 SIGTERM received — shutting down gracefully...');
+  commissionEngine.stop();
+  riskEngine.stop();
+  profitTracker.stop?.();
+  aggregationService.stop?.();
+  feeTracker.stop?.();
+  orderSyncEngine.stop?.();
+  scheduleSyncEngine.stop?.();
+  trailingStopEngine.stop?.();
+  server.close(() => {
+    console.log('✅ Server closed. Goodbye!');
+    process.exit(0);
+  });
+});
+process.on('SIGINT', () => process.emit('SIGTERM'));

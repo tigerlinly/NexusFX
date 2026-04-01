@@ -168,10 +168,14 @@ router.post('/deposit', requirePermission('finance.deposit'), auditLog('DEPOSIT'
 });
 
 // POST /api/wallet/topup — User Mock Deposit (For Testing)
-router.post('/topup', auditLog('TOPUP', 'WALLET'), async (req, res) => {
+router.post('/topup', requirePermission('finance.deposit'), auditLog('TOPUP', 'WALLET'), async (req, res) => {
   try {
-    // SECURITY: Restrict mock deposit to Admin only
-    if (req.user.role !== 'admin') {
+    // Check admin role from database (not JWT)
+    const roleCheck = await pool.query(
+      `SELECT r.role_name FROM users u JOIN roles r ON r.id = u.role_id WHERE u.id = $1`,
+      [req.user.id]
+    );
+    if (roleCheck.rows.length === 0 || !['admin', 'super_admin'].includes(roleCheck.rows[0].role_name)) {
       return res.status(403).json({ error: 'Permission denied. Admins only.' });
     }
 
@@ -224,7 +228,11 @@ router.post('/withdraw', requirePermission('finance.withdraw'), auditLog('WITHDR
       'SELECT * FROM wallets WHERE user_id = $1 AND currency = $2',
       [req.user.id, currency]
     );
-    if (wallet.rows.length === 0 || parseFloat(wallet.rows[0].balance) < amount) {
+    if (wallet.rows.length === 0) {
+      return res.status(400).json({ error: 'Wallet not found' });
+    }
+    const availableBalance = parseFloat(wallet.rows[0].balance) - parseFloat(wallet.rows[0].locked_balance || 0);
+    if (availableBalance < amount) {
       return res.status(400).json({ error: 'Insufficient balance' });
     }
 

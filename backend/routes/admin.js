@@ -721,7 +721,7 @@ router.get('/agents/:userId/stats', async (req, res) => {
 // =============================================
 // POST /api/admin/agents/:userId/settle — Settle commissions for agent
 // =============================================
-router.post('/agents/:userId/settle', authMiddleware, requireRole('admin'), async (req, res) => {
+router.post('/agents/:userId/settle', async (req, res) => {
   try {
     const commissionEngine = require('../services/commissionEngine');
     const result = await commissionEngine.settlePendingCommissions(parseInt(req.params.userId));
@@ -742,7 +742,7 @@ router.post('/agents/:userId/settle', authMiddleware, requireRole('admin'), asyn
 // =============================================
 // POST /api/admin/commissions/calculate — Trigger manual commission calc
 // =============================================
-router.post('/commissions/calculate', authMiddleware, requireRole('admin'), async (req, res) => {
+router.post('/commissions/calculate', async (req, res) => {
   try {
     const commissionEngine = require('../services/commissionEngine');
     await commissionEngine.run();
@@ -756,7 +756,7 @@ router.post('/commissions/calculate', authMiddleware, requireRole('admin'), asyn
 // =============================================
 // GET /api/admin/commissions/status — Commission engine status
 // =============================================
-router.get('/commissions/status', authMiddleware, requireRole('admin'), async (req, res) => {
+router.get('/commissions/status', async (req, res) => {
   try {
     const commissionEngine = require('../services/commissionEngine');
     const dbStats = await pool.query(`
