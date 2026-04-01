@@ -30,11 +30,12 @@ function requireRole(...roleNames) {
         return res.status(403).json({ error: 'No role assigned' });
       }
       const userRole = result.rows[0].role_name;
-      if (!roleNames.includes(userRole)) {
-        return res.status(403).json({ error: 'Insufficient permissions' });
+      // super_admin always passes role checks
+      if (userRole === 'super_admin' || roleNames.includes(userRole)) {
+        req.user.role = userRole;
+        return next();
       }
-      req.user.role = userRole;
-      next();
+      return res.status(403).json({ error: 'Insufficient permissions' });
     } catch (err) {
       console.error('Role check error:', err);
       res.status(500).json({ error: 'Internal server error' });

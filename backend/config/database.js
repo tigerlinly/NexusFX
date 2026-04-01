@@ -26,13 +26,31 @@ async function initDatabase() {
         domain VARCHAR(100) UNIQUE,
         logo_url TEXT,
         primary_color VARCHAR(20) DEFAULT '#007bff',
+        secondary_color VARCHAR(20) DEFAULT '#6c757d',
+        platform_name VARCHAR(100) DEFAULT 'NexusFX',
+        owner_user_id INTEGER,
+        revenue_share_pct DECIMAL(5,2) DEFAULT 10.00,
+        max_users INTEGER DEFAULT 50,
+        subscription_plan VARCHAR(50) DEFAULT 'enterprise',
         is_active BOOLEAN DEFAULT true,
         contact_email VARCHAR(255),
+        contact_phone VARCHAR(50),
         settings JSONB DEFAULT '{}',
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
+
+    // Add new columns for existing tenants table
+    try {
+      await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS owner_user_id INTEGER;`);
+      await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS revenue_share_pct DECIMAL(5,2) DEFAULT 10.00;`);
+      await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS max_users INTEGER DEFAULT 50;`);
+      await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS subscription_plan VARCHAR(50) DEFAULT 'enterprise';`);
+      await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS secondary_color VARCHAR(20) DEFAULT '#6c757d';`);
+      await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS platform_name VARCHAR(100) DEFAULT 'NexusFX';`);
+      await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS contact_phone VARCHAR(50);`);
+    } catch (e) { /* ignore */ }
 
     // =============================================
     // ROLES & PERMISSIONS (RBAC)
@@ -848,7 +866,9 @@ async function initDatabase() {
     // =============================================
     await client.query(`
       INSERT INTO roles (role_name, description, is_system_default) VALUES
+        ('super_admin', 'Platform owner with full system control', true),
         ('admin', 'System Administrator with full access', true),
+        ('agent', 'B2B Partner/Agent who manages a team of traders', true),
         ('team_lead', 'Team leader who manages a group of traders', true),
         ('user', 'Regular trader', true)
       ON CONFLICT (role_name) DO NOTHING;
@@ -874,15 +894,41 @@ async function initDatabase() {
         ('admin.audit', 'admin', 'View audit logs'),
         ('admin.revenue', 'admin', 'View revenue data'),
         ('bot.manage', 'bot', 'Manage trading bots'),
-        ('bot.view', 'bot', 'View bot status')
+        ('bot.view', 'bot', 'View bot status'),
+        ('agent.team', 'agent', 'Manage agent team members'),
+        ('agent.invite', 'agent', 'Create team invitations'),
+        ('agent.branding', 'agent', 'Customize branding settings'),
+        ('agent.commission', 'agent', 'View agent commissions'),
+        ('agent.dashboard', 'agent', 'View agent team dashboard'),
+        ('admin.agents', 'admin', 'Manage all agents')
       ON CONFLICT (slug) DO NOTHING;
     `);
 
     // Assign permissions to roles
+    // Super Admin gets all permissions
+    await client.query(`
+      INSERT INTO role_permissions (role_id, permission_id)
+      SELECT r.id, p.id FROM roles r, permissions p WHERE r.role_name = 'super_admin'
+      ON CONFLICT DO NOTHING;
+    `);
+
     // Admin gets all permissions
     await client.query(`
       INSERT INTO role_permissions (role_id, permission_id)
       SELECT r.id, p.id FROM roles r, permissions p WHERE r.role_name = 'admin'
+      ON CONFLICT DO NOTHING;
+    `);
+
+    // Agent gets agent + trading + group + finance + report permissions
+    await client.query(`
+      INSERT INTO role_permissions (role_id, permission_id)
+      SELECT r.id, p.id FROM roles r, permissions p
+      WHERE r.role_name = 'agent'
+        AND p.slug IN ('dashboard.view','trade.view','trade.execute','account.manage',
+                       'finance.deposit','finance.withdraw','finance.view',
+                       'group.create','group.manage','group.view_team',
+                       'report.view','report.export','settings.manage','bot.manage','bot.view',
+                       'agent.team','agent.invite','agent.branding','agent.commission','agent.dashboard')
       ON CONFLICT DO NOTHING;
     `);
 
@@ -957,6 +1003,53 @@ async function initDatabase() {
         UNIQUE(user_id, post_id),
         UNIQUE(user_id, comment_id)
       );
+    `);
+
+    // =============================================
+    // B2B / AGENT COMMISSIONS
+    // =============================================
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS agent_commissions (
+        id SERIAL PRIMARY KEY,
+        tenant_id INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        agent_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        source_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        commission_type VARCHAR(30) NOT NULL DEFAULT 'subscription',
+        amount DECIMAL(18,2) NOT NULL DEFAULT 0,
+        rate_pct DECIMAL(5,2) NOT NULL DEFAULT 10,
+        reference_id VARCHAR(100),
+        description TEXT,
+        status VARCHAR(20) DEFAULT 'PENDING',
+        settled_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    // =============================================
+    // B2B / AGENT INVITATIONS
+    // =============================================
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS agent_invitations (
+        id SERIAL PRIMARY KEY,
+        tenant_id INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        invited_by INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        invite_code VARCHAR(50) UNIQUE NOT NULL,
+        email VARCHAR(255),
+        max_uses INTEGER DEFAULT 1,
+        used_count INTEGER DEFAULT 0,
+        expires_at TIMESTAMPTZ DEFAULT NOW() + INTERVAL '7 days',
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    // B2B indexes
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_agent_commissions_tenant ON agent_commissions(tenant_id);
+      CREATE INDEX IF NOT EXISTS idx_agent_commissions_agent ON agent_commissions(agent_user_id);
+      CREATE INDEX IF NOT EXISTS idx_agent_invitations_tenant ON agent_invitations(tenant_id);
+      CREATE INDEX IF NOT EXISTS idx_agent_invitations_code ON agent_invitations(invite_code);
+      CREATE INDEX IF NOT EXISTS idx_users_tenant ON users(tenant_id);
     `);
 
     // =============================================

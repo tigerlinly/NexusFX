@@ -60,7 +60,7 @@ const router = express.Router();
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
   try {
-    const { username, email, password, display_name } = req.body;
+    const { username, email, password, display_name, invite_code } = req.body;
     if (!username || !email || !password) {
       return res.status(400).json({ error: 'username, email, password required' });
     }
@@ -81,18 +81,51 @@ router.post('/register', async (req, res) => {
       return res.status(409).json({ error: 'Username or email already exists' });
     }
 
+    // Validate invite code if provided
+    let tenantId = null;
+    if (invite_code) {
+      const inviteResult = await pool.query(
+        `SELECT * FROM agent_invitations
+         WHERE invite_code = $1 AND is_active = true AND expires_at > NOW()
+           AND (max_uses = 0 OR used_count < max_uses)`,
+        [invite_code]
+      );
+      if (inviteResult.rows.length === 0) {
+        return res.status(400).json({ error: 'ลิงก์เชิญไม่ถูกต้องหรือหมดอายุแล้ว' });
+      }
+      tenantId = inviteResult.rows[0].tenant_id;
+
+      // Check tenant member limit
+      const memberCount = await pool.query(
+        `SELECT COUNT(*) as count FROM users WHERE tenant_id = $1`,
+        [tenantId]
+      );
+      const tenantInfo = await pool.query(`SELECT max_users FROM tenants WHERE id = $1`, [tenantId]);
+      if (tenantInfo.rows.length > 0 && parseInt(memberCount.rows[0].count) >= tenantInfo.rows[0].max_users) {
+        return res.status(400).json({ error: 'ทีมมีสมาชิกเต็มแล้ว' });
+      }
+    }
+
     // Get default 'user' role
     const roleResult = await pool.query("SELECT id FROM roles WHERE role_name = 'user'");
     const roleId = roleResult.rows.length > 0 ? roleResult.rows[0].id : null;
 
     const hash = await bcrypt.hash(password, 12);
     const result = await pool.query(
-      `INSERT INTO users (username, email, password_hash, display_name, role_id)
-       VALUES ($1, $2, $3, $4, $5) RETURNING id, username, email, display_name`,
-      [username, email, hash, display_name || username, roleId]
+      `INSERT INTO users (username, email, password_hash, display_name, role_id, tenant_id)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, username, email, display_name`,
+      [username, email, hash, display_name || username, roleId, tenantId]
     );
 
     const user = result.rows[0];
+
+    // Update invite used count
+    if (invite_code) {
+      await pool.query(
+        `UPDATE agent_invitations SET used_count = used_count + 1 WHERE invite_code = $1`,
+        [invite_code]
+      );
+    }
 
     // Create default settings
     await pool.query('INSERT INTO user_settings (user_id) VALUES ($1)', [user.id]);
@@ -112,8 +145,8 @@ router.post('/register', async (req, res) => {
     // Audit log
     const ip = req.headers['x-forwarded-for'] || req.connection?.remoteAddress || 'unknown';
     await pool.query(
-      `INSERT INTO audit_logs (user_id, action, entity_type, ip_address) VALUES ($1, $2, $3, $4)`,
-      [user.id, 'user.register', 'user', ip]
+      `INSERT INTO audit_logs (user_id, action, entity_type, ip_address, details) VALUES ($1, $2, $3, $4, $5)`,
+      [user.id, 'user.register', 'user', ip, JSON.stringify({ invite_code: invite_code || null, tenant_id: tenantId })]
     );
 
     res.status(201).json({ user: { ...user, role: 'user' }, token });

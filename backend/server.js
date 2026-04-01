@@ -118,6 +118,7 @@ const billingRoutes = require('./routes/billing');
 const strategiesRoutes = require('./routes/strategies');
 const forumsRoutes = require('./routes/forums');
 const notificationsRoutes = require('./routes/notifications');
+const agentsRoutes = require('./routes/agents');
 
 // Apply stricter rate limits to sensitive routes
 app.use('/api/auth', authLimiter, authRoutes);
@@ -140,6 +141,7 @@ app.use('/api/store', storeRoutes);
 app.use('/api/strategies', strategiesRoutes);
 app.use('/api/forums', forumsRoutes);
 app.use('/api/notifications', notificationsRoutes);
+app.use('/api/agents', agentsRoutes);
 
 // =============================================
 // Swagger API Docs (Level 3)

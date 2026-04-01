@@ -344,4 +344,218 @@ router.put('/system-config', async (req, res) => {
   }
 });
 
+// =============================================
+// AGENT / B2B MANAGEMENT
+// =============================================
+
+// GET /api/admin/agents — list all agents
+router.get('/agents', async (req, res) => {
+  try {
+    const { search, page = 1, limit = 20 } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    let where = `r.role_name = 'agent'`;
+    const params = [];
+    let idx = 1;
+
+    if (search) {
+      where += ` AND (u.username ILIKE $${idx} OR u.email ILIKE $${idx} OR u.display_name ILIKE $${idx})`;
+      params.push(`%${search}%`);
+      idx++;
+    }
+
+    const countResult = await pool.query(
+      `SELECT COUNT(*) FROM users u JOIN roles r ON r.id = u.role_id WHERE ${where}`,
+      params
+    );
+
+    params.push(parseInt(limit), offset);
+    const result = await pool.query(
+      `SELECT u.id, u.username, u.email, u.display_name, u.is_active, u.created_at,
+              t.id as tenant_id, t.name as tenant_name, t.platform_name, t.domain,
+              t.revenue_share_pct, t.max_users, t.logo_url, t.primary_color,
+              (SELECT COUNT(*) FROM users m WHERE m.tenant_id = t.id AND m.id != u.id) as member_count,
+              (SELECT COALESCE(SUM(ac.amount), 0) FROM agent_commissions ac WHERE ac.agent_user_id = u.id) as total_commission
+       FROM users u
+       JOIN roles r ON r.id = u.role_id
+       LEFT JOIN tenants t ON t.owner_user_id = u.id
+       WHERE ${where}
+       ORDER BY u.created_at DESC
+       LIMIT $${idx++} OFFSET $${idx++}`,
+      params
+    );
+
+    res.json({
+      agents: result.rows,
+      total: parseInt(countResult.rows[0].count),
+      page: parseInt(page),
+      limit: parseInt(limit),
+    });
+  } catch (err) {
+    console.error('Admin list agents error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/admin/agents — create a new agent (promote user to agent + create tenant)
+router.post('/agents', async (req, res) => {
+  try {
+    const { user_id, tenant_name, platform_name, domain, revenue_share_pct = 10, max_users = 50, contact_email, contact_phone } = req.body;
+
+    if (!user_id || !tenant_name) {
+      return res.status(400).json({ error: 'user_id and tenant_name are required' });
+    }
+
+    // Check user exists
+    const userCheck = await pool.query('SELECT id, username FROM users WHERE id = $1', [user_id]);
+    if (userCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'ไม่พบผู้ใช้' });
+    }
+
+    await pool.query('BEGIN');
+
+    // 1. Set user role to agent
+    const agentRole = await pool.query(`SELECT id FROM roles WHERE role_name = 'agent'`);
+    if (agentRole.rows.length === 0) {
+      await pool.query('ROLLBACK');
+      return res.status(500).json({ error: 'Agent role not found in database' });
+    }
+
+    await pool.query(
+      `UPDATE users SET role_id = $1, updated_at = NOW() WHERE id = $2`,
+      [agentRole.rows[0].id, user_id]
+    );
+
+    // 2. Create tenant
+    const tenantResult = await pool.query(
+      `INSERT INTO tenants (name, platform_name, domain, owner_user_id, revenue_share_pct, max_users, contact_email, contact_phone)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING *`,
+      [tenant_name, platform_name || tenant_name, domain || null, user_id, revenue_share_pct, max_users, contact_email || null, contact_phone || null]
+    );
+
+    // 3. Assign tenant_id to the agent user themselves too
+    await pool.query(
+      `UPDATE users SET tenant_id = $1 WHERE id = $2`,
+      [tenantResult.rows[0].id, user_id]
+    );
+
+    // 4. Audit log
+    await pool.query(
+      `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details)
+       VALUES ($1, 'admin.create_agent', 'tenant', $2, $3)`,
+      [req.user.id, tenantResult.rows[0].id, JSON.stringify({ user_id, tenant_name })]
+    );
+
+    await pool.query('COMMIT');
+
+    res.status(201).json({
+      agent: userCheck.rows[0],
+      tenant: tenantResult.rows[0],
+    });
+  } catch (err) {
+    await pool.query('ROLLBACK');
+    console.error('Admin create agent error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PUT /api/admin/agents/:userId — update agent tenant config
+router.put('/agents/:userId', async (req, res) => {
+  try {
+    const { revenue_share_pct, max_users, is_active, platform_name, domain, contact_email, contact_phone } = req.body;
+
+    const result = await pool.query(
+      `UPDATE tenants SET
+        revenue_share_pct = COALESCE($1, revenue_share_pct),
+        max_users = COALESCE($2, max_users),
+        is_active = COALESCE($3, is_active),
+        platform_name = COALESCE($4, platform_name),
+        domain = COALESCE($5, domain),
+        contact_email = COALESCE($6, contact_email),
+        contact_phone = COALESCE($7, contact_phone),
+        updated_at = NOW()
+       WHERE owner_user_id = $8
+       RETURNING *`,
+      [revenue_share_pct, max_users, is_active, platform_name, domain, contact_email, contact_phone, req.params.userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'ไม่พบ Tenant ของ Agent นี้' });
+    }
+
+    // Audit
+    await pool.query(
+      `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details)
+       VALUES ($1, 'admin.update_agent', 'tenant', $2, $3)`,
+      [req.user.id, result.rows[0].id, JSON.stringify(req.body)]
+    );
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Admin update agent error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/admin/agents/:userId/stats — agent statistics
+router.get('/agents/:userId/stats', async (req, res) => {
+  try {
+    const tenant = await pool.query(
+      `SELECT * FROM tenants WHERE owner_user_id = $1`,
+      [req.params.userId]
+    );
+    if (tenant.rows.length === 0) {
+      return res.status(404).json({ error: 'ไม่พบ Tenant ของ Agent นี้' });
+    }
+    const tenantId = tenant.rows[0].id;
+
+    const [members, trades, commissions, invites] = await Promise.all([
+      pool.query(
+        `SELECT COUNT(*) as total, 
+                COUNT(CASE WHEN is_active THEN 1 END) as active,
+                COUNT(CASE WHEN NOT is_active THEN 1 END) as inactive
+         FROM users WHERE tenant_id = $1 AND id != $2`,
+        [tenantId, req.params.userId]
+      ),
+      pool.query(
+        `SELECT 
+           COALESCE(SUM(t.pnl), 0) as total_pnl,
+           COUNT(t.id) as total_trades,
+           COUNT(CASE WHEN t.pnl > 0 THEN 1 END) as winning,
+           COUNT(CASE WHEN t.pnl < 0 THEN 1 END) as losing
+         FROM trades t
+         JOIN accounts a ON a.id = t.account_id
+         JOIN users u ON u.id = a.user_id
+         WHERE u.tenant_id = $1 AND t.status = 'CLOSED'`,
+        [tenantId]
+      ),
+      pool.query(
+        `SELECT 
+           COALESCE(SUM(amount), 0) as total,
+           COALESCE(SUM(CASE WHEN status = 'SETTLED' THEN amount ELSE 0 END), 0) as settled,
+           COALESCE(SUM(CASE WHEN status = 'PENDING' THEN amount ELSE 0 END), 0) as pending
+         FROM agent_commissions WHERE agent_user_id = $1`,
+        [req.params.userId]
+      ),
+      pool.query(
+        `SELECT COUNT(*) as total, 
+                COUNT(CASE WHEN is_active AND expires_at > NOW() THEN 1 END) as active
+         FROM agent_invitations WHERE tenant_id = $1`,
+        [tenantId]
+      ),
+    ]);
+
+    res.json({
+      tenant: tenant.rows[0],
+      members: members.rows[0],
+      trades: trades.rows[0],
+      commissions: commissions.rows[0],
+      invitations: invites.rows[0],
+    });
+  } catch (err) {
+    console.error('Agent stats error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;
