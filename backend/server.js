@@ -18,6 +18,7 @@ const FeeTracker = require('./services/feeTracker');
 const mockBotEngine = require('./services/mockBotEngine');
 const orderSyncEngine = require('./services/orderSyncEngine');
 const trailingStopEngine = require('./services/trailingStopEngine');
+const scheduleSyncEngine = require('./services/scheduleSyncEngine');
 
 const app = express();
 app.set('trust proxy', 1); // Trust first proxy (Nginx) to get correct Client IP for rate limiting
@@ -238,6 +239,7 @@ async function start() {
     aggregationService.start();
     feeTracker.start();
     orderSyncEngine.start();
+    scheduleSyncEngine.start();
     binanceFeed.start();
     executionEngine.start();
     riskEngine.start();

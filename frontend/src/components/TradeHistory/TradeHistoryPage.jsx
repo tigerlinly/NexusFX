@@ -29,6 +29,7 @@ export default function TradeHistoryPage() {
   const [symbolFilter, setSymbolFilter] = useState('');
   const [sideFilter, setSideFilter] = useState('');
   const [sourceFilter, setSourceFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   
   // Date Filters
   const [dateMode, setDateMode] = useState('day'); // 'day', 'week', 'month'
@@ -52,6 +53,7 @@ export default function TradeHistoryPage() {
         ...(symbolFilter && { symbol: symbolFilter }),
         ...(sideFilter && { side: sideFilter }),
         ...(sourceFilter && { source: sourceFilter }),
+        ...(statusFilter && { status: statusFilter }),
         ...(dateFrom && { from: dateFrom }),
         ...(dateTo && { to: dateTo }),
       };
@@ -78,7 +80,7 @@ export default function TradeHistoryPage() {
     }
   };
 
-  useEffect(() => { fetchData(); }, [viewMode, selectedBrokerId, selectedAccountId, page, sortBy, sortDir, symbolFilter, sideFilter, sourceFilter, dateFrom, dateTo]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchData(); }, [viewMode, selectedBrokerId, selectedAccountId, page, sortBy, sortDir, symbolFilter, sideFilter, sourceFilter, statusFilter, dateFrom, dateTo]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle date mode shifts
   useEffect(() => {
@@ -158,16 +160,12 @@ export default function TradeHistoryPage() {
   };
 
   const handleSyncBroker = async () => {
-    if (viewMode !== 'account' || !selectedAccountId) {
-      alert('กรุณาเลือก "บัญชี" (Account) ที่ต้องการอัพเดตข้อมูลจากการตั้งค่าด้านบนก่อน');
-      return;
-    }
-    const confirmed = await window.customConfirm('ระบบจะดึงข้อมูลประวัติการเทรดล่าสุดจาก Broker\nต้องการดำเนินการต่อหรือไม่?');
+    const confirmed = await window.customConfirm('ระบบจะตรวจสอบข้อมูลทุกบัญชีการเทรดของคุณ แล้วอัพเดทข้อมูลใหม่ทั้งหมด\nคุณต้องการดำเนินการต่อหรือไม่ (อาจใช้เวลาสักครู่)?');
     if (!confirmed) return;
     
     setSyncing(true);
     try {
-      await api.syncTrades(selectedAccountId);
+      await api.syncAllTrades();
       alert('อัพเดตข้อมูลสำเร็จ!');
       fetchData();
     } catch (err) {
@@ -275,6 +273,12 @@ export default function TradeHistoryPage() {
             <option value="SELL">SELL</option>
           </select>
 
+          <select className="filter-select" value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}>
+            <option value="">ออเดอร์ทั้งหมด</option>
+            <option value="OPEN">ออเดอร์ที่เปิดอยู่</option>
+            <option value="CLOSED">ออเดอร์ที่ปิดแล้ว</option>
+          </select>
+
           <select className="filter-select" value={sourceFilter} onChange={e => { setSourceFilter(e.target.value); setPage(1); }}>
             <option value="">เทรดทั้งหมด</option>
             <option value="bot">🤖 เทรดออโต้</option>
@@ -317,11 +321,12 @@ export default function TradeHistoryPage() {
             </select>
           )}
 
-          {(symbolFilter || sideFilter || sourceFilter || dateFrom || dateTo) && (
+          {(symbolFilter || sideFilter || sourceFilter || statusFilter || dateFrom || dateTo) && (
             <button className="btn btn-ghost btn-sm" onClick={() => {
               setSymbolFilter('');
               setSideFilter('');
               setSourceFilter('');
+              setStatusFilter('');
               setDateFrom('');
               setDateTo('');
               setPage(1);
@@ -346,6 +351,7 @@ export default function TradeHistoryPage() {
                   <th onClick={() => handleSort('lot_size')}>Lot {sortBy === 'lot_size' && (sortDir === 'ASC' ? '↑' : '↓')}</th>
                   <th>ราคาเปิด</th>
                   <th>ราคาปิด</th>
+                  <th>สถานะ</th>
                   <th onClick={() => handleSort('pnl')}>PnL {sortBy === 'pnl' && (sortDir === 'ASC' ? '↑' : '↓')}</th>
                   <th>Commission</th>
                   <th>Swap</th>
@@ -369,19 +375,24 @@ export default function TradeHistoryPage() {
                       </span>
                     </td>
                     <td>
-                      {trade.bot_id ? (
+                      {(trade.bot_id || trade.magic_number > 0) ? (
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--accent-primary)', fontSize: 11 }}>
-                          <Bot size={13} /> Bot
+                          <Bot size={13} /> ออโต้
                         </span>
                       ) : (
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--text-tertiary)', fontSize: 11 }}>
-                          <Hand size={13} /> Manual
+                          <Hand size={13} /> เเมนนวล
                         </span>
                       )}
                     </td>
                     <td>{parseFloat(trade.lot_size).toFixed(2)}</td>
                     <td>{parseFloat(trade.entry_price).toFixed(trade.symbol?.includes('JPY') ? 3 : 5)}</td>
                     <td>{trade.exit_price ? parseFloat(trade.exit_price).toFixed(trade.symbol?.includes('JPY') ? 3 : 5) : '-'}</td>
+                    <td>
+                      <span className={`badge ${trade.status === 'OPEN' ? 'badge-open' : 'badge-closed'}`}>
+                        {trade.status}
+                      </span>
+                    </td>
                     <td className={parseFloat(trade.pnl) >= 0 ? 'pnl-positive' : 'pnl-negative'}>
                       {formatCurrency(trade.pnl)}
                     </td>

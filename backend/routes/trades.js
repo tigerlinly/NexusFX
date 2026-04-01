@@ -86,9 +86,9 @@ router.get('/', async (req, res) => {
       paramIdx++;
     }
     if (source === 'bot') {
-      conditions.push(`t.bot_id IS NOT NULL`);
+      conditions.push(`(t.bot_id IS NOT NULL OR t.magic_number > 0)`);
     } else if (source === 'manual') {
-      conditions.push(`t.bot_id IS NULL`);
+      conditions.push(`(t.bot_id IS NULL AND (t.magic_number IS NULL OR t.magic_number = 0))`);
     }
 
     const whereClause = conditions.join(' AND ');
@@ -315,6 +315,96 @@ router.post('/', auditLog('PLACE_TRADE', 'ORDER'), async (req, res) => {
   } catch (err) {
     console.error('Place trade error:', err);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/trades/sync-all
+router.post('/sync-all', auditLog('SYNC_ALL_TRADES', 'ACCOUNT'), async (req, res) => {
+  try {
+    // Get all active accounts for user that have MetaAPI configured
+    const accounts = await pool.query(`
+      SELECT a.id, a.metaapi_account_id, a.account_name, us.metaapi_token
+      FROM accounts a
+      LEFT JOIN user_settings us ON us.user_id = a.user_id
+      WHERE a.user_id = $1 AND a.is_active = true AND a.metaapi_account_id IS NOT NULL
+    `, [req.user.id]);
+
+    if (accounts.rows.length === 0) {
+      return res.status(400).json({ error: 'ไม่พบบัญชีที่เชื่อมต่อกับ MetaAPI' });
+    }
+
+    const metaApiService = require('../services/metaApiService');
+    let totalSynced = 0;
+    const errors = [];
+
+    // Default to last 30 days
+    const startTime = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+    const endTime = new Date().toISOString();
+
+    for (const acc of accounts.rows) {
+      const token = acc.metaapi_token || process.env.METAAPI_TOKEN;
+      if (!token) continue;
+
+      try {
+        const history = await metaApiService.getTradeHistory(acc.metaapi_account_id, token, startTime, endTime);
+        const closedDeals = history.filter(d => 
+          d.entryType === 'DEAL_ENTRY_OUT' || d.entryType === 'DEAL_ENTRY_OUT_BY'
+        );
+
+        let syncedCount = 0;
+        for (const deal of closedDeals) {
+          const isSellDeal = deal.type === 'DEAL_TYPE_SELL'; 
+          const originalSide = isSellDeal ? 'BUY' : 'SELL';
+
+          const ticket = (deal.id || deal.positionId || '').toString();
+          const symbol = deal.symbol || 'Unknown';
+          const lotSize = deal.volume || 0;
+          const pnl = deal.profit || 0;
+          const commission = deal.commission || 0;
+          const swap = deal.swap || 0;
+          const exitPrice = deal.price || 0;
+          const closedAt = deal.time || deal.brokerTime || new Date().toISOString();
+          const magic = deal.magic || deal.magicNumber || null;
+          
+          const insertQuery = `
+            INSERT INTO trades (
+              account_id, ticket, symbol, side, lot_size, exit_price, pnl, commission, swap, 
+              closed_at, opened_at, status, magic_number
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10, 'CLOSED', $11)
+            ON CONFLICT (account_id, ticket) DO UPDATE SET
+              pnl = EXCLUDED.pnl,
+              exit_price = EXCLUDED.exit_price,
+              commission = EXCLUDED.commission,
+              swap = EXCLUDED.swap,
+              status = 'CLOSED'
+          `;
+          await pool.query(insertQuery, [
+            acc.id, ticket, symbol, originalSide, lotSize, exitPrice, pnl, commission, swap, closedAt, magic
+          ]);
+          syncedCount++;
+        }
+
+        // Update last_sync_at
+        await pool.query(`UPDATE accounts SET last_sync_at = NOW() WHERE id = $1`, [acc.id]);
+        totalSynced += syncedCount;
+      } catch (err) {
+        console.error(`Sync error for account ${acc.id}:`, err);
+        errors.push(`Account ${acc.account_name}: ${err.message}`);
+      }
+    }
+
+    if (errors.length > 0 && totalSynced === 0) {
+      return res.status(500).json({ error: 'เกิดข้อผิดพลาดในการดึงข้อมูลย้อนหลัง:\n' + errors.join('\n') });
+    }
+
+    res.json({ 
+      success: true, 
+      message: `ซิงค์ข้อมูลเรียบร้อย ได้ข้อมูลออเดอร์ปิดใหม่จำนวน ${totalSynced} ออเดอร์ (พบข้อผิดพลาด ${errors.length} บัญชี)`, 
+      synced_count: totalSynced 
+    });
+  } catch (err) {
+    console.error('Sync all trades error:', err);
+    res.status(500).json({ error: 'Failed to sync trades: ' + err.message });
   }
 });
 

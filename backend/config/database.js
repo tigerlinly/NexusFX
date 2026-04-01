@@ -17,6 +17,24 @@ async function initDatabase() {
     await client.query('BEGIN');
 
     // =============================================
+    // TENANTS (B2B / White-label)
+    // =============================================
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tenants (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        domain VARCHAR(100) UNIQUE,
+        logo_url TEXT,
+        primary_color VARCHAR(20) DEFAULT '#007bff',
+        is_active BOOLEAN DEFAULT true,
+        contact_email VARCHAR(255),
+        settings JSONB DEFAULT '{}',
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    // =============================================
     // ROLES & PERMISSIONS (RBAC)
     // =============================================
     await client.query(`
@@ -53,6 +71,7 @@ async function initDatabase() {
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
+        tenant_id INTEGER REFERENCES tenants(id) ON DELETE SET NULL,
         username VARCHAR(50) UNIQUE NOT NULL,
         email VARCHAR(255) UNIQUE NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
@@ -73,6 +92,7 @@ async function initDatabase() {
 
     // Add columns if missing (for existing tables)
     try {
+      await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS tenant_id INTEGER REFERENCES tenants(id) ON DELETE SET NULL;`);
       await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS role_id INTEGER REFERENCES roles(id);`);
       await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ;`);
       await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS mfa_secret VARCHAR(255);`);
@@ -504,6 +524,8 @@ async function initDatabase() {
       await client.query(`ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS line_notify_token TEXT;`);
       await client.query(`ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS telegram_bot_token TEXT;`);
       await client.query(`ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS telegram_chat_id TEXT;`);
+      await client.query(`ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS sync_schedules JSONB DEFAULT '["07:00"]'::jsonb;`);
+
 
       // Ensure existing columns are wide enough (upgrade from VARCHAR(255) to TEXT)
       await client.query(`ALTER TABLE user_settings ALTER COLUMN metaapi_token TYPE TEXT;`);

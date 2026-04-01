@@ -18,10 +18,8 @@ export default function DashboardPage() {
   const [chartData, setChartData] = useState([]);
   const [breakdown, setBreakdown] = useState([]);
   const [targetStatus, setTargetStatus] = useState([]);
-  const [chartFilterType, setChartFilterType] = useState('duration');
-  const [chartPeriod, setChartPeriod] = useState('30');
-  const [selectedMonth] = useState(new Date().getMonth());
-  const [selectedYear] = useState(new Date().getFullYear());
+  const [chartPeriod, setChartPeriod] = useState('7');
+  const periods = ['1', '2', '3', '5', '7', '14', '30', '60', '90'];
   const [loading, setLoading] = useState(true);
   const [layout, setLayout] = useState(['targets', 'summary', 'chart', 'breakdown']);
   const [editMode, setEditMode] = useState(false);
@@ -54,34 +52,17 @@ export default function DashboardPage() {
         return new Date(d.getTime() - offset).toISOString().split('T')[0];
       };
       
-      let startDateStr, endDateStr;
       const today = new Date();
-      
-      if (chartFilterType === 'duration') {
-        endDateStr = formatDate(today);
-        const past = new Date(today);
-        past.setDate(past.getDate() - parseInt(chartPeriod) + 1);
-        startDateStr = formatDate(past);
-      } else if (chartFilterType === 'current_month') {
-        endDateStr = formatDate(today);
-        const start = new Date(today.getFullYear(), today.getMonth(), 1);
-        startDateStr = formatDate(start);
-      } else {
-        const start = new Date(selectedYear, selectedMonth, 1);
-        startDateStr = formatDate(start);
-        
-        if (selectedYear === today.getFullYear() && selectedMonth === today.getMonth()) {
-          endDateStr = formatDate(today);
-        } else {
-          const end = new Date(selectedYear, selectedMonth + 1, 0);
-          endDateStr = formatDate(end);
-        }
-      }
+      const endDateStr = formatDate(today);
+      const past = new Date(today);
+      past.setDate(past.getDate() - parseInt(chartPeriod) + 1);
+      const startDateStr = formatDate(past);
+      const interval = ['1', '2', '3'].includes(String(chartPeriod)) ? 'hour' : 'day';
 
       const params = getFilterParams();
       const [sum, chart, brk, targets, widgetsData] = await Promise.all([
         api.getDashboardSummary(params),
-        api.getPnlChart({ ...params, start_date: startDateStr, end_date: endDateStr }),
+        api.getPnlChart({ ...params, start_date: startDateStr, end_date: endDateStr, interval }),
         api.getAccountBreakdown(params),
         api.getTargetStatus(),
         api.getWidgets().catch(() => [])
@@ -102,7 +83,7 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [chartFilterType, chartPeriod, selectedMonth, selectedYear, getFilterParams]);
+  }, [chartPeriod, getFilterParams]);
 
   useEffect(() => {
     fetchData();
@@ -206,13 +187,26 @@ export default function DashboardPage() {
   // =============================================
   const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null;
+    
+    const isHourly = ['1', '2', '3'].includes(String(chartPeriod));
+    let displayLabel = String(label);
+    if (isHourly && label) {
+      const d = new Date(label);
+      displayLabel = `${d.getFullYear()}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getDate().toString().padStart(2, '0')} ${d.getHours().toString().padStart(2, '0')}:00`;
+    } else if (typeof label === 'string' && label.includes('T')) {
+      displayLabel = label.split('T')[0];
+    } else if (label) {
+      const d = new Date(label);
+      displayLabel = `${d.getFullYear()}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getDate().toString().padStart(2, '0')}`;
+    }
+
     return (
       <div style={{
         background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)',
         borderRadius: 'var(--radius-md)', padding: '12px', fontSize: 12
       }}>
         <div style={{ color: 'var(--text-tertiary)', marginBottom: 4 }}>
-          {typeof label === 'string' && label.includes('T') ? label.split('T')[0] : label}
+          {displayLabel}
         </div>
         <div style={{ color: payload[0].value >= 0 ? 'var(--profit)' : 'var(--loss)', fontWeight: 600, fontFamily: 'var(--font-mono)' }}>
           กำไร/ขาดทุน: {formatCurrency(payload[0].value)}
@@ -367,35 +361,69 @@ export default function DashboardPage() {
 
         case 'chart': {
           const boundaryLines = [];
-          const monthLabels = [];
+          const labels = [];
+          const isHourly = ['1', '2', '3'].includes(String(chartPeriod));
+
           if (chartData && chartData.length > 0) {
-            let currentMonth = null;
-            const groupedByMonth = {};
-            
-            chartData.forEach((d) => {
-              const dateObj = new Date(d.date);
-              const monthKey = `${dateObj.getFullYear()}/${(dateObj.getMonth() + 1).toString().padStart(2, '0')}`;
-              
-              if (!groupedByMonth[monthKey]) groupedByMonth[monthKey] = [];
-              groupedByMonth[monthKey].push(d);
+            if (isHourly) {
+              let currentDay = null;
+              const groupedByDay = {};
 
-              if (monthKey !== currentMonth) {
-                if (currentMonth !== null) {
-                  boundaryLines.push({ date: d.date });
+              chartData.forEach((d) => {
+                const dateObj = new Date(d.date);
+                const dayKey = `${dateObj.getFullYear()}/${(dateObj.getMonth() + 1).toString().padStart(2, '0')}/${dateObj.getDate().toString().padStart(2, '0')}`;
+                
+                if (!groupedByDay[dayKey]) groupedByDay[dayKey] = [];
+                groupedByDay[dayKey].push(d);
+
+                if (dayKey !== currentDay) {
+                  if (currentDay !== null) {
+                    boundaryLines.push({ date: d.date });
+                  }
+                  currentDay = dayKey;
                 }
-                currentMonth = monthKey;
-              }
-            });
+              });
 
-            Object.entries(groupedByMonth).forEach(([monthKey, days]) => {
-              // พยายามหาวันที่ 15 ของเดือน ถ้ายาวเต็มเดือน จะได้อยู่ตรงกลางเป๊ะๆ
-              let targetDay = days[Math.floor(days.length / 2)];
-              const fifteenth = days.find(d => new Date(d.date).getDate() === 15);
-              if (fifteenth) {
-                targetDay = fifteenth;
-              }
-              monthLabels.push({ date: targetDay.date, label: monthKey });
-            });
+              Object.entries(groupedByDay).forEach(([dayKey, hours]) => {
+                // Find nearest hour to 12:00 for the label
+                let targetHour = hours[0]; // fallback
+                const twelve = hours.find(h => new Date(h.date).getHours() === 12);
+                if (twelve) {
+                  targetHour = twelve;
+                } else if (hours.length > 0) {
+                  targetHour = hours[Math.floor(hours.length / 2)];
+                }
+                labels.push({ date: targetHour.date, label: dayKey });
+              });
+
+            } else {
+              let currentMonth = null;
+              const groupedByMonth = {};
+              
+              chartData.forEach((d) => {
+                const dateObj = new Date(d.date);
+                const monthKey = `${dateObj.getFullYear()}/${(dateObj.getMonth() + 1).toString().padStart(2, '0')}`;
+                
+                if (!groupedByMonth[monthKey]) groupedByMonth[monthKey] = [];
+                groupedByMonth[monthKey].push(d);
+
+                if (monthKey !== currentMonth) {
+                  if (currentMonth !== null) {
+                    boundaryLines.push({ date: d.date });
+                  }
+                  currentMonth = monthKey;
+                }
+              });
+
+              Object.entries(groupedByMonth).forEach(([monthKey, days]) => {
+                let targetDay = days[Math.floor(days.length / 2)];
+                const fifteenth = days.find(d => new Date(d.date).getDate() === 15);
+                if (fifteenth) {
+                  targetDay = fifteenth;
+                }
+                labels.push({ date: targetDay.date, label: monthKey });
+              });
+            }
           }
 
           return (
@@ -409,21 +437,16 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <div className="filter-group" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                  <select className="filter-select filter-select-view" value={chartFilterType} onChange={(e) => setChartFilterType(e.target.value)} style={{ minWidth: 120, height: 32, border: '1px solid #ffffff' }}>
-                    <option value="duration" hidden>เลือกระยะเวลา</option>
-                    <option value="current_month">เดือนปัจจุบัน</option>
-                    <option value="custom_month">ระบุเดือน...</option>
-                  </select>
                   <div className="filter-group" style={{ display: 'flex', border: '1px solid #ffffff', borderRadius: '6px', overflow: 'hidden' }}>
-                    {['7', '14', '30', '60', '90'].map(p => (
+                    {periods.map(p => (
                       <button
                         key={p}
-                        className={`filter-btn ${chartFilterType === 'duration' && String(chartPeriod) === String(p) ? 'active' : ''}`}
-                        onClick={() => { setChartFilterType('duration'); setChartPeriod(p); }}
+                        className={`filter-btn ${String(chartPeriod) === String(p) ? 'active' : ''}`}
+                        onClick={() => setChartPeriod(p)}
                         style={{ 
                           border: 'none', borderRadius: 0, padding: '4px 12px',
-                          background: chartFilterType === 'duration' && String(chartPeriod) === String(p) ? 'var(--accent-primary)' : 'transparent',
-                          color: chartFilterType === 'duration' && String(chartPeriod) === String(p) ? '#fff' : 'var(--text-secondary)'
+                          background: String(chartPeriod) === String(p) ? 'var(--accent-primary)' : 'transparent',
+                          color: String(chartPeriod) === String(p) ? '#fff' : 'var(--text-secondary)'
                         }}
                       >{p}D</button>
                     ))}
@@ -439,14 +462,26 @@ export default function DashboardPage() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border-primary)" />
-                  <XAxis dataKey="date" interval={0} padding={{ left: 10, right: 25 }} tick={{ fill: 'var(--text-tertiary)', fontSize: 11 }} tickFormatter={(val) => new Date(val).getDate().toString()} />
+                  <XAxis 
+                    dataKey="date" 
+                    interval={0} 
+                    padding={{ left: 10, right: 25 }} 
+                    tick={{ fill: 'var(--text-tertiary)', fontSize: 11 }} 
+                    tickFormatter={(val) => {
+                      const d = new Date(val);
+                      if (isHourly) {
+                        return d.getHours().toString().padStart(2, '0') + ':00';
+                      }
+                      return d.getDate().toString();
+                    }} 
+                  />
                   <YAxis tickCount={10} tick={{ fill: 'var(--text-tertiary)', fontSize: 11 }} tickFormatter={(val) => { const abs = Math.abs(val); return abs >= 1000 ? (val / 1000).toLocaleString() + 'K' : val; }} />
                   <Tooltip content={<CustomTooltip />} />
                   <ReferenceLine y={0} stroke="#ffffff" strokeDasharray="3 3" />
                   {boundaryLines.map(m => (
                     <ReferenceLine key={`bound-${m.date}`} x={m.date} stroke="var(--accent-secondary)" strokeOpacity={0.6} strokeDasharray="4 4" />
                   ))}
-                  {monthLabels.map(m => (
+                  {labels.map(m => (
                     <ReferenceLine key={`label-${m.date}`} x={m.date} stroke="none">
                       <Label value={m.label} position="top" fill="var(--text-primary)" fontSize={13} fontWeight="bold" offset={40} />
                     </ReferenceLine>

@@ -109,7 +109,8 @@ router.post('/:id/action', async (req, res) => {
     }
 
     const t = target.rows[0];
-    const today = new Date().toISOString().split('T')[0];
+    const todayDate = new Date();
+    const today = new Date(todayDate.toLocaleString('en-US', { timeZone: 'Asia/Bangkok' })).toISOString().split('T')[0];
 
     // Get current PnL
     let pnlQuery;
@@ -178,7 +179,8 @@ router.get('/status', async (req, res) => {
       [req.user.id]
     );
 
-    const today = new Date().toISOString().split('T')[0];
+    const todayDate = new Date();
+    const today = new Date(todayDate.toLocaleString('en-US', { timeZone: 'Asia/Bangkok' })).toISOString().split('T')[0];
     const statuses = [];
 
     for (const t of targets.rows) {
@@ -205,7 +207,7 @@ router.get('/status', async (req, res) => {
       }
 
       const progress = t.target_amount > 0 ? 
-        Math.min(100, (currentPnl / parseFloat(t.target_amount)) * 100).toFixed(1) : 0;
+        Math.max(0, Math.min(100, (currentPnl / parseFloat(t.target_amount)) * 100)).toFixed(1) : 0;
       const reached = currentPnl >= parseFloat(t.target_amount);
 
       statuses.push({

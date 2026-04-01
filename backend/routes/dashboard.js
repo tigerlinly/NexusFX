@@ -107,7 +107,7 @@ router.get('/summary', async (req, res) => {
 // GET /api/dashboard/pnl-chart
 router.get('/pnl-chart', async (req, res) => {
   try {
-    const { view = 'all', broker_id, account_id, start_date, end_date } = req.query;
+    const { view = 'all', broker_id, account_id, start_date, end_date, interval = 'day' } = req.query;
     const accountIds = await getFilteredAccountIds(req.user.id, view, broker_id, account_id);
 
     if (accountIds.length === 0) return res.json([]);
@@ -115,34 +115,61 @@ router.get('/pnl-chart', async (req, res) => {
     const sd = start_date || new Date(new Date().setDate(new Date().getDate() - 29)).toISOString().split('T')[0];
     const ed = end_date || new Date().toISOString().split('T')[0];
 
-    const result = await pool.query(
-      `WITH date_series AS (
-         SELECT generate_series(
-           $2::date,
-           $3::date,
-           '1 day'::interval
-         )::date AS report_date
-       )
-       SELECT 
-        ds.report_date,
-        COALESCE(SUM(da.total_pnl), 0) as pnl,
-        COALESCE(SUM(da.total_trades), 0) as trades,
-        COALESCE(SUM(da.winning_trades), 0) as wins,
-        COALESCE(SUM(da.total_volume), 0) as volume
-       FROM date_series ds
-       LEFT JOIN daily_aggregates da
-         ON da.report_date = ds.report_date AND da.account_id = ANY($1)
-       GROUP BY ds.report_date
-       ORDER BY ds.report_date`,
-      [accountIds, sd, ed]
-    );
+    let result;
+    if (interval === 'hour') {
+      result = await pool.query(
+        `WITH time_series AS (
+           SELECT generate_series(
+             $2::timestamp,
+             ($3::date + interval '1 day' - interval '1 second')::timestamp,
+             '1 hour'::interval
+           ) AS report_time
+         )
+         SELECT 
+          ts.report_time as date,
+          COALESCE(SUM(t.pnl), 0) as pnl,
+          COUNT(t.id) as trades,
+          SUM(CASE WHEN t.pnl > 0 THEN 1 ELSE 0 END) as wins,
+          COALESCE(SUM(t.lot_size), 0) as volume
+         FROM time_series ts
+         LEFT JOIN trades t 
+           ON t.account_id = ANY($1) 
+           AND date_trunc('hour', t.close_time) = ts.report_time
+           AND t.status = 'CLOSED'
+         GROUP BY ts.report_time
+         ORDER BY ts.report_time`,
+        [accountIds, sd, ed]
+      );
+    } else {
+      result = await pool.query(
+        `WITH date_series AS (
+           SELECT generate_series(
+             $2::date,
+             $3::date,
+             '1 day'::interval
+           )::date AS report_date
+         )
+         SELECT 
+          ds.report_date as date,
+          COALESCE(SUM(da.total_pnl), 0) as pnl,
+          COALESCE(SUM(da.total_trades), 0) as trades,
+          COALESCE(SUM(da.winning_trades), 0) as wins,
+          COALESCE(SUM(da.total_volume), 0) as volume
+         FROM date_series ds
+         LEFT JOIN daily_aggregates da
+           ON da.report_date = ds.report_date AND da.account_id = ANY($1)
+         GROUP BY ds.report_date
+         ORDER BY ds.report_date`,
+        [accountIds, sd, ed]
+      );
+    }
 
     // Compute cumulative PnL
     let cumPnl = 0;
     const data = result.rows.map(row => {
       cumPnl += parseFloat(row.pnl);
       return {
-        date: row.report_date,
+        date: row.date,
         pnl: parseFloat(row.pnl),
         cumulative_pnl: cumPnl,
         trades: parseInt(row.trades),
