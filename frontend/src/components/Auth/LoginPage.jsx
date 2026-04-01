@@ -1,12 +1,16 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LogIn, UserPlus, Eye, EyeOff } from 'lucide-react';
+import { api } from '../../utils/api';
+import { LogIn, UserPlus, Eye, EyeOff, Handshake } from 'lucide-react';
 
 export default function LoginPage() {
   const { login, register } = useAuth();
   const navigate = useNavigate();
-  const [isRegister, setIsRegister] = useState(false);
+  const [searchParams] = useSearchParams();
+  const inviteCode = searchParams.get('invite');
+
+  const [isRegister, setIsRegister] = useState(!!inviteCode);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -14,13 +18,32 @@ export default function LoginPage() {
   const [showMfa, setShowMfa] = useState(false);
   const [mfaCode, setMfaCode] = useState('');
 
+  // Agent branding from invite code
+  const [inviteBranding, setInviteBranding] = useState(null);
+  const [inviteLoading, setInviteLoading] = useState(!!inviteCode);
+
+  // Validate invite code and get agent branding
+  useEffect(() => {
+    if (!inviteCode) return;
+    setInviteLoading(true);
+    api.validateInvite(inviteCode)
+      .then(data => {
+        setInviteBranding(data);
+        setIsRegister(true);
+      })
+      .catch(() => {
+        setError('ลิงก์เชิญไม่ถูกต้องหรือหมดอายุแล้ว');
+      })
+      .finally(() => setInviteLoading(false));
+  }, [inviteCode]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
       if (isRegister) {
-        await register(form.username, form.email, form.password);
+        await register(form.username, form.email, form.password, inviteCode || undefined);
         navigate('/');
       } else {
         const response = await login(form.username, form.password, mfaCode);
@@ -38,15 +61,63 @@ export default function LoginPage() {
     }
   };
 
+  if (inviteLoading) {
+    return (
+      <div className="login-page">
+        <div className="login-card" style={{ textAlign: 'center' }}>
+          <div className="sidebar-logo" style={{ width: 56, height: 56, fontSize: 24, margin: '0 auto var(--space-lg)' }}>N</div>
+          <div style={{ color: 'var(--text-tertiary)' }}>กำลังตรวจสอบลิงก์เชิญ...</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="login-page">
       <div className="login-card">
+        {/* Agent Branding Banner */}
+        {inviteBranding && (
+          <div style={{
+            background: `linear-gradient(135deg, ${inviteBranding.primary_color || 'var(--accent-primary)'}22, transparent)`,
+            border: `1px solid ${inviteBranding.primary_color || 'var(--accent-primary)'}44`,
+            borderRadius: 'var(--radius-md)',
+            padding: '12px 16px',
+            marginBottom: 'var(--space-lg)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+          }}>
+            {inviteBranding.logo_url ? (
+              <img src={inviteBranding.logo_url} alt="" style={{ width: 36, height: 36, borderRadius: 'var(--radius-sm)', objectFit: 'cover' }} />
+            ) : (
+              <div style={{
+                width: 36, height: 36, borderRadius: 'var(--radius-sm)',
+                background: inviteBranding.primary_color || 'var(--accent-primary)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#fff', fontWeight: 700, fontSize: 16,
+              }}>
+                <Handshake size={18} />
+              </div>
+            )}
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
+                {inviteBranding.platform_name || inviteBranding.tenant_name || 'Agent Partner'}
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                คุณได้รับเชิญให้เข้าร่วมทีม
+              </div>
+            </div>
+          </div>
+        )}
+
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 'var(--space-lg)' }}>
           <div className="sidebar-logo" style={{ width: 56, height: 56, fontSize: 24 }}>N</div>
         </div>
         <h1 className="login-title">NexusFX</h1>
         <p className="login-subtitle">
-          {isRegister ? 'สร้างบัญชีใหม่เพื่อเริ่มต้น' : 'เข้าสู่ระบบ Trading Platform'}
+          {inviteBranding
+            ? `สมัครสมาชิกเข้าร่วมทีม ${inviteBranding.platform_name || ''}`
+            : isRegister ? 'สร้างบัญชีใหม่เพื่อเริ่มต้น' : 'เข้าสู่ระบบ Trading Platform'}
         </p>
 
         {error && (
@@ -171,7 +242,7 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {!showMfa && (
+        {!showMfa && !inviteCode && (
           <div style={{ textAlign: 'center', marginTop: 'var(--space-lg)' }}>
             <button
               onClick={() => { setIsRegister(p => !p); setError(''); }}
@@ -181,6 +252,20 @@ export default function LoginPage() {
               }}
             >
               {isRegister ? 'มีบัญชีแล้ว? เข้าสู่ระบบ' : 'ยังไม่มีบัญชี? สมัครสมาชิก'}
+            </button>
+          </div>
+        )}
+
+        {inviteCode && !isRegister && (
+          <div style={{ textAlign: 'center', marginTop: 'var(--space-lg)' }}>
+            <button
+              onClick={() => setIsRegister(true)}
+              style={{
+                background: 'none', border: 'none', color: 'var(--accent-primary)',
+                cursor: 'pointer', fontSize: 13
+              }}
+            >
+              ยังไม่มีบัญชี? สมัครสมาชิกผ่านลิงก์เชิญ
             </button>
           </div>
         )}

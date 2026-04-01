@@ -15,7 +15,6 @@ export default function WalletPage() {
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
   const [processing, setProcessing] = useState(false);
-  const [depositMethod, setDepositMethod] = useState('test');
 
   const fetchData = useCallback(async () => {
     try {
@@ -52,17 +51,11 @@ export default function WalletPage() {
     setProcessing(true);
     try {
       if (showModal === 'deposit') {
-        if (depositMethod === 'test') {
-          // Direct topup — skip payment gateway
-          await api.topup({ amount: parseFloat(amount), currency: 'USD' });
-          alert(`ฝากเงิน $${parseFloat(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ยอดเข้าสู่กระเป๋า USD แล้ว! (โหมดทดสอบ)`);
-        } else {
-          // Stripe checkout
-          const res = await api.createCheckout({ amountUSD: parseFloat(amount) });
-          if (res.url) {
-            window.location.href = res.url;
-            return; // Redirecting to Stripe
-          }
+        // Stripe checkout
+        const res = await api.createCheckout({ amountUSD: parseFloat(amount) });
+        if (res.url) {
+          window.location.href = res.url;
+          return; // Redirecting to Stripe
         }
       } else {
         await api.withdraw({ amount: parseFloat(amount), note });
@@ -75,26 +68,9 @@ export default function WalletPage() {
     } catch (err) {
       alert(err.message || 'เกิดข้อผิดพลาดในการทำรายการ');
     } finally {
-      if (depositMethod === 'test' || showModal !== 'deposit') {
+      if (showModal !== 'deposit') {
         setProcessing(false);
       }
-    }
-  };
-
-  const handleTestDeposit = async () => {
-    if (!amount || parseFloat(amount) <= 0) return;
-    setProcessing(true);
-    try {
-      await api.topup({ amount: parseFloat(amount), currency: 'USD' });
-      setShowModal(null);
-      setAmount('');
-      setNote('');
-      fetchData();
-      alert('เติมเงินทดสอบสำเร็จ!');
-    } catch (err) {
-      alert(err.message);
-    } finally {
-      setProcessing(false);
     }
   };
 
@@ -286,33 +262,7 @@ export default function WalletPage() {
                   autoFocus
                 />
               </div>
-              {showModal === 'deposit' && (
-                <div className="form-group" style={{ marginBottom: 16 }}>
-                  <label className="form-label">รูปแบบการทำรายการ</label>
-                  <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', color: depositMethod === 'test' ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
-                      <input 
-                        type="radio" 
-                        name="depositMethod" 
-                        value="test" 
-                        checked={depositMethod === 'test'} 
-                        onChange={() => setDepositMethod('test')} 
-                      />
-                      ทดสอบ (เพิ่มยอดเข้าทันที)
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', color: depositMethod === 'real' ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
-                      <input 
-                        type="radio" 
-                        name="depositMethod" 
-                        value="real" 
-                        checked={depositMethod === 'real'} 
-                        onChange={() => setDepositMethod('real')} 
-                      />
-                      โอนจริง (ไปที่ Payment)
-                    </label>
-                  </div>
-                </div>
-              )}
+
               <div className="form-group" style={{ marginBottom: 16 }}>
                 <label className="form-label">หมายเหตุ</label>
                 <input
@@ -324,17 +274,7 @@ export default function WalletPage() {
               </div>
               <div className="modal-actions">
                 <button type="button" className="btn btn-secondary" onClick={() => setShowModal(null)}>ยกเลิก</button>
-                {showModal === 'deposit' && (
-                  <button 
-                    type="button" 
-                    className="btn" 
-                    style={{ background: 'var(--profit)', color: '#fff' }} 
-                    onClick={handleTestDeposit}
-                    disabled={processing}
-                  >
-                    ทดสอบเติมเงิน
-                  </button>
-                )}
+
                 <button type="submit" className={`btn ${showModal === 'deposit' ? 'btn-primary' : 'btn-danger'}`} disabled={processing}>
                   {processing ? 'กำลังดำเนินการ...' : showModal === 'deposit' ? 'ฝากเงิน Stripe' : 'ถอนเงิน'}
                 </button>

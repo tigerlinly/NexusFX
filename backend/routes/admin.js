@@ -141,6 +141,166 @@ router.put('/users/:id', async (req, res) => {
   }
 });
 
+// POST /api/admin/users/:id/adjust-balance — Maker-Checker Balance adjustment request
+router.post('/users/:id/adjust-balance', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { amount, reason } = req.body;
+    const adjustAmount = parseFloat(amount);
+    
+    if (isNaN(adjustAmount) || adjustAmount === 0) {
+      return res.status(400).json({ error: 'Valid amount required (not zero)' });
+    }
+    if (!reason || reason.trim() === '') {
+      return res.status(400).json({ error: 'Reason is required for manual adjustment' });
+    }
+
+    await client.query('BEGIN');
+
+    // Get user's wallet
+    const walletRes = await client.query('SELECT id, balance FROM wallets WHERE user_id = $1 AND currency = $2 FOR UPDATE', [req.params.id, 'USD']);
+    if (walletRes.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'User wallet not found' });
+    }
+    const walletId = walletRes.rows[0].id;
+
+    if (req.user.role === 'super_admin' || req.user.role === 'team_lead') {
+      // Auto-approve logic for high-level roles
+      const updatedWallet = await client.query(
+        'UPDATE wallets SET balance = balance + $1, updated_at = NOW() WHERE id = $2 RETURNING balance',
+        [adjustAmount, walletId]
+      );
+
+      const type = adjustAmount > 0 ? 'DEPOSIT' : 'WITHDRAW';
+      await client.query(
+        `INSERT INTO transactions (wallet_id, type, amount, status, note, created_at) 
+         VALUES ($1, $2, $3, 'COMPLETED', $4, NOW())`,
+        [walletId, type, Math.abs(adjustAmount), `Manual Adjustment: ${reason}`]
+      );
+
+      await client.query(
+        `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details)
+         VALUES ($1, 'admin.adjust_balance', 'user', $2, $3)`,
+        [req.user.id, req.params.id, JSON.stringify({ adjust_amount: adjustAmount, reason, auto_approved: true })]
+      );
+
+      await client.query(
+        `INSERT INTO balance_adjustments (user_id, requested_by, approved_by, amount, reason, status) 
+         VALUES ($1, $2, $3, $4, $5, 'APPROVED')`,
+        [req.params.id, req.user.id, req.user.id, adjustAmount, reason]
+      );
+
+      await client.query('COMMIT');
+      return res.json({ success: true, new_balance: updatedWallet.rows[0].balance, status: 'APPROVED' });
+    } else {
+      // Maker flow: Create a PENDING request.
+      await client.query(
+        `INSERT INTO balance_adjustments (user_id, requested_by, amount, reason, status) 
+         VALUES ($1, $2, $3, $4, 'PENDING')`,
+        [req.params.id, req.user.id, adjustAmount, reason]
+      );
+
+      await client.query(
+        `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details)
+         VALUES ($1, 'admin.adjust_balance_request', 'user', $2, $3)`,
+        [req.user.id, req.params.id, JSON.stringify({ adjust_amount: adjustAmount, reason, status: 'PENDING' })]
+      );
+
+      await client.query('COMMIT');
+      return res.json({ success: true, status: 'PENDING', message: 'Balance adjustment request submitted for approval.' });
+    }
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Admin adjust balance error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    client.release();
+  }
+});
+
+// GET /api/admin/adjustments
+router.get('/adjustments', async (req, res) => {
+  try {
+    const status = req.query.status || 'PENDING';
+    const result = await pool.query(`
+      SELECT ba.*, 
+             u1.username as target_username, u1.email as target_email, 
+             u2.username as requested_by_username,
+             u3.username as approved_by_username
+      FROM balance_adjustments ba
+      JOIN users u1 ON ba.user_id = u1.id
+      JOIN users u2 ON ba.requested_by = u2.id
+      LEFT JOIN users u3 ON ba.approved_by = u3.id
+      WHERE ba.status = $1
+      ORDER BY ba.created_at DESC
+      LIMIT 100
+    `, [status]);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('List adjustments error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/admin/adjustments/:id/approve
+router.post('/adjustments/:id/approve', async (req, res) => {
+  if (req.user.role !== 'super_admin' && req.user.role !== 'team_lead') {
+    return res.status(403).json({ error: 'Insufficient permissions to approve adjustments' });
+  }
+
+  const client = await pool.connect();
+  try {
+    const { action } = req.body; // 'APPROVE' or 'REJECT'
+    const status = action === 'APPROVE' ? 'APPROVED' : 'REJECTED';
+
+    await client.query('BEGIN');
+    const reqRes = await client.query('SELECT * FROM balance_adjustments WHERE id = $1 AND status = $2 FOR UPDATE', [req.params.id, 'PENDING']);
+    if (reqRes.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Adjustment request not found or already processed' });
+    }
+    const adjustment = reqRes.rows[0];
+
+    await client.query('UPDATE balance_adjustments SET status = $1, approved_by = $2, updated_at = NOW() WHERE id = $3', [status, req.user.id, adjustment.id]);
+
+    if (action === 'APPROVE') {
+      const walletRes = await client.query('SELECT id, balance FROM wallets WHERE user_id = $1 AND currency = $2 FOR UPDATE', [adjustment.user_id, 'USD']);
+      if (walletRes.rows.length > 0) {
+        const walletId = walletRes.rows[0].id;
+        const adjustAmount = parseFloat(adjustment.amount);
+        
+        await client.query(
+          'UPDATE wallets SET balance = balance + $1, updated_at = NOW() WHERE id = $2',
+          [adjustAmount, walletId]
+        );
+
+        const type = adjustAmount > 0 ? 'DEPOSIT' : 'WITHDRAW';
+        await client.query(
+          `INSERT INTO transactions (wallet_id, type, amount, status, note, created_at) 
+           VALUES ($1, $2, $3, 'COMPLETED', $4, NOW())`,
+          [walletId, type, Math.abs(adjustAmount), `Manual Adjustment: ${adjustment.reason}`]
+        );
+      }
+    }
+
+    await client.query(
+      `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details)
+       VALUES ($1, $2, 'balance_adjustment', $3, $4)`,
+      [req.user.id, action === 'APPROVE' ? 'admin.approve_adjustment' : 'admin.reject_adjustment', adjustment.id, JSON.stringify({ adjust_amount: adjustment.amount, target_user: adjustment.user_id })]
+    );
+
+    await client.query('COMMIT');
+    res.json({ success: true, status });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Approve adjustment error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    client.release();
+  }
+});
+
 // =============================================
 // AUDIT LOGS
 // =============================================

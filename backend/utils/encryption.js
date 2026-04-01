@@ -1,105 +1,98 @@
 /**
- * Encryption utility for API keys and sensitive data
- * Uses AES-256-GCM (Authenticated Encryption)
+ * AES-256-GCM Encryption Utility for API Keys & Sensitive Data
+ * 
+ * Uses AES-256-GCM authenticated encryption:
+ * - 256-bit key derived from ENCRYPTION_KEY env var
+ * - Random 12-byte IV per encryption
+ * - 16-byte auth tag for integrity verification
+ * - Output format: iv:authTag:ciphertext (all hex-encoded)
  */
+
 const crypto = require('crypto');
 
 const ALGORITHM = 'aes-256-gcm';
-const IV_LENGTH = 16;
-const TAG_LENGTH = 16;
-
-// Derive encryption key from JWT_SECRET (or a dedicated ENCRYPTION_KEY env var)
-function getEncryptionKey() {
-  const secret = process.env.ENCRYPTION_KEY || process.env.JWT_SECRET;
-  if (!secret) throw new Error('No encryption key configured');
-  // Derive a 32-byte key using scrypt with deployment-specific salt
-  const salt = process.env.ENCRYPTION_SALT || 'nexusfx-salt-v1';
-  return crypto.scryptSync(secret, salt, 32);
-}
+const IV_LENGTH = 12;   // GCM standard
+const TAG_LENGTH = 16;  // 128-bit auth tag
+const ENCODING = 'hex';
 
 /**
- * Check if a string looks like it's already encrypted (iv:authTag:ciphertext hex format)
+ * Get the 256-bit encryption key from environment.
+ * Falls back to a derived key from JWT_SECRET if ENCRYPTION_KEY is not set.
  */
-function isEncrypted(text) {
-  if (!text || typeof text !== 'string') return false;
-  const parts = text.split(':');
-  if (parts.length !== 3) return false;
-  // Check that all parts are valid hex strings with expected lengths
-  const [iv, tag, cipher] = parts;
-  return iv.length === 32 && tag.length === 32 && cipher.length > 0 && /^[0-9a-f]+$/i.test(iv) && /^[0-9a-f]+$/i.test(tag) && /^[0-9a-f]+$/i.test(cipher);
+function getKey() {
+  const raw = process.env.ENCRYPTION_KEY || process.env.JWT_SECRET;
+  if (!raw) {
+    throw new Error('ENCRYPTION_KEY or JWT_SECRET must be set for API key encryption');
+  }
+  // Derive a consistent 32-byte key using SHA-256
+  return crypto.createHash('sha256').update(raw).digest();
 }
 
 /**
- * Encrypt a plaintext string
- * @param {string} plaintext 
- * @returns {string} encrypted string in format: iv:authTag:ciphertext (all hex)
+ * Encrypt a plaintext string using AES-256-GCM.
+ * @param {string} plaintext - The text to encrypt
+ * @returns {string} Encrypted string in format "iv:authTag:ciphertext"
  */
 function encrypt(plaintext) {
-  if (!plaintext || typeof plaintext !== 'string' || plaintext.trim() === '') {
-    return plaintext; // Don't encrypt empty values
-  }
+  if (!plaintext || plaintext.trim() === '') return '';
 
-  // GUARD: Don't double-encrypt — if already encrypted, return as-is
-  if (isEncrypted(plaintext)) {
-    console.warn('[Encryption] Value appears already encrypted, skipping double-encryption');
-    return plaintext;
-  }
-
-  const key = getEncryptionKey();
+  const key = getKey();
   const iv = crypto.randomBytes(IV_LENGTH);
   const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
 
-  let encrypted = cipher.update(plaintext, 'utf8', 'hex');
-  encrypted += cipher.final('hex');
-  const authTag = cipher.getAuthTag().toString('hex');
+  let encrypted = cipher.update(plaintext, 'utf8', ENCODING);
+  encrypted += cipher.final(ENCODING);
+  const authTag = cipher.getAuthTag().toString(ENCODING);
 
-  // Return as iv:authTag:ciphertext
-  return `${iv.toString('hex')}:${authTag}:${encrypted}`;
+  return `${iv.toString(ENCODING)}:${authTag}:${encrypted}`;
 }
 
 /**
- * Decrypt an encrypted string
- * @param {string} encryptedText - format: iv:authTag:ciphertext (all hex)
- * @returns {string|null} decrypted plaintext, or null if decryption fails
+ * Decrypt an AES-256-GCM encrypted string.
+ * @param {string} encryptedStr - The encrypted string in format "iv:authTag:ciphertext"
+ * @returns {string} Decrypted plaintext
  */
-function decrypt(encryptedText) {
-  if (!encryptedText || typeof encryptedText !== 'string' || encryptedText.trim() === '') {
-    return null;
+function decrypt(encryptedStr) {
+  if (!encryptedStr || encryptedStr.trim() === '') return '';
+
+  // If the value doesn't look encrypted (no colons), return as-is (backward compat with plaintext)
+  if (!encryptedStr.includes(':')) {
+    return encryptedStr;
   }
 
-  // Check if it's actually encrypted (has the iv:tag:cipher format)
-  if (!isEncrypted(encryptedText)) {
-    // Not encrypted (legacy plaintext), return as-is
-    return encryptedText;
+  const parts = encryptedStr.split(':');
+  if (parts.length !== 3) {
+    // Not our format, return as-is
+    return encryptedStr;
   }
-
-  const parts = encryptedText.split(':');
 
   try {
-    const key = getEncryptionKey();
-    const iv = Buffer.from(parts[0], 'hex');
-    const authTag = Buffer.from(parts[1], 'hex');
+    const key = getKey();
+    const iv = Buffer.from(parts[0], ENCODING);
+    const authTag = Buffer.from(parts[1], ENCODING);
     const ciphertext = parts[2];
 
     const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
     decipher.setAuthTag(authTag);
 
-    let decrypted = decipher.update(ciphertext, 'hex', 'utf8');
+    let decrypted = decipher.update(ciphertext, ENCODING, 'utf8');
     decrypted += decipher.final('utf8');
     return decrypted;
   } catch (err) {
-    // Decryption failed — data is likely corrupted (double-encrypted or wrong key)
-    console.error('[Encryption] Decryption FAILED — data may be corrupted:', err.message);
-    return null; // Return null instead of corrupt data
+    // If decryption fails (e.g., key changed, corrupted data), return empty
+    console.error('[Encryption] Decryption failed — data may be corrupted or key changed:', err.message);
+    return '';
   }
 }
 
 /**
- * Mask a string for display (show first 4 and last 4 chars)
+ * Mask a value for display (show first 4 and last 4 chars).
+ * @param {string} value 
+ * @returns {string}
  */
 function mask(value) {
-  if (!value || value.length < 10) return '••••••••';
+  if (!value || value.length < 10) return value ? '••••••••' : '';
   return value.substring(0, 4) + '••••••••' + value.substring(value.length - 4);
 }
 
-module.exports = { encrypt, decrypt, mask, isEncrypted };
+module.exports = { encrypt, decrypt, mask };

@@ -2,6 +2,7 @@ const { pool } = require('../config/database');
 const metaApiService = require('./metaApiService');
 const TelegramNotify = require('./telegramNotify');
 const LineNotify = require('./lineNotify');
+const { decrypt } = require('../utils/encryption');
 
 class OrderSyncEngine {
   constructor() {
@@ -52,8 +53,10 @@ class OrderSyncEngine {
   }
 
   async syncAccountPositions(accountInfo) {
-    const { account_id, user_id, metaapi_account_id, metaapi_token } = accountInfo;
+    const { account_id, user_id, metaapi_account_id, metaapi_token: rawToken } = accountInfo;
     
+    // Decrypt the token (supports both encrypted and legacy plaintext)
+    const metaapi_token = decrypt(rawToken);
     if (!metaapi_token) {
       console.warn(`[OrderSyncEngine] No metaapi_token for account ${account_id}, skipping`);
       return;

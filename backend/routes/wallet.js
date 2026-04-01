@@ -1,6 +1,6 @@
 const express = require('express');
 const { pool } = require('../config/database');
-const { authMiddleware, requirePermission } = require('../middleware/auth');
+const { authMiddleware, requirePermission, auditLog } = require('../middleware/auth');
 const router = express.Router();
 
 router.use(authMiddleware);
@@ -126,7 +126,7 @@ router.get('/transactions', async (req, res) => {
 });
 
 // POST /api/wallet/deposit — create deposit
-router.post('/deposit', requirePermission('finance.deposit'), async (req, res) => {
+router.post('/deposit', requirePermission('finance.deposit'), auditLog('DEPOSIT', 'WALLET'), async (req, res) => {
   try {
     const { amount, currency = 'USD', note, reference_id } = req.body;
     if (!amount || amount <= 0) {
@@ -168,8 +168,13 @@ router.post('/deposit', requirePermission('finance.deposit'), async (req, res) =
 });
 
 // POST /api/wallet/topup — User Mock Deposit (For Testing)
-router.post('/topup', async (req, res) => {
+router.post('/topup', auditLog('TOPUP', 'WALLET'), async (req, res) => {
   try {
+    // SECURITY: Restrict mock deposit to Admin only
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Permission denied. Admins only.' });
+    }
+
     const { amount, currency = 'USD' } = req.body;
     if (!amount || amount <= 0) {
       return res.status(400).json({ error: 'Valid amount required' });
@@ -208,7 +213,7 @@ router.post('/topup', async (req, res) => {
 });
 
 // POST /api/wallet/withdraw — create withdrawal
-router.post('/withdraw', requirePermission('finance.withdraw'), async (req, res) => {
+router.post('/withdraw', requirePermission('finance.withdraw'), auditLog('WITHDRAW', 'WALLET'), async (req, res) => {
   try {
     const { amount, currency = 'USD', note, reference_id } = req.body;
     if (!amount || amount <= 0) {

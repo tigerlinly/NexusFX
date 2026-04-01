@@ -46,7 +46,7 @@ class PreTradeRiskCheck {
       // CHECK 3: Daily drawdown limit (group-level)
       // =============================================
       const groupCheck = await pool.query(`
-        SELECT g.group_name, (g.config->>'max_drawdown')::numeric as max_drawdown,
+        SELECT g.group_name, COALESCE((g.config->>'global_stop_loss')::numeric, 0) as global_stop_loss,
                COALESCE(SUM(t.pnl), 0) as daily_pnl
         FROM group_members gm
         JOIN groups g ON g.id = gm.group_id AND g.is_active = true
@@ -55,24 +55,24 @@ class PreTradeRiskCheck {
           AND DATE(t.created_at) = CURRENT_DATE
           AND t.status IN ('OPEN', 'CLOSED')
         WHERE gm.user_id = $1
-          AND (g.config->>'max_drawdown') IS NOT NULL
-          AND (g.config->>'max_drawdown')::numeric > 0
+          AND (g.config->>'global_stop_loss') IS NOT NULL
+          AND (g.config->>'global_stop_loss')::numeric > 0
         GROUP BY g.group_name, g.config
       `, [userId]);
 
       for (const group of groupCheck.rows) {
         const dailyPnl = parseFloat(group.daily_pnl);
-        const maxDrawdown = parseFloat(group.max_drawdown);
+        const globalStopLoss = parseFloat(group.global_stop_loss);
         
-        if (dailyPnl <= -maxDrawdown) {
+        if (dailyPnl <= -globalStopLoss) {
           return { 
             allowed: false, 
-            reason: `Trading blocked: Daily loss ($${Math.abs(dailyPnl).toFixed(2)}) exceeds group "${group.group_name}" limit ($${maxDrawdown.toFixed(2)})`,
+            reason: `Trading blocked: Daily loss ($${Math.abs(dailyPnl).toFixed(2)}) exceeds group "${group.group_name}" limit ($-${globalStopLoss.toFixed(2)})`,
             warnings 
           };
         }
-        if (dailyPnl <= -maxDrawdown * 0.7) {
-          warnings.push(`Warning: Daily loss is ${((Math.abs(dailyPnl) / maxDrawdown) * 100).toFixed(0)}% of group "${group.group_name}" limit`);
+        if (dailyPnl <= -globalStopLoss * 0.7) {
+          warnings.push(`Warning: Daily loss is ${((Math.abs(dailyPnl) / globalStopLoss) * 100).toFixed(0)}% of group "${group.group_name}" limit`);
         }
       }
 

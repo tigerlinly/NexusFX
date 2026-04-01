@@ -90,7 +90,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST /api/groups — create group
-router.post('/', requirePermission('group.create'), async (req, res) => {
+router.post('/', requirePermission('group.create'), auditLog('CREATE_GROUP', 'GROUP'), async (req, res) => {
   try {
     const { group_name, description, max_members } = req.body;
     if (!group_name) {
@@ -111,7 +111,7 @@ router.post('/', requirePermission('group.create'), async (req, res) => {
 });
 
 // PUT /api/groups/:id — update group
-router.put('/:id', async (req, res) => {
+router.put('/:id', auditLog('UPDATE_GROUP', 'GROUP'), async (req, res) => {
   try {
     const { group_name, description, max_members } = req.body;
 
@@ -148,7 +148,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // DELETE /api/groups/:id
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', auditLog('DELETE_GROUP', 'GROUP'), async (req, res) => {
   try {
     await pool.query(
       'UPDATE groups SET is_active = false WHERE id = $1 AND lead_user_id = $2',
@@ -168,7 +168,7 @@ router.delete('/:id', async (req, res) => {
 
 
 // POST /api/groups/:id/members — add member
-router.post('/:id/members', requirePermission('group.manage'), async (req, res) => {
+router.post('/:id/members', requirePermission('group.manage'), auditLog('ADD_GROUP_MEMBER', 'GROUP'), async (req, res) => {
   try {
     const { username } = req.body;
     // Check ownership
@@ -204,7 +204,7 @@ router.post('/:id/members', requirePermission('group.manage'), async (req, res) 
 });
 
 // DELETE /api/groups/:id/members/:userId — remove member
-router.delete('/:id/members/:userId', async (req, res) => {
+router.delete('/:id/members/:userId', auditLog('REMOVE_GROUP_MEMBER', 'GROUP'), async (req, res) => {
   try {
     const group = await pool.query('SELECT * FROM groups WHERE id = $1 AND lead_user_id = $2', [req.params.id, req.user.id]);
     if (group.rows.length === 0) {
@@ -290,7 +290,7 @@ router.get('/:id/performance', requirePermission('group.view_team'), async (req,
 // =============================================
 
 // PUT /api/groups/:id/config — update global risk settings (global stop-loss)
-router.put('/:id/config', requirePermission('group.manage'), async (req, res) => {
+router.put('/:id/config', requirePermission('group.manage'), auditLog('UPDATE_GROUP_CONFIG', 'GROUP'), async (req, res) => {
   try {
     const { global_stop_loss } = req.body;
     
@@ -323,7 +323,7 @@ router.put('/:id/config', requirePermission('group.manage'), async (req, res) =>
 });
 
 // POST /api/groups/:id/emergency-close — emergency close team's positions
-router.post('/:id/emergency-close', requirePermission('group.manage'), async (req, res) => {
+router.post('/:id/emergency-close', requirePermission('group.manage'), auditLog('EMERGENCY_CLOSE', 'GROUP'), async (req, res) => {
   try {
     const { reason } = req.body;
     

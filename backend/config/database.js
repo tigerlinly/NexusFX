@@ -222,6 +222,20 @@ async function initDatabase() {
     `);
 
     await client.query(`
+      CREATE TABLE IF NOT EXISTS balance_adjustments (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        requested_by INTEGER NOT NULL REFERENCES users(id),
+        approved_by INTEGER REFERENCES users(id),
+        amount DECIMAL(18,2) NOT NULL,
+        reason TEXT NOT NULL,
+        status VARCHAR(20) DEFAULT 'PENDING',
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    await client.query(`
       CREATE TABLE IF NOT EXISTS financial_transactions (
         id SERIAL PRIMARY KEY,
         wallet_id INTEGER NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,

@@ -4,7 +4,7 @@ import { api } from '../../utils/api';
 import {
   Shield, Users, BarChart3, DollarSign, Activity, Search,
   Edit2, UserCheck, UserX, Eye, AlertTriangle, Clock, ChevronDown,
-  Building, UserPlus, Percent, X
+  Building, UserPlus, Percent, X, Zap, CheckCircle, Calculator, RefreshCw
 } from 'lucide-react';
 
 export default function AdminPage() {
@@ -26,6 +26,13 @@ export default function AdminPage() {
   const [agentForm, setAgentForm] = useState({ user_id: '', tenant_name: '', platform_name: '', revenue_share_pct: 10, max_users: 50 });
   const [agentStats, setAgentStats] = useState(null);
   const [selectedAgent, setSelectedAgent] = useState(null);
+  const [commissionStatus, setCommissionStatus] = useState(null);
+  const [settlingAgent, setSettlingAgent] = useState(null);
+  const [calcRunning, setCalcRunning] = useState(false);
+  const [showAdjustModal, setShowAdjustModal] = useState(false);
+  const [adjustData, setAdjustData] = useState({ userId: null, amount: '', reason: '', username: '' });
+  const [isAdjusting, setIsAdjusting] = useState(false);
+  const [adjustments, setAdjustments] = useState([]);
 
   const fetchData = useCallback(async () => {
     try {
@@ -40,14 +47,21 @@ export default function AdminPage() {
         const data = await api.getAdminUsers({ search, role: roleFilter, page, limit: 20 });
         setUsers(data.users);
         setTotalUsers(data.total);
+      } else if (activeTab === 'adjustments') {
+        const data = await api.getAdjustments('PENDING');
+        setAdjustments(data);
       } else if (activeTab === 'audit') {
         const data = await api.getAuditLogs({ page, limit: 30 });
         setAuditLogs(data.logs);
         setTotalLogs(data.total);
       } else if (activeTab === 'agents') {
-        const data = await api.getAdminAgents({ search, page, limit: 20 });
+        const [data, status] = await Promise.all([
+          api.getAdminAgents({ search, page, limit: 20 }),
+          api.getCommissionEngineStatus().catch(() => null),
+        ]);
         setAgents(data.agents);
         setTotalAgents(data.total);
+        if (status) setCommissionStatus(status);
       }
     } catch (err) {
       console.error('Admin fetch error:', err);
@@ -128,7 +142,62 @@ export default function AdminPage() {
     }
   };
 
-  if (user?.role !== 'admin' && user?.role !== 'super_admin') {
+  const handleSettleCommissions = async (userId) => {
+    if (!confirm('ยืนยันการจ่ายค่าคอมมิชชั่นให้ตัวแทนนี้?')) return;
+    setSettlingAgent(userId);
+    try {
+      const res = await api.settleAgentCommissions(userId);
+      alert(`✅ จ่ายค่าคอมสำเร็จ\nจำนวน: ${res.settled_count} รายการ\nยอดรวม: $${parseFloat(res.settled_amount || 0).toFixed(2)}`);
+      fetchData();
+    } catch (err) {
+      alert('❌ ' + (err.message || 'เกิดข้อผิดพลาด'));
+    } finally {
+      setSettlingAgent(null);
+    }
+  };
+
+  const handleTriggerCalc = async () => {
+    if (!confirm('ยืนยันการคำนวณค่าคอมมิชชั่นทั้งระบบ?')) return;
+    setCalcRunning(true);
+    try {
+      const res = await api.triggerCommissionCalc();
+      alert(`✅ คำนวณค่าคอมสำเร็จ\nตัวแทนที่ประมวลผล: ${res.agents_processed || 0}\nค่าคอมใหม่: ${res.commissions_created || 0} รายการ`);
+      fetchData();
+    } catch (err) {
+      alert('❌ ' + (err.message || 'เกิดข้อผิดพลาด'));
+    } finally {
+      setCalcRunning(false);
+    }
+  };
+
+  const handleAdjustBalance = async (e) => {
+    e.preventDefault();
+    setIsAdjusting(true);
+    try {
+      await api.adjustUserBalance(adjustData.userId, { amount: adjustData.amount, reason: adjustData.reason });
+      alert(`✅ ปรับปรุงยอดเงินให้ผู้ใช้ ${adjustData.username} สำเร็จ!`);
+      setShowAdjustModal(false);
+      setAdjustData({ userId: null, amount: '', reason: '', username: '' });
+      fetchData(); // Refresh overview
+    } catch (err) {
+      alert(`❌ ${err.message || 'เกิดข้อผิดพลาดในการปรับยอดเงิน'}`);
+    } finally {
+      setIsAdjusting(false);
+    }
+  };
+
+  const handleApproveAdjustment = async (id, action) => {
+    if (!confirm(`ยืนยันการ ${action === 'APPROVE' ? 'อนุมัติ' : 'ปฏิเสธ'} รายการนี้?`)) return;
+    try {
+      await api.approveAdjustment(id, action);
+      alert(`✅ อัปเดตสถานะคำขอสำเร็จ`);
+      fetchData(); // Refresh queue
+    } catch (err) {
+      alert(`❌ ${err.message || 'เกิดข้อผิดพลาดในการจัดการคำขอ'}`);
+    }
+  };
+
+  if (user?.role !== 'admin' && user?.role !== 'super_admin' && user?.role !== 'team_lead') {
     return (
       <>
         <div className="header"><div className="header-left"><h1 className="page-title">แผงควบคุมผู้ดูแล</h1></div></div>
@@ -146,6 +215,7 @@ export default function AdminPage() {
   const tabs = [
     { id: 'overview', label: 'ภาพรวมระบบ', icon: Activity },
     { id: 'users', label: 'จัดการผู้ใช้', icon: Users },
+    { id: 'adjustments', label: 'รออนุมัติเงิน', icon: DollarSign },
     { id: 'agents', label: 'จัดการตัวแทน', icon: Building },
     { id: 'audit', label: 'Audit Logs', icon: Eye },
   ];
@@ -193,6 +263,50 @@ export default function AdminPage() {
                 <button type="button" className="btn btn-secondary" onClick={() => setShowKillModal(false)}>ยกเลิก</button>
                 <button type="submit" className="btn btn-primary" style={{ background: 'var(--loss)', color: '#fff' }} disabled={isKilling}>
                   {isKilling ? 'กำลังหยุดระบบ...' : 'ยืนยันหยุดการทำงาน'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showAdjustModal && (
+        <div className="modal-overlay" onClick={() => setShowAdjustModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ border: '2px solid var(--accent-primary)' }}>
+            <h2 className="modal-title" style={{ color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <DollarSign size={24} /> ปรับปรุงยอดเงินผู้ใช้ (Manual Adjustment)
+            </h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: 20, fontSize: 13, lineHeight: 1.5 }}>
+              คุณกำลังปรับยอดเงินให้กับผู้ใช้: <strong>{adjustData.username}</strong>
+            </p>
+            <form onSubmit={handleAdjustBalance}>
+              <div className="form-group" style={{ marginBottom: 16 }}>
+                <label className="form-label">จำนวนเงิน USD (ใส่จำนวนติดลบเพื่อหักเงิน)</label>
+                <input 
+                  className="form-input" 
+                  type="number"
+                  step="0.01"
+                  autoFocus 
+                  required 
+                  value={adjustData.amount} 
+                  onChange={e => setAdjustData(prev => ({ ...prev, amount: e.target.value }))} 
+                  placeholder="เช่น 100 หรือ -50" 
+                />
+              </div>
+              <div className="form-group" style={{ marginBottom: 20 }}>
+                <label className="form-label">เหตุผล / ข้อความใน Audit Log</label>
+                <input 
+                  className="form-input" 
+                  required 
+                  value={adjustData.reason} 
+                  onChange={e => setAdjustData(prev => ({ ...prev, reason: e.target.value }))} 
+                  placeholder="เช่น คืนเงินฝากตกหล่น หรือ หักลบยอดค้าง..." 
+                />
+              </div>
+              <div className="modal-actions">
+                <button type="button" className="btn btn-secondary" onClick={() => setShowAdjustModal(false)}>ยกเลิก</button>
+                <button type="submit" className="btn btn-primary" disabled={isAdjusting}>
+                  {isAdjusting ? 'กำลังปรับยอด...' : 'ยืนยันปรับยอดเงิน'}
                 </button>
               </div>
             </form>
@@ -372,6 +486,12 @@ export default function AdminPage() {
                           </td>
                           <td>
                             <div style={{ display: 'flex', gap: 4 }}>
+                              <button className="btn btn-ghost btn-icon" onClick={() => {
+                                setAdjustData({ userId: u.id, amount: '', reason: '', username: u.display_name || u.username });
+                                setShowAdjustModal(true);
+                              }} title="ปรับปรุงยอดเงิน" style={{ width: 28, height: 28 }}>
+                                <DollarSign size={12} style={{ color: 'var(--accent-primary)' }} />
+                              </button>
                               <button className="btn btn-ghost btn-icon" onClick={() => setEditingUser(editingUser === u.id ? null : u.id)} style={{ width: 28, height: 28 }}>
                                 <Edit2 size={12} />
                               </button>
@@ -396,6 +516,72 @@ export default function AdminPage() {
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Adjustments Tab */}
+            {activeTab === 'adjustments' && (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                  <h2 style={{ fontSize: 18, fontWeight: 600 }}>รายการขออนุมัติปรับยอดเงิน (Pending Adjustments)</h2>
+                </div>
+                
+                <div className="data-table-wrapper" style={{ border: 'none' }}>
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>วันที่ / เวลา</th>
+                        <th>ผู้ใช้งาน (Target)</th>
+                        <th>ผู้ขอทำรายการ (Maker)</th>
+                        <th>จำนวนเงิน (USD)</th>
+                        <th>เหตุผล (Reason)</th>
+                        <th style={{ textAlign: 'right' }}>การจัดการ (Checker)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {adjustments.length === 0 ? (
+                        <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: 40 }}>ไม่มีรายการรออนุมัติในขณะนี้</td></tr>
+                      ) : adjustments.map(adj => (
+                        <tr key={adj.id}>
+                          <td style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'var(--text-tertiary)' }}>
+                            {new Date(adj.created_at).toLocaleString('th-TH')}
+                          </td>
+                          <td style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 500 }}>
+                            {adj.target_username || `- UID ${adj.user_id}`}
+                            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{adj.target_email}</div>
+                          </td>
+                          <td style={{ fontSize: 12 }}>{adj.requested_by_username || `Admin ID: ${adj.requested_by}`}</td>
+                          <td style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 600, color: adj.amount > 0 ? 'var(--profit)' : 'var(--loss)' }}>
+                            {formatCurrency(adj.amount)}
+                          </td>
+                          <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{adj.reason}</td>
+                          <td style={{ textAlign: 'right' }}>
+                            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                              <button 
+                                className="btn btn-sm" 
+                                style={{ background: 'var(--profit)', color: '#fff', border: 'none' }}
+                                onClick={() => handleApproveAdjustment(adj.id, 'APPROVE')}
+                                disabled={user?.role !== 'super_admin' && user?.role !== 'team_lead'}
+                                title={user?.role !== 'super_admin' && user?.role !== 'team_lead' ? 'สิทธิ์ไม่เพียงพอ (ต้องเป็น Team Lead หรือ Super Admin)' : 'อนุมัติ'}
+                              >
+                                ยืนยัน
+                              </button>
+                              <button 
+                                className="btn btn-sm" 
+                                style={{ background: 'var(--loss)', color: '#fff', border: 'none' }}
+                                onClick={() => handleApproveAdjustment(adj.id, 'REJECT')}
+                                disabled={user?.role !== 'super_admin' && user?.role !== 'team_lead'}
+                                title={user?.role !== 'super_admin' && user?.role !== 'team_lead' ? 'สิทธิ์ไม่เพียงพอ' : 'ปฏิเสธ'}
+                              >
+                                ปฏิเสธ
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
 
@@ -447,6 +633,45 @@ export default function AdminPage() {
             {/* Agents Tab */}
             {activeTab === 'agents' && (
               <div>
+                {/* Commission Engine Status Bar */}
+                {commissionStatus && (
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 16, padding: '10px 16px',
+                    background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)',
+                    marginBottom: 16, fontSize: 12, color: 'var(--text-secondary)',
+                    border: '1px solid var(--border-primary)',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Zap size={14} style={{ color: commissionStatus.running ? 'var(--profit)' : 'var(--text-tertiary)' }} />
+                      <span>Commission Engine: <strong style={{ color: commissionStatus.running ? 'var(--profit)' : 'var(--text-tertiary)' }}>
+                        {commissionStatus.running ? 'Running' : 'Idle'}
+                      </strong></span>
+                    </div>
+                    {commissionStatus.last_run && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Clock size={12} />
+                        <span>Last Run: {new Date(commissionStatus.last_run).toLocaleString('th-TH')}</span>
+                      </div>
+                    )}
+                    {commissionStatus.next_run && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <RefreshCw size={12} />
+                        <span>Next: {new Date(commissionStatus.next_run).toLocaleString('th-TH')}</span>
+                      </div>
+                    )}
+                    <div style={{ marginLeft: 'auto' }}>
+                      <button
+                        className="btn btn-sm"
+                        style={{ fontSize: 11, padding: '4px 10px', background: 'var(--accent-primary)', color: '#fff', border: 'none' }}
+                        onClick={handleTriggerCalc}
+                        disabled={calcRunning}
+                      >
+                        <Calculator size={12} /> {calcRunning ? 'กำลังคำนวณ...' : 'คำนวณค่าคอมทันที'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                   <h4 style={{ fontSize: 15, fontWeight: 600 }}>🏢 จัดการตัวแทน (Agent / B2B Partner)</h4>
                   <button className="btn btn-sm btn-primary" onClick={() => setShowCreateAgent(true)}>
@@ -512,6 +737,13 @@ export default function AdminPage() {
                               <button className="btn btn-ghost btn-icon" onClick={() => handleViewAgentStats(a.id)}
                                 title="ดูสถิติ" style={{ width: 28, height: 28 }}>
                                 <Eye size={12} />
+                              </button>
+                              <button className="btn btn-ghost btn-icon" onClick={() => handleSettleCommissions(a.id)}
+                                title="จ่ายค่าคอม" style={{ width: 28, height: 28 }}
+                                disabled={settlingAgent === a.id}>
+                                {settlingAgent === a.id
+                                  ? <RefreshCw size={12} className="spin" style={{ color: 'var(--warning)' }} />
+                                  : <CheckCircle size={12} style={{ color: 'var(--warning)' }} />}
                               </button>
                               <button className="btn btn-ghost btn-icon" onClick={() => handleUpdateAgent(a.id, { is_active: !a.is_active })}
                                 title={a.is_active ? 'ปิดใช้งาน' : 'เปิดใช้งาน'} style={{ width: 28, height: 28 }}>

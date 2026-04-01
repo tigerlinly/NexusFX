@@ -21,12 +21,7 @@ export default function BillingPage() {
         setCurrentPlan(current);
       } catch (err) {
         console.error('Failed to load plans:', err);
-        setPlans([
-          { plan_key: 'free', plan_name: 'Free Trial', monthly_price: 0, features: ['รันบอทสูงสุด 1 ตัว', 'ระยะเวลาใช้งาน 15 วัน', 'อัปเดตราคาแบบ Real-time', 'อีเมลแจ้งเตือนเมื่อออเดอร์เข้า', 'ประวัติย้อนหลัง 30 วัน'], is_popular: false },
-          { plan_key: 'basic', plan_name: 'Starter Trader', monthly_price: 29, features: ['รันบอทสูงสุด 2 ตัว', 'อัปเดตราคาแบบ Real-time', 'อีเมลแจ้งเตือนเมื่อออเดอร์เข้า', 'ประวัติย้อนหลัง 30 วัน'], is_popular: false },
-          { plan_key: 'pro', plan_name: 'Pro Algo', monthly_price: 99, features: ['รันบอทสูงสุด 10 ตัว', 'รวมฟีเจอร์ Starter Trader', 'ดึงสัญญาณ TradingView Webhook', 'Line Notify เรียลไทม์', 'ประวัติเข้าใช้งานไม่จำกัด (Archive)'], is_popular: true },
-          { plan_key: 'enterprise', plan_name: 'White-label / B2B', monthly_price: 199, features: ['รันบอทไม่จำกัด', 'ตั้งค่าทีมและหัวหน้างาน (RBAC)', 'เชื่อม API Key หลายพอร์ต', 'ปรับแต่งสีธีม-โลโก้ของตัวเอง', 'ทีมซัพพอร์ตระดับ Priority'], is_popular: false },
-        ]);
+        setPlans([]); // Fetch failed, fallback to empty to enforce DB-only plans.
       } finally {
         setLoading(false);
       }

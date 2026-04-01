@@ -1,5 +1,6 @@
 const { pool } = require('../config/database');
 const LineNotify = require('./lineNotify');
+const TelegramNotify = require('./telegramNotify');
 
 class RiskEngine {
   constructor(io) {
@@ -36,14 +37,14 @@ class RiskEngine {
   // =============================================
   async enforceGroupRiskLimits() {
     try {
-      // Get all Groups that have a max_drawdown configured
+      // Get all Groups that have a global_stop_loss configured
       const groupsResult = await pool.query(`
         SELECT g.id, g.group_name, g.lead_user_id,
-               (g.config->>'max_drawdown')::numeric as max_drawdown 
+               COALESCE((g.config->>'global_stop_loss')::numeric, 0) as global_stop_loss 
         FROM groups g 
         WHERE g.is_active = true
-          AND (g.config->>'max_drawdown') IS NOT NULL 
-          AND (g.config->>'max_drawdown')::numeric > 0
+          AND (g.config->>'global_stop_loss') IS NOT NULL 
+          AND (g.config->>'global_stop_loss')::numeric > 0
       `);
       
       for (const group of groupsResult.rows) {
@@ -63,9 +64,9 @@ class RiskEngine {
         for (const user of usersResult.rows) {
           const userPnL = parseFloat(user.daily_pnl);
           
-          // Drawdown logic: if userPnL is less than -max_drawdown
-          if (userPnL <= -Math.abs(group.max_drawdown)) {
-            console.log(`⚠️ [RiskEngine] User ${user.user_id} (${user.display_name}) in Group '${group.group_name}' hit Stop-Loss limit (${userPnL} / -${group.max_drawdown})`);
+          // Drawdown logic: if userPnL is less than -global_stop_loss
+          if (userPnL <= -Math.abs(group.global_stop_loss)) {
+            console.log(`⚠️ [RiskEngine] User ${user.user_id} (${user.display_name}) in Group '${group.group_name}' hit Stop-Loss limit (${userPnL} / -${group.global_stop_loss})`);
             
             // 1. Force close all OPEN trades of this user
             const openTrades = await pool.query(`
@@ -104,20 +105,28 @@ class RiskEngine {
               [user.user_id, group.id, JSON.stringify({
                 group_name: group.group_name,
                 daily_pnl: userPnL,
-                max_drawdown: group.max_drawdown,
+                global_stop_loss: group.global_stop_loss,
                 trades_closed: openTrades.rows.length
               })]
             );
 
-            // 5. 🔔 Notify user via Line
+            // 5. 🔔 Notify user via Line & Telegram
             LineNotify.notifyRiskViolation(
-              user.user_id, group.group_name, userPnL, group.max_drawdown
+              user.user_id, group.group_name, userPnL, group.global_stop_loss
             ).catch(err => console.warn('[LineNotify] Risk notify failed:', err.message));
+            
+            TelegramNotify.notifyRiskViolation(
+              user.user_id, group.group_name, userPnL, group.global_stop_loss
+            ).catch(err => console.warn('[TelegramNotify] Risk notify failed:', err.message));
 
             // 6. Notify group leader
             LineNotify.notifyRiskViolation(
-              group.lead_user_id, group.group_name, userPnL, group.max_drawdown
+              group.lead_user_id, group.group_name, userPnL, group.global_stop_loss
             ).catch(err => console.warn('[LineNotify] Leader notify failed:', err.message));
+            
+            TelegramNotify.notifyRiskViolation(
+              group.lead_user_id, group.group_name, userPnL, group.global_stop_loss
+            ).catch(err => console.warn('[TelegramNotify] Leader notify failed:', err.message));
 
             // 7. Emit socket event
             if (this.io) {
@@ -125,7 +134,7 @@ class RiskEngine {
                 type: 'AUTO_STOPLOSS',
                 group: group.group_name,
                 pnl: userPnL,
-                limit: group.max_drawdown
+                limit: group.global_stop_loss
               });
             }
 
@@ -171,10 +180,13 @@ class RiskEngine {
           console.log(`⚠️ [RiskEngine] Group '${group.group_name}' exceeded exposure limit! (${totalExposure} / ${group.max_exposure} lots)`);
 
           // Notify group leader
-          LineNotify.sendAlert(
-            group.lead_user_id,
-            `⚠️ กลุ่ม "${group.group_name}" มีความเสี่ยงสูง!\nExposure: ${totalExposure.toFixed(2)} lots (เกินขีดจำกัด ${group.max_exposure} lots)\nOpen Positions: ${openPositions}\nโปรดตรวจสอบและลดขนาดไม้`
-          ).catch(err => console.warn('[LineNotify] Exposure notify failed:', err.message));
+          const alertMsg = `⚠️ กลุ่ม "${group.group_name}" มีความเสี่ยงสูง!\nExposure: ${totalExposure.toFixed(2)} lots (เกินขีดจำกัด ${group.max_exposure} lots)\nOpen Positions: ${openPositions}\nโปรดตรวจสอบและลดขนาดไม้`;
+          
+          LineNotify.sendAlert(group.lead_user_id, alertMsg)
+            .catch(err => console.warn('[LineNotify] Exposure notify failed:', err.message));
+            
+          TelegramNotify.sendAlert(group.lead_user_id, alertMsg)
+            .catch(err => console.warn('[TelegramNotify] Exposure notify failed:', err.message));
 
           // Log
           await pool.query(

@@ -155,6 +155,9 @@ export const api = {
   getAdminOverview: () => request('/admin/overview'),
   getAdminUsers: (params = {}) => request(`/admin/users?${new URLSearchParams(params)}`),
   updateAdminUser: (id, body) => request(`/admin/users/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  adjustUserBalance: (id, body) => request(`/admin/users/${id}/adjust-balance`, { method: 'POST', body: JSON.stringify(body) }),
+  getAdjustments: (status = 'PENDING') => request(`/admin/adjustments?status=${status}`),
+  approveAdjustment: (id, action) => request(`/admin/adjustments/${id}/approve`, { method: 'POST', body: JSON.stringify({ action }) }),
   getAuditLogs: (params = {}) => request(`/admin/audit-logs?${new URLSearchParams(params)}`),
   getAdminRevenue: (params = {}) => request(`/admin/revenue?${new URLSearchParams(params)}`),
   getAdminRoles: () => request('/admin/roles'),
@@ -230,9 +233,22 @@ export const api = {
   getAgentCommissions: (params = {}) => request(`/agents/commissions?${new URLSearchParams(params)}`),
   validateInviteCode: (code) => request(`/agents/validate-invite/${code}`),
 
+  // Public invite validation (no auth needed)
+  validateInvite: async (code) => {
+    const res = await fetch(`${API_BASE}/auth/validate-invite/${code}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Invalid invite');
+    return data;
+  },
+
   // Admin Agent Management
   getAdminAgents: (params = {}) => request(`/admin/agents?${new URLSearchParams(params)}`),
   createAdminAgent: (body) => request('/admin/agents', { method: 'POST', body: JSON.stringify(body) }),
   updateAdminAgent: (userId, body) => request(`/admin/agents/${userId}`, { method: 'PUT', body: JSON.stringify(body) }),
   getAdminAgentStats: (userId) => request(`/admin/agents/${userId}/stats`),
+
+  // Admin Commission Management
+  settleAgentCommissions: (userId) => request(`/admin/agents/${userId}/settle`, { method: 'POST' }),
+  triggerCommissionCalc: () => request('/admin/commissions/calculate', { method: 'POST' }),
+  getCommissionEngineStatus: () => request('/admin/commissions/status'),
 };

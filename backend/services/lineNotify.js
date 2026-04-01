@@ -1,6 +1,7 @@
 const { pool } = require('../config/database');
 const https = require('https');
 const querystring = require('querystring');
+const { decrypt } = require('../utils/encryption');
 
 class LineNotify {
   
@@ -22,7 +23,11 @@ class LineNotify {
       // Check if notifications are enabled
       if (settingsQuery.rows[0].notifications_enabled === false) return false;
 
-      const token = settingsQuery.rows[0].line_notify_token;
+      const rawToken = settingsQuery.rows[0].line_notify_token;
+      if (!rawToken || rawToken.trim() === '') return false;
+      
+      // Decrypt the token (supports both encrypted and plaintext for backward compat)
+      const token = decrypt(rawToken);
       if (!token || token.trim() === '') return false;
 
       // 2. Prepare payload

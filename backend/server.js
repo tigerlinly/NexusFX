@@ -246,8 +246,9 @@ async function start() {
     binanceFeed.start();
     executionEngine.start();
     riskEngine.start();
-    mockBotEngine.setIo(io);
-    mockBotEngine.start();
+    // ⚠️ ข้อ 2: ปิดระบบเทรดจำลอง (Mock Bot Engine) สำหรับ Production เพื่อไม่ให้กราฟวิ่งสุ่มแบบหลอกๆ
+    // mockBotEngine.setIo(io);
+    // mockBotEngine.start();
     trailingStopEngine.setIo(io);
     trailingStopEngine.start();
     commissionEngine.start();

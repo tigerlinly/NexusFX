@@ -193,6 +193,23 @@ class CommissionEngine {
 
     if (insertCount > 0) {
       console.log(`💰 Tenant "${tenant.tenant_name}": ${insertCount} commissions ($${totalAmount.toFixed(2)}) at ${revenue_share_pct}%`);
+
+      // Send notification to agent
+      try {
+        await pool.query(
+          `INSERT INTO notifications (user_id, type, title, message, data, created_at)
+           VALUES ($1, 'commission', 'ค่าคอมมิชชั่นใหม่',
+             $2, $3, NOW())`,
+          [
+            owner_user_id,
+            `คุณได้รับค่าคอมมิชชั่นใหม่ ${insertCount} รายการ รวม $${totalAmount.toFixed(2)}`,
+            JSON.stringify({ count: insertCount, total: totalAmount, tenant_name: tenant.tenant_name })
+          ]
+        );
+      } catch (notifErr) {
+        // Notification failure should not block commission engine
+        console.error('💰 Failed to send commission notification:', notifErr.message);
+      }
     }
 
     return { count: insertCount, amount: totalAmount };
@@ -203,39 +220,92 @@ class CommissionEngine {
    * Changes status from PENDING to SETTLED
    */
   async settlePendingCommissions(agentUserId = null) {
+    const client = await pool.connect();
     try {
-      let query = `
-        UPDATE agent_commissions 
-        SET status = 'SETTLED', settled_at = NOW()
+      await client.query('BEGIN');
+
+      let selectQuery = `
+        SELECT agent_user_id, SUM(amount) as total_amount
+        FROM agent_commissions
         WHERE status = 'PENDING'
       `;
       const params = [];
 
       if (agentUserId) {
-        query += ` AND agent_user_id = $1`;
+        selectQuery += ` AND agent_user_id = $1`;
         params.push(agentUserId);
       }
+      selectQuery += ` GROUP BY agent_user_id`;
 
-      query += ` RETURNING id, amount`;
-      const result = await pool.query(query, params);
+      const pendingRes = await client.query(selectQuery, params);
+      let totalSettled = 0;
+      let count = 0;
 
-      const totalSettled = result.rows.reduce((sum, r) => sum + parseFloat(r.amount), 0);
-      console.log(`💰 Settled ${result.rows.length} commissions ($${totalSettled.toFixed(2)})`);
+      for (const row of pendingRes.rows) {
+        const amount = parseFloat(row.total_amount);
+        if (amount <= 0) continue;
+
+        // Ensure agent has a USD wallet
+        const walletRes = await client.query(
+          'SELECT id FROM wallets WHERE user_id = $1 AND currency = $2 FOR UPDATE',
+          [row.agent_user_id, 'USD']
+        );
+
+        if (walletRes.rows.length > 0) {
+          const walletId = walletRes.rows[0].id;
+
+          // Add to agent's wallet
+          await client.query(
+            'UPDATE wallets SET balance = balance + $1 WHERE id = $2',
+            [amount, walletId]
+          );
+
+          // Record earning transaction
+          await client.query(
+            `INSERT INTO financial_transactions (wallet_id, user_id, type, amount, status, note, completed_at)
+             VALUES ($1, $2, 'REWARD', $3, 'COMPLETED', 'Agent Commission Settlement', NOW())`,
+            [walletId, row.agent_user_id, amount]
+          );
+
+          // Mark as settled
+          const updateRes = await client.query(`
+            UPDATE agent_commissions 
+            SET status = 'SETTLED', settled_at = NOW()
+            WHERE status = 'PENDING' AND agent_user_id = $1
+            RETURNING id
+          `, [row.agent_user_id]);
+
+          count += updateRes.rowCount;
+          totalSettled += amount;
+        } else {
+          console.error(`💰 Cannot settle commissions for user ${row.agent_user_id} - no USD wallet found.`);
+        }
+      }
+
+      await client.query('COMMIT');
+      console.log(`💰 Settled ${count} commissions ($${totalSettled.toFixed(2)})`);
 
       return {
-        count: result.rows.length,
+        count: count,
         total_amount: totalSettled,
       };
     } catch (err) {
+      await client.query('ROLLBACK');
       console.error('💰 Settle commissions error:', err);
       throw err;
+    } finally {
+      client.release();
     }
   }
 
   getStatus() {
+    const nextRun = this.lastRun
+      ? new Date(this.lastRun.getTime() + this.intervalMs)
+      : null;
     return {
       running: this.isRunning,
-      lastRun: this.lastRun,
+      last_run: this.lastRun,
+      next_run: nextRun,
       intervalMs: this.intervalMs,
     };
   }

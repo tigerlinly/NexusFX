@@ -1,6 +1,6 @@
 const express = require('express');
 const { pool } = require('../config/database');
-const { authMiddleware } = require('../middleware/auth');
+const { authMiddleware, auditLog } = require('../middleware/auth');
 const router = express.Router();
 
 router.use(authMiddleware);
@@ -25,7 +25,7 @@ router.get('/', async (req, res) => {
 });
 
 // POST /api/targets
-router.post('/', async (req, res) => {
+router.post('/', auditLog('CREATE_TARGET', 'TARGET'), async (req, res) => {
   try {
     const { account_id, target_amount, action_on_reach } = req.body;
     if (!target_amount || target_amount <= 0) {
@@ -56,7 +56,7 @@ router.post('/', async (req, res) => {
 });
 
 // PUT /api/targets/:id
-router.put('/:id', async (req, res) => {
+router.put('/:id', auditLog('UPDATE_TARGET', 'TARGET'), async (req, res) => {
   try {
     const { target_amount, action_on_reach, is_active } = req.body;
     const result = await pool.query(
@@ -79,7 +79,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // DELETE /api/targets/:id
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', auditLog('DELETE_TARGET', 'TARGET'), async (req, res) => {
   try {
     await pool.query(
       'DELETE FROM daily_targets WHERE id = $1 AND user_id = $2',
@@ -93,7 +93,7 @@ router.delete('/:id', async (req, res) => {
 });
 
 // POST /api/targets/:id/action — user responds when target reached
-router.post('/:id/action', async (req, res) => {
+router.post('/:id/action', auditLog('TARGET_ACTION', 'TARGET'), async (req, res) => {
   try {
     const { action } = req.body; // 'STOPPED' or 'CONTINUED'
     if (!['STOPPED', 'CONTINUED'].includes(action)) {

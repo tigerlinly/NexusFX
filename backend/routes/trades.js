@@ -2,7 +2,9 @@ const express = require('express');
 const { pool } = require('../config/database');
 const { authMiddleware, auditLog } = require('../middleware/auth');
 const LineNotify = require('../services/lineNotify');
+const TelegramNotify = require('../services/telegramNotify');
 const PreTradeRiskCheck = require('../services/preTradeRiskCheck');
+const { decrypt } = require('../utils/encryption');
 const router = express.Router();
 
 router.use(authMiddleware);
@@ -296,15 +298,17 @@ router.post('/', auditLog('PLACE_TRADE', 'ORDER'), async (req, res) => {
       [account_id, symbol.toUpperCase(), side.toUpperCase(), order_type.toUpperCase(), lot_size, entry_price]
     );
 
-    // 🔔 Auto-trigger Line Notify (Level 2)
-    LineNotify.notifyTradeOpened(req.user.id, {
+    // 🔔 Auto-trigger Line + Telegram Notify
+    const tradeInfo = {
       symbol: symbol.toUpperCase(),
       side: side.toUpperCase(),
       lot_size,
       entry_price,
       stop_loss: sl,
       take_profit: tp
-    }).catch(err => console.warn('[LineNotify] Trade notify failed:', err.message));
+    };
+    LineNotify.notifyTradeOpened(req.user.id, tradeInfo).catch(err => console.warn('[LineNotify] Trade notify failed:', err.message));
+    TelegramNotify.notifyTradeOpened(req.user.id, tradeInfo).catch(err => console.warn('[TelegramNotify] Trade notify failed:', err.message));
 
     res.status(201).json({ 
       success: true, 
@@ -342,7 +346,7 @@ router.post('/sync-all', auditLog('SYNC_ALL_TRADES', 'ACCOUNT'), async (req, res
     const endTime = new Date().toISOString();
 
     for (const acc of accounts.rows) {
-      const token = acc.metaapi_token || process.env.METAAPI_TOKEN;
+      const token = decrypt(acc.metaapi_token) || process.env.METAAPI_TOKEN;
       if (!token) continue;
 
       try {
@@ -425,8 +429,8 @@ router.post('/sync/:accountId', auditLog('SYNC_TRADES', 'ACCOUNT'), async (req, 
       return res.status(404).json({ error: 'Account not found' });
     }
 
-    const { metaapi_account_id, metaapi_token } = accQuery.rows[0];
-    const token = metaapi_token || process.env.METAAPI_TOKEN;
+    const { metaapi_account_id, metaapi_token: rawToken } = accQuery.rows[0];
+    const token = decrypt(rawToken) || process.env.METAAPI_TOKEN;
 
     if (!metaapi_account_id || !token) {
       return res.status(400).json({ error: 'Missing MetaAPI configuration' });

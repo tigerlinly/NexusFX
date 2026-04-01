@@ -1,6 +1,7 @@
 const express = require('express');
 const { pool } = require('../config/database');
-const { authMiddleware } = require('../middleware/auth');
+const { authMiddleware, auditLog } = require('../middleware/auth');
+const { decrypt } = require('../utils/encryption');
 const router = express.Router();
 
 router.use(authMiddleware);
@@ -24,7 +25,7 @@ router.get('/', async (req, res) => {
 });
 
 // POST /api/accounts — add account
-router.post('/', async (req, res) => {
+router.post('/', auditLog('ADD_ACCOUNT', 'ACCOUNT'), async (req, res) => {
   try {
     const { broker_id, account_number, account_name, account_type, currency, server, metaapi_account_id } = req.body;
     if (!broker_id || !account_number) {
@@ -48,7 +49,7 @@ router.post('/', async (req, res) => {
 });
 
 // PUT /api/accounts/:id
-router.put('/:id', async (req, res) => {
+router.put('/:id', auditLog('UPDATE_ACCOUNT', 'ACCOUNT'), async (req, res) => {
   try {
     const { account_name, account_number, account_type, currency, is_active, metaapi_account_id, server, broker_id } = req.body;
     const result = await pool.query(
@@ -76,7 +77,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // DELETE /api/accounts/:id
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', auditLog('DELETE_ACCOUNT', 'ACCOUNT'), async (req, res) => {
   try {
     await pool.query(
       'UPDATE accounts SET is_active = false WHERE id = $1 AND user_id = $2',
@@ -90,7 +91,7 @@ router.delete('/:id', async (req, res) => {
 });
 
 // POST /api/accounts/:id/sync — manually sync a single account via MetaAPI
-router.post('/:id/sync', async (req, res) => {
+router.post('/:id/sync', auditLog('SYNC_ACCOUNT', 'ACCOUNT'), async (req, res) => {
   try {
     const acctRes = await pool.query(
       `SELECT a.*, us.metaapi_token
@@ -110,7 +111,7 @@ router.post('/:id/sync', async (req, res) => {
     }
 
     const metaApiService = require('../services/metaApiService');
-    const info = await metaApiService.getAccountInfo(acct.metaapi_account_id, acct.metaapi_token);
+    const info = await metaApiService.getAccountInfo(acct.metaapi_account_id, decrypt(acct.metaapi_token));
 
     if (info.connected) {
       // Update balance, equity AND account_name, account_type from MetaAPI

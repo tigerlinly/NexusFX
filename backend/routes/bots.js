@@ -1,6 +1,6 @@
 const express = require('express');
 const { pool } = require('../config/database');
-const { authMiddleware } = require('../middleware/auth');
+const { authMiddleware, auditLog } = require('../middleware/auth');
 const router = express.Router();
 
 router.use(authMiddleware);
@@ -48,7 +48,7 @@ router.get('/logs/all', async (req, res) => {
 });
 
 // POST /api/bots — create a bot (full config)
-router.post('/', async (req, res) => {
+router.post('/', auditLog('CREATE_BOT', 'BOT'), async (req, res) => {
   try {
     const {
       account_id, bot_name, strategy_type,
@@ -108,7 +108,7 @@ router.post('/', async (req, res) => {
 });
 
 // PUT /api/bots/:id — update bot config
-router.put('/:id', async (req, res) => {
+router.put('/:id', auditLog('UPDATE_BOT', 'BOT'), async (req, res) => {
   try {
     const {
       is_active, bot_name, strategy_type, parameters,
@@ -174,7 +174,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // DELETE /api/bots/:id
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', auditLog('DELETE_BOT', 'BOT'), async (req, res) => {
   try {
     const result = await pool.query(
       'DELETE FROM trading_bots WHERE id = $1 AND user_id = $2 RETURNING id',

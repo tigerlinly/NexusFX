@@ -1,15 +1,22 @@
 const express = require('express');
 const { pool } = require('../config/database');
 const { authMiddleware, auditLog } = require('../middleware/auth');
+const { encrypt, decrypt, mask } = require('../utils/encryption');
 const router = express.Router();
 
 router.use(authMiddleware);
+
+// Sensitive fields that must be encrypted in DB
+const SENSITIVE_FIELDS = [
+  'metaapi_token', 'binance_api_key', 'binance_api_secret',
+  'twelvedata_api_key', 'line_notify_token', 'telegram_bot_token'
+];
 
 /**
  * @swagger
  * /settings:
  *   get:
- *     summary: Get user settings
+ *     summary: Get user settings (sensitive fields are decrypted for display)
  *     tags: [Settings]
  *     responses:
  *       200:
@@ -29,19 +36,17 @@ router.get('/', async (req, res) => {
       return res.json(newSettings.rows[0]);
     }
 
-    // Return settings directly — no encryption, plain text
     const settings = result.rows[0];
     const response = { ...settings };
 
-    // Provide _actual and _masked fields for frontend compatibility
-    const sensitiveFields = ['metaapi_token', 'binance_api_key', 'binance_api_secret', 'twelvedata_api_key', 'line_notify_token', 'telegram_bot_token'];
-    for (const field of sensitiveFields) {
-      const val = settings[field] || '';
-      response[`${field}_actual`] = val;
-      response[`${field}_masked`] = val.length >= 10
-        ? val.substring(0, 4) + '••••••••' + val.substring(val.length - 4)
-        : val ? '••••••••' : '';
-      // Keep the raw field too for backward compatibility
+    // Decrypt sensitive fields and provide _actual / _masked versions
+    for (const field of SENSITIVE_FIELDS) {
+      const raw = settings[field] || '';
+      const decrypted = decrypt(raw);
+      response[`${field}_actual`] = decrypted;
+      response[`${field}_masked`] = mask(decrypted);
+      // Keep raw field as the encrypted value (frontend won't use it directly)
+      response[field] = decrypted; // For backward compat with frontend state
     }
     response.telegram_chat_id = settings.telegram_chat_id || '';
 
@@ -56,7 +61,7 @@ router.get('/', async (req, res) => {
  * @swagger
  * /settings:
  *   put:
- *     summary: Update user settings
+ *     summary: Update user settings (sensitive fields are encrypted before storage)
  *     tags: [Settings]
  *     requestBody:
  *       content:
@@ -77,13 +82,13 @@ router.put('/', auditLog('UPDATE_SETTINGS', 'SETTING'), async (req, res) => {
       telegram_bot_token, telegram_chat_id, sync_schedules
     } = req.body;
 
-    // Store plain text — no encryption, trim whitespace
-    const valMetaapi = metaapi_token !== undefined ? (metaapi_token ? metaapi_token.trim() : '') : null;
-    const valBinanceKey = binance_api_key !== undefined ? (binance_api_key ? binance_api_key.trim() : '') : null;
-    const valBinanceSecret = binance_api_secret !== undefined ? (binance_api_secret ? binance_api_secret.trim() : '') : null;
-    const valTwelvedata = twelvedata_api_key !== undefined ? (twelvedata_api_key ? twelvedata_api_key.trim() : '') : null;
-    const valLineToken = line_notify_token !== undefined ? (line_notify_token ? line_notify_token.trim() : '') : null;
-    const valTelegramToken = telegram_bot_token !== undefined ? (telegram_bot_token ? telegram_bot_token.trim() : '') : null;
+    // Encrypt sensitive fields before storing
+    const valMetaapi = metaapi_token !== undefined ? encrypt((metaapi_token || '').trim()) : null;
+    const valBinanceKey = binance_api_key !== undefined ? encrypt((binance_api_key || '').trim()) : null;
+    const valBinanceSecret = binance_api_secret !== undefined ? encrypt((binance_api_secret || '').trim()) : null;
+    const valTwelvedata = twelvedata_api_key !== undefined ? encrypt((twelvedata_api_key || '').trim()) : null;
+    const valLineToken = line_notify_token !== undefined ? encrypt((line_notify_token || '').trim()) : null;
+    const valTelegramToken = telegram_bot_token !== undefined ? encrypt((telegram_bot_token || '').trim()) : null;
 
     const result = await pool.query(
       `UPDATE user_settings SET

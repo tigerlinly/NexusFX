@@ -156,6 +156,35 @@ router.post('/register', async (req, res) => {
   }
 });
 
+// GET /api/auth/validate-invite/:code  (public, no auth)
+router.get('/validate-invite/:code', async (req, res) => {
+  try {
+    const { code } = req.params;
+    const result = await pool.query(
+      `SELECT ai.*, t.name as tenant_name, t.platform_name, t.logo_url, t.primary_color
+       FROM agent_invitations ai
+       JOIN tenants t ON t.id = ai.tenant_id
+       WHERE ai.invite_code = $1 AND ai.is_active = true AND ai.expires_at > NOW()
+         AND (ai.max_uses = 0 OR ai.used_count < ai.max_uses)`,
+      [code]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'ลิงก์เชิญไม่ถูกต้องหรือหมดอายุแล้ว' });
+    }
+    const inv = result.rows[0];
+    res.json({
+      valid: true,
+      tenant_name: inv.tenant_name,
+      platform_name: inv.platform_name,
+      logo_url: inv.logo_url,
+      primary_color: inv.primary_color,
+    });
+  } catch (err) {
+    console.error('Validate invite error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 /**
  * @swagger
  * /auth/login:
@@ -316,11 +345,23 @@ router.post('/forgot-password', async (req, res) => {
       [resetToken, expires, userId]
     );
 
-    // MOCK SEND EMAIL: In a real app we'd trigger NodeMailer here.
-    console.log(`\n============================`);
-    console.log(`📧 MOCK EMAIL SENT TO: ${email}`);
-    console.log(`Reset Link: http://localhost:5173/reset-password?token=${resetToken}`);
-    console.log(`============================\n`);
+    const { sendEmail } = require('../services/emailService');
+    const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
+    const emailHtml = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+        <h2 style="color: #3b82f6; text-align: center;">NexusFX Platform</h2>
+        <h3>การขอรีเซ็ตรหัสผ่านใหม่</h3>
+        <p>คุณได้ทำการขอรีเซ็ตรหัสผ่านสำหรับบัญชีของคุณบน NexusFX</p>
+        <p>กรุณาคลิกที่ปุ่มด้านล่างเพื่อทำการตั้งรหัสผ่านใหม่ (ลิงก์มีอายุการใช้งาน 1 ชั่วโมง):</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${resetLink}" style="padding: 12px 25px; background: #3b82f6; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">ตั้งรหัสผ่านใหม่ คลิกที่นี่</a>
+        </div>
+        <p style="color: #666; font-size: 14px;">หากคุณไม่ได้ทำรายการนี้ กรุณาเพิกเฉยต่ออีเมลฉบับนี้ รหัสผ่านของคุณจะไม่มีการเปลี่ยนแปลงใดๆ</p>
+        <hr style="border: none; border-top: 1px solid #eee; margin-top: 20px;">
+        <p style="color: #999; font-size: 12px; text-align: center;">&copy; ${new Date().getFullYear()} NexusFX Platform. All rights reserved.</p>
+      </div>
+    `;
+    await sendEmail(email, 'การรีเซ็ตรหัสผ่านสำหรับ NexusFX', emailHtml);
 
     res.json({ message: 'If an account exists, a reset link was sent.' });
   } catch (err) {

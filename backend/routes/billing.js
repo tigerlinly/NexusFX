@@ -1,6 +1,7 @@
 const express = require('express');
 const { pool } = require('../config/database');
 const { authMiddleware, auditLog } = require('../middleware/auth');
+const TelegramNotify = require('../services/telegramNotify');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_mock_secret');
 const router = express.Router();
 
@@ -379,9 +380,61 @@ router.post('/profit-sharing/settle', auditLog('SETTLE_PROFIT_SHARING', 'GROUP')
     try {
       await client.query('BEGIN');
       
+      // Get leader's USD wallet
+      const leaderWalletRes = await client.query(
+        'SELECT id FROM wallets WHERE user_id = $1 AND currency = $2 FOR UPDATE',
+        [req.user.id, 'USD']
+      );
+      if (leaderWalletRes.rows.length === 0) throw new Error('Leader USD wallet not found');
+      const leaderWalletId = leaderWalletRes.rows[0].id;
+
       let settled = 0;
+      const notifications = [];
+      const leaderName = req.user.username || 'Leader';
+
       for (const m of members) {
         if (m.leader_share > 0) {
+          // Get member's USD wallet
+          const memberWalletRes = await client.query(
+            'SELECT id, balance FROM wallets WHERE user_id = $1 AND currency = $2 FOR UPDATE',
+            [m.user_id, 'USD']
+          );
+          if (memberWalletRes.rows.length === 0) {
+             throw new Error(`Member ${m.username || m.user_id} does not have a USD wallet.`);
+          }
+          const memberWalletId = memberWalletRes.rows[0].id;
+          
+          if (memberWalletRes.rows[0].balance < m.leader_share) {
+             throw new Error(`Member ${m.username || m.user_id} has insufficient USD balance. Required: $${m.leader_share}, Available: $${memberWalletRes.rows[0].balance}`);
+          }
+
+          // Deduct from member
+          await client.query(
+            'UPDATE wallets SET balance = balance - $1 WHERE id = $2',
+            [m.leader_share, memberWalletId]
+          );
+
+          // Record deduction transaction
+          await client.query(
+            `INSERT INTO financial_transactions (wallet_id, user_id, type, amount, status, note, completed_at)
+             VALUES ($1, $2, 'FEE', $3, 'COMPLETED', $4, NOW())`,
+            [memberWalletId, m.user_id, -m.leader_share, `Profit share paid to leader of '${group.rows[0].group_name}'`]
+          );
+
+          // Add to leader
+          await client.query(
+            'UPDATE wallets SET balance = balance + $1 WHERE id = $2',
+            [m.leader_share, leaderWalletId]
+          );
+
+          // Record earning transaction
+          await client.query(
+            `INSERT INTO financial_transactions (wallet_id, user_id, type, amount, status, note, completed_at)
+             VALUES ($1, $2, 'REWARD', $3, 'COMPLETED', $4, NOW())`,
+            [leaderWalletId, req.user.id, m.leader_share, `Profit share received from member '${m.username || m.user_id}'`]
+          );
+
+          // Mark as settled in profit sharing logs
           await client.query(`
             INSERT INTO profit_sharing_logs 
               (group_id, leader_user_id, member_user_id, period_start, period_end, 
@@ -389,12 +442,36 @@ router.post('/profit-sharing/settle', auditLog('SETTLE_PROFIT_SHARING', 'GROUP')
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'SETTLED', NOW())
           `, [group_id, req.user.id, m.user_id, period_start, period_end,
               m.total_pnl, share_percentage || 20, m.leader_share, m.member_net]);
+              
+          notifications.push({
+            leaderId: req.user.id,
+            memberId: m.user_id,
+            memberName: m.username || m.user_id,
+            amount: m.leader_share,
+            groupName: group.rows[0].group_name
+          });
+
           settled++;
         }
       }
 
       await client.query('COMMIT');
       res.json({ success: true, settled_members: settled });
+
+      // Send telegram notifications AFTER successful commit
+      for (const msg of notifications) {
+        // To Leader
+        TelegramNotify.sendAlert(
+          msg.leaderId,
+          `💸 *ได้รับค่าส่วนแบ่งกำไร (Profit Sharing)*\nกลุ่ม: ${msg.groupName}\nจาก: ${msg.memberName}\nยอดเงิน: +$${Number(msg.amount).toFixed(2)}\nโอนเข้า USD Wallet เรียบร้อยแล้ว`
+        ).catch(err => console.error('[Telegram] Leader PS notify failed:', err.message));
+
+        // To Member
+        TelegramNotify.sendAlert(
+          msg.memberId,
+          `📉 *จ่ายค่าส่วนแบ่งกำไร (Profit Sharing)*\nกลุ่ม: ${msg.groupName}\nจ่ายให้: ${leaderName}\nยอดเงิน: -$${Number(msg.amount).toFixed(2)}\nหักจาก USD Wallet เรียบร้อยแล้ว`
+        ).catch(err => console.error('[Telegram] Member PS notify failed:', err.message));
+      }
     } catch (err) {
       await client.query('ROLLBACK');
       throw err;
