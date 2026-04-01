@@ -19,7 +19,7 @@ export default function DashboardPage() {
   const [breakdown, setBreakdown] = useState([]);
   const [targetStatus, setTargetStatus] = useState([]);
   const [chartPeriod, setChartPeriod] = useState('7');
-  const periods = ['1', '2', '3', '5', '7', '14', '30', '60', '90'];
+  const periods = ['5', '7', '14', '30', '60', '90'];
   const [loading, setLoading] = useState(true);
   const [layout, setLayout] = useState(['targets', 'summary', 'chart', 'breakdown']);
   const [editMode, setEditMode] = useState(false);
@@ -57,7 +57,7 @@ export default function DashboardPage() {
       const past = new Date(today);
       past.setDate(past.getDate() - parseInt(chartPeriod) + 1);
       const startDateStr = formatDate(past);
-      const interval = ['1', '2', '3'].includes(String(chartPeriod)) ? 'hour' : 'day';
+      const interval = 'day';
 
       const params = getFilterParams();
       const [sum, chart, brk, targets, widgetsData] = await Promise.all([
@@ -188,12 +188,8 @@ export default function DashboardPage() {
   const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null;
     
-    const isHourly = ['1', '2', '3'].includes(String(chartPeriod));
     let displayLabel = String(label);
-    if (isHourly && label) {
-      const d = new Date(label);
-      displayLabel = `${d.getUTCFullYear()}/${(d.getUTCMonth() + 1).toString().padStart(2, '0')}/${d.getUTCDate().toString().padStart(2, '0')} ${d.getUTCHours().toString().padStart(2, '0')}:00`;
-    } else if (typeof label === 'string' && label.includes('T')) {
+    if (typeof label === 'string' && label.includes('T')) {
       displayLabel = label.split('T')[0];
     } else if (label) {
       const d = new Date(label);
@@ -362,85 +358,34 @@ export default function DashboardPage() {
         case 'chart': {
           const boundaryLines = [];
           const labels = [];
-          const isHourly = ['1', '2', '3'].includes(String(chartPeriod));
-
-          // Calculate custom ticks for x-axis
-          let customTicks = [];
 
           if (chartData && chartData.length > 0) {
-            if (isHourly) {
-              // For hourly mode: show every hour tick, boundary lines between days, date labels at noon
-              let currentDay = null;
-              const dayMap = {};
-
-              chartData.forEach((d, i) => {
-                const dateObj = new Date(d.date);
-                const dayKey = `${dateObj.getUTCFullYear()}/${(dateObj.getUTCMonth() + 1).toString().padStart(2, '0')}/${dateObj.getUTCDate().toString().padStart(2, '0')}`;
-                
-                if (!dayMap[dayKey]) dayMap[dayKey] = { start: i, items: [] };
-                dayMap[dayKey].items.push(d);
-
-                if (dayKey !== currentDay) {
-                  if (currentDay !== null) {
-                    boundaryLines.push({ date: d.date });
-                  }
-                  currentDay = dayKey;
-                }
-
-                // Add tick for every hour
-                customTicks.push(d.date);
-              });
-
-              // Add date labels at the 12:00 hour (midpoint) of each day
-              Object.entries(dayMap).forEach(([dayKey, info]) => {
-                const hours = info.items;
-                // Find 12:00 for label placement
-                const twelve = hours.find(h => new Date(h.date).getUTCHours() === 12);
-                if (twelve) {
-                  labels.push({ date: twelve.date, label: dayKey });
-                } else if (hours.length > 0) {
-                  labels.push({ date: hours[Math.floor(hours.length / 2)].date, label: dayKey });
-                }
-              });
-
-              // For 1D, 2D, 3D: always show 24 ticks per day (interval = 1 hour)
-              // This ensures that 1D shows 24 ticks, 2D shows 48 ticks, 3D shows 72 ticks
-              const tickInterval = 1;
-              customTicks = chartData
-                .filter(d => {
-                  const h = new Date(d.date).getUTCHours();
-                  return h % tickInterval === 0;
-                })
-                .map(d => d.date);
-
-            } else {
-              let currentMonth = null;
-              const groupedByMonth = {};
+            let currentMonth = null;
+            const groupedByMonth = {};
+            
+            chartData.forEach((d) => {
+              const dateObj = new Date(d.date);
+              const monthKey = `${dateObj.getFullYear()}/${(dateObj.getMonth() + 1).toString().padStart(2, '0')}`;
               
-              chartData.forEach((d) => {
-                const dateObj = new Date(d.date);
-                const monthKey = `${dateObj.getFullYear()}/${(dateObj.getMonth() + 1).toString().padStart(2, '0')}`;
-                
-                if (!groupedByMonth[monthKey]) groupedByMonth[monthKey] = [];
-                groupedByMonth[monthKey].push(d);
+              if (!groupedByMonth[monthKey]) groupedByMonth[monthKey] = [];
+              groupedByMonth[monthKey].push(d);
 
-                if (monthKey !== currentMonth) {
-                  if (currentMonth !== null) {
-                    boundaryLines.push({ date: d.date });
-                  }
-                  currentMonth = monthKey;
+              if (monthKey !== currentMonth) {
+                if (currentMonth !== null) {
+                  boundaryLines.push({ date: d.date });
                 }
-              });
+                currentMonth = monthKey;
+              }
+            });
 
-              Object.entries(groupedByMonth).forEach(([monthKey, days]) => {
-                let targetDay = days[Math.floor(days.length / 2)];
-                const fifteenth = days.find(d => new Date(d.date).getDate() === 15);
-                if (fifteenth) {
-                  targetDay = fifteenth;
-                }
-                labels.push({ date: targetDay.date, label: monthKey });
-              });
-            }
+            Object.entries(groupedByMonth).forEach(([monthKey, days]) => {
+              let targetDay = days[Math.floor(days.length / 2)];
+              const fifteenth = days.find(d => new Date(d.date).getDate() === 15);
+              if (fifteenth) {
+                targetDay = fifteenth;
+              }
+              labels.push({ date: targetDay.date, label: monthKey });
+            });
           }
 
           return (
@@ -481,15 +426,11 @@ export default function DashboardPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border-primary)" />
                   <XAxis 
                     dataKey="date" 
-                    ticks={isHourly ? customTicks : undefined}
-                    interval={isHourly ? 0 : 'preserveStartEnd'}
+                    interval="preserveStartEnd"
                     padding={{ left: 10, right: 25 }} 
                     tick={{ fill: 'var(--text-tertiary)', fontSize: 10 }} 
                     tickFormatter={(val) => {
                       const d = new Date(val);
-                      if (isHourly) {
-                        return d.getUTCHours().toString().padStart(2, '0');
-                      }
                       return d.getUTCDate().toString();
                     }} 
                     angle={0}
