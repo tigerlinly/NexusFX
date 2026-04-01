@@ -213,4 +213,26 @@ export const api = {
   getUnreadCount: () => request('/notifications/unread-count'),
   markAllRead: () => request('/notifications/read-all', { method: 'PUT' }),
   markRead: (id) => request(`/notifications/${id}/read`, { method: 'PUT' }),
+
+  // =============================================
+  // B2B / Agent System
+  // =============================================
+  getAgentTenant: () => request('/agents/my-tenant'),
+  getAgentTeam: (params = {}) => request(`/agents/my-team?${new URLSearchParams(params)}`),
+  getAgentTeamPerformance: (params = {}) => request(`/agents/team-performance?${new URLSearchParams(params)}`),
+  createAgentInvite: (body) => request('/agents/invite', { method: 'POST', body: JSON.stringify(body) }),
+  getAgentInvitations: () => request('/agents/invitations'),
+  cancelAgentInvite: (id) => request(`/agents/invitations/${id}`, { method: 'DELETE' }),
+  toggleAgentMember: (id) => request(`/agents/members/${id}/toggle`, { method: 'PUT' }),
+  removeAgentMember: (id) => request(`/agents/members/${id}`, { method: 'DELETE' }),
+  getAgentBranding: () => request('/agents/branding'),
+  updateAgentBranding: (body) => request('/agents/branding', { method: 'PUT', body: JSON.stringify(body) }),
+  getAgentCommissions: (params = {}) => request(`/agents/commissions?${new URLSearchParams(params)}`),
+  validateInviteCode: (code) => request(`/agents/validate-invite/${code}`),
+
+  // Admin Agent Management
+  getAdminAgents: (params = {}) => request(`/admin/agents?${new URLSearchParams(params)}`),
+  createAdminAgent: (body) => request('/admin/agents', { method: 'POST', body: JSON.stringify(body) }),
+  updateAdminAgent: (userId, body) => request(`/admin/agents/${userId}`, { method: 'PUT', body: JSON.stringify(body) }),
+  getAdminAgentStats: (userId) => request(`/admin/agents/${userId}/stats`),
 };

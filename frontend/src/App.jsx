@@ -24,6 +24,7 @@ import HeatmapPage from './components/Heatmap/HeatmapPage';
 import StrategiesPage from './components/Strategies/StrategiesPage';
 import ForumsPage from './components/Forums/ForumsPage';
 import BrokersPage from './components/Brokers/BrokersPage';
+import AgentDashboard from './components/Agent/AgentDashboard';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -74,6 +75,7 @@ function AppRoutes() {
         <Route path="bots" element={<BotsPage />} />
         <Route path="forums" element={<ForumsPage />} />
         <Route path="brokers" element={<BrokersPage />} />
+        <Route path="agent" element={<AgentDashboard />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
       <Route path="*" element={

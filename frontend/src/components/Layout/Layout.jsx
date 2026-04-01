@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard, History, Target, Settings, LogOut,
-  Building2, Menu, Wallet, Users, BarChart3, Shield, Cpu, TerminalSquare, CreditCard, Store, Flame, Copy, MessageSquare, Globe, DollarSign, X
+  Building2, Menu, Wallet, Users, BarChart3, Shield, Cpu, TerminalSquare, CreditCard, Store, Flame, Copy, MessageSquare, Globe, DollarSign, X, Handshake
 } from 'lucide-react';
 import NotificationBell from './NotificationBell';
 
@@ -42,8 +42,9 @@ export default function Layout() {
     window.location.href = '/login';
   };
 
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
   const isTeamLead = user?.role === 'team_lead' || isAdmin;
+  const isAgent = user?.role === 'agent' || isAdmin;
 
   // Determine sidebar classes based on mobile vs desktop
   let sidebarClass = 'sidebar ';
@@ -161,6 +162,16 @@ export default function Layout() {
             </>
           )}
 
+          {isAgent && (
+            <>
+              {showLabels && <div className="sidebar-section-title">ตัวแทน (Agent)</div>}
+              <NavLink to="/agent" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="ระบบตัวแทน">
+                <Handshake size={18} className="nav-icon" />
+                {showLabels && <span>ระบบตัวแทน</span>}
+              </NavLink>
+            </>
+          )}
+
           {isAdmin && (
             <>
               {showLabels && <div className="sidebar-section-title">ผู้ดูแล</div>}
@@ -209,7 +220,7 @@ export default function Layout() {
                     width: 6, height: 6, borderRadius: '50%',
                     background: user?.role === 'admin' ? 'var(--loss)' : user?.role === 'team_lead' ? 'var(--warning)' : 'var(--profit)'
                   }}></span>
-                  {user?.role === 'admin' ? 'Admin' : user?.role === 'team_lead' ? 'Team Lead' : 'Trader'}
+                  {user?.role === 'super_admin' ? 'Super Admin' : user?.role === 'admin' ? 'Admin' : user?.role === 'agent' ? 'Agent' : user?.role === 'team_lead' ? 'Team Lead' : 'Trader'}
                 </div>
               </div>
             )}
