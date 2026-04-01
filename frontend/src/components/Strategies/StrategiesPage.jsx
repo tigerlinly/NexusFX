@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../utils/api';
+import ConfirmDialog from '../Layout/ConfirmDialog';
 import { ShoppingCart, Target, Users, TrendingUp, CheckCircle2, Plus, Zap, Activity, AlertTriangle } from 'lucide-react';
 
 export default function StrategiesPage() {
@@ -14,6 +15,12 @@ export default function StrategiesPage() {
   // Create Modal State
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createForm, setCreateForm] = useState({ name: '', description: '', risk_level: 'medium', price_monthly: 0 });
+  const [confirmDialog, setConfirmDialog] = useState({ open: false });
+
+  const showConfirm = (message, onConfirm, options = {}) => {
+    setConfirmDialog({ open: true, message, onConfirm, ...options });
+  };
+  const closeConfirm = () => setConfirmDialog({ open: false });
 
   // Publish Signal Modal State
   const [showSignalModal, setShowSignalModal] = useState(false);
@@ -58,26 +65,37 @@ export default function StrategiesPage() {
 
   const handleSubscribe = async (strategy) => {
     if (!selectedAccountId) return alert('กรุณาเลือกบัญชีเทรดก่อนกดติดตามกลยุทธ์');
-    if (!await window.confirm(`คุณต้องการติดตามกลยุทธ์ ${strategy.name} หรือไม่?`)) return;
-
-    try {
-      await api.subscribeStrategy(strategy.id, { account_id: selectedAccountId, lot_multiplier: 1.0 });
-      alert('ติดตามกลยุทธ์เรียบร้อยแล้ว!');
-      fetchData();
-    } catch (err) {
-      alert(err.message || 'เกิดข้อผิดพลาดในการติดตามกลยุทธ์');
-    }
+    showConfirm(
+      `ต้องการติดตามกลยุทธ์ “${strategy.name}” หรือไม่? คำสั่งจะถูกคัดลอกเข้าบัญชี ${selectedAccountId} โดยอัตโนมัติ`,
+      async () => {
+        closeConfirm();
+        try {
+          await api.subscribeStrategy(strategy.id, { account_id: selectedAccountId, lot_multiplier: 1.0 });
+          alert('ติดตามกลยุทธ์เรียบร้อยแล้ว!');
+          fetchData();
+        } catch (err) {
+          alert(err.message || 'เกิดข้อผิดพลาดในการติดตามกลยุทธ์');
+        }
+      },
+      { title: 'ติดตามกลยุทธ์ (Copy Trade)', confirmText: 'ติดตามเลย', variant: 'info' }
+    );
   };
 
   const handleUnsubscribe = async (strategyId) => {
-    if (!await window.confirm(`คุณแน่ใจหรือไม่ว่าต้องการยกเลิกการติดตามกลยุทธ์นี้?`)) return;
-    try {
-      await api.unsubscribeStrategy(strategyId);
-      alert('ยกเลิกการติดตามเรียบร้อยแล้ว');
-      fetchData();
-    } catch (err) {
-      alert(err.message);
-    }
+    showConfirm(
+      'ยกเลิกการติดตามกลยุทธ์นี้หรือไม่? ระบบจะหยุดคัดลอกคำสั่งจากกลยุทธ์นี้ทันที',
+      async () => {
+        closeConfirm();
+        try {
+          await api.unsubscribeStrategy(strategyId);
+          alert('ยกเลิกการติดตามเรียบร้อยแล้ว');
+          fetchData();
+        } catch (err) {
+          alert(err.message);
+        }
+      },
+      { title: 'ยกเลิกการติดตาม', confirmText: 'ยกเลิก', variant: 'danger' }
+    );
   };
 
   const handleCreateStrategy = async (e) => {
@@ -389,6 +407,15 @@ export default function StrategiesPage() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={confirmDialog.open}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        variant={confirmDialog.variant}
+        confirmText={confirmDialog.confirmText}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={closeConfirm}
+      />
     </>
   );
 }

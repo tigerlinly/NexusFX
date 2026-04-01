@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../utils/api';
+import ConfirmDialog from '../Layout/ConfirmDialog';
 import {
   Shield, Users, BarChart3, DollarSign, Activity, Search,
   Edit2, UserCheck, UserX, Eye, AlertTriangle, Clock, ChevronDown,
@@ -33,6 +34,13 @@ export default function AdminPage() {
   const [adjustData, setAdjustData] = useState({ userId: null, amount: '', reason: '', username: '' });
   const [isAdjusting, setIsAdjusting] = useState(false);
   const [adjustments, setAdjustments] = useState([]);
+  const [confirmDialog, setConfirmDialog] = useState({ open: false });
+
+  // Helper: show custom confirm dialog
+  const showConfirm = (message, onConfirm, options = {}) => {
+    setConfirmDialog({ open: true, message, onConfirm, ...options });
+  };
+  const closeConfirm = () => setConfirmDialog({ open: false });
 
   const fetchData = useCallback(async () => {
     try {
@@ -143,31 +151,43 @@ export default function AdminPage() {
   };
 
   const handleSettleCommissions = async (userId) => {
-    if (!confirm('ยืนยันการจ่ายค่าคอมมิชชั่นให้ตัวแทนนี้?')) return;
-    setSettlingAgent(userId);
-    try {
-      const res = await api.settleAgentCommissions(userId);
-      alert(`✅ จ่ายค่าคอมสำเร็จ\nจำนวน: ${res.settled_count} รายการ\nยอดรวม: $${parseFloat(res.settled_amount || 0).toFixed(2)}`);
-      fetchData();
-    } catch (err) {
-      alert('❌ ' + (err.message || 'เกิดข้อผิดพลาด'));
-    } finally {
-      setSettlingAgent(null);
-    }
+    showConfirm(
+      'ต้องการจ่ายค่าคอมมิชชั่นค้างจ่ายทั้งหมดให้ตัวแทนนี้หรือไม่? ยอดเงินจะถูกโอนเข้า Wallet ของตัวแทนทันที',
+      async () => {
+        closeConfirm();
+        setSettlingAgent(userId);
+        try {
+          const res = await api.settleAgentCommissions(userId);
+          alert(`✅ จ่ายค่าคอมสำเร็จ\nจำนวน: ${res.settled_count} รายการ\nยอดรวม: $${parseFloat(res.settled_amount || 0).toFixed(2)}`);
+          fetchData();
+        } catch (err) {
+          alert('❌ ' + (err.message || 'เกิดข้อผิดพลาด'));
+        } finally {
+          setSettlingAgent(null);
+        }
+      },
+      { title: 'ยืนยันการจ่ายค่าคอมมิชชั่น', confirmText: 'จ่ายเลย', variant: 'success' }
+    );
   };
 
   const handleTriggerCalc = async () => {
-    if (!confirm('ยืนยันการคำนวณค่าคอมมิชชั่นทั้งระบบ?')) return;
-    setCalcRunning(true);
-    try {
-      const res = await api.triggerCommissionCalc();
-      alert(`✅ คำนวณค่าคอมสำเร็จ\nตัวแทนที่ประมวลผล: ${res.agents_processed || 0}\nค่าคอมใหม่: ${res.commissions_created || 0} รายการ`);
-      fetchData();
-    } catch (err) {
-      alert('❌ ' + (err.message || 'เกิดข้อผิดพลาด'));
-    } finally {
-      setCalcRunning(false);
-    }
+    showConfirm(
+      'ระบบจะคำนวณค่าคอมมิชชั่นใหม่ทั้งหมด สำหรับตัวแทนทุกคนในระบบ ใช้เวลาสักครู่',
+      async () => {
+        closeConfirm();
+        setCalcRunning(true);
+        try {
+          const res = await api.triggerCommissionCalc();
+          alert(`✅ คำนวณค่าคอมสำเร็จ\nตัวแทนที่ประมวลผล: ${res.agents_processed || 0}\nค่าคอมใหม่: ${res.commissions_created || 0} รายการ`);
+          fetchData();
+        } catch (err) {
+          alert('❌ ' + (err.message || 'เกิดข้อผิดพลาด'));
+        } finally {
+          setCalcRunning(false);
+        }
+      },
+      { title: 'ยืนยันการคำนวณค่าคอมมิชชั่นทั้งระบบ', confirmText: 'คำนวณเลย', variant: 'warning' }
+    );
   };
 
   const handleAdjustBalance = async (e) => {
@@ -187,14 +207,23 @@ export default function AdminPage() {
   };
 
   const handleApproveAdjustment = async (id, action) => {
-    if (!confirm(`ยืนยันการ ${action === 'APPROVE' ? 'อนุมัติ' : 'ปฏิเสธ'} รายการนี้?`)) return;
-    try {
-      await api.approveAdjustment(id, action);
-      alert(`✅ อัปเดตสถานะคำขอสำเร็จ`);
-      fetchData(); // Refresh queue
-    } catch (err) {
-      alert(`❌ ${err.message || 'เกิดข้อผิดพลาดในการจัดการคำขอ'}`);
-    }
+    const isApprove = action === 'APPROVE';
+    showConfirm(
+      isApprove
+        ? 'ยืนยันการอนุมัติคำขอปรับยอดเงินนี้? ยอดเงินจะถูกปรับทันทีและไม่สามารถย้อนกลับได้'
+        : 'ยืนยันการปฏิเสธคำขอปรับยอดเงินนี้?',
+      async () => {
+        closeConfirm();
+        try {
+          await api.approveAdjustment(id, action);
+          alert(`✅ อัปเดตสถานะคำขอสำเร็จ`);
+          fetchData();
+        } catch (err) {
+          alert(`❌ ${err.message || 'เกิดข้อผิดพลาดในการจัดการคำขอ'}`);
+        }
+      },
+      { title: isApprove ? 'อนุมัติคำขอ' : 'ปฏิเสธคำขอ', confirmText: isApprove ? 'อนุมัติ' : 'ปฏิเสธ', variant: isApprove ? 'success' : 'danger' }
+    );
   };
 
   if (user?.role !== 'admin' && user?.role !== 'super_admin' && user?.role !== 'team_lead') {
@@ -885,6 +914,15 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={confirmDialog.open}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        variant={confirmDialog.variant}
+        confirmText={confirmDialog.confirmText}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={closeConfirm}
+      />
     </>
   );
 }

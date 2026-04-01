@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
+import ConfirmDialog from '../Layout/ConfirmDialog';
 import { ShieldCheck, Globe, Star, ExternalLink, Award, CheckCircle2, Plus, Edit2, Trash2, X } from 'lucide-react';
 
 export default function BrokersPage() {
@@ -21,6 +22,12 @@ export default function BrokersPage() {
     min_deposit: 0, spread_from: '', platforms: 'MT4, MT5',
     rating: 0, description: '', logo_url: ''
   });
+  const [confirmDialog, setConfirmDialog] = useState({ open: false });
+
+  const showConfirm = (message, onConfirm, options = {}) => {
+    setConfirmDialog({ open: true, message, onConfirm, ...options });
+  };
+  const closeConfirm = () => setConfirmDialog({ open: false });
 
   useEffect(() => {
     fetchBrokers();
@@ -70,13 +77,19 @@ export default function BrokersPage() {
   };
 
   const handleDelete = async (id, name) => {
-    if (!window.confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบโบรกเกอร์ ${name}?`)) return;
-    try {
-      await api.deleteBroker(id);
-      setBrokers(brokers.filter(b => b.id !== id));
-    } catch (err) {
-      alert(err.message);
-    }
+    showConfirm(
+      `ต้องการลบโบรกเกอร์ “${name}” ออกจากระบบหรือไม่? ข้อมูลทั้งหมดจะหายไปและไม่สามารถกู้คืนได้`,
+      async () => {
+        closeConfirm();
+        try {
+          await api.deleteBroker(id);
+          setBrokers(brokers.filter(b => b.id !== id));
+        } catch (err) {
+          alert(err.message);
+        }
+      },
+      { title: 'ยืนยันการลบโบรกเกอร์', confirmText: 'ลบเลย', variant: 'danger' }
+    );
   };
 
   const handleSubmit = async (e) => {
@@ -382,6 +395,15 @@ export default function BrokersPage() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={confirmDialog.open}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        variant={confirmDialog.variant}
+        confirmText={confirmDialog.confirmText}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={closeConfirm}
+      />
     </>
   );
 }

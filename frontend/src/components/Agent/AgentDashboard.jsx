@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../../utils/api';
+import ConfirmDialog from '../Layout/ConfirmDialog';
 import {
   Users, TrendingUp, DollarSign, Link2, Copy, UserPlus, UserMinus,
   UserCheck, UserX, Search, BarChart3, Trophy, Clock, Send, X, RefreshCw,
@@ -25,6 +26,12 @@ export default function AgentDashboard() {
   const [inviteResult, setInviteResult] = useState(null);
   const [showBrandingModal, setShowBrandingModal] = useState(false);
   const [brandingForm, setBrandingForm] = useState({});
+  const [confirmDialog, setConfirmDialog] = useState({ open: false });
+
+  const showConfirm = (message, onConfirm, options = {}) => {
+    setConfirmDialog({ open: true, message, onConfirm, ...options });
+  };
+  const closeConfirm = () => setConfirmDialog({ open: false });
 
   const formatCurrency = (val) => {
     if (val === undefined || val === null) return '$0.00';
@@ -97,11 +104,17 @@ export default function AgentDashboard() {
   };
 
   const handleRemoveMember = async (id, name) => {
-    if (!confirm(`ต้องการลบ ${name} ออกจากทีมหรือไม่?`)) return;
-    try {
-      await api.removeAgentMember(id);
-      fetchData();
-    } catch (err) { alert(err.message); }
+    showConfirm(
+      `ต้องการนำ "${name}" ออกจากทีมหรือไม่? สมาชิกจะสูญเสียการเข้าถึงแพลตฟอร์มนี้`,
+      async () => {
+        closeConfirm();
+        try {
+          await api.removeAgentMember(id);
+          fetchData();
+        } catch (err) { alert(err.message); }
+      },
+      { title: 'ลบสมาชิกออกจากทีม', confirmText: 'ลบออก', variant: 'danger' }
+    );
   };
 
   const handleCancelInvite = async (id) => {
@@ -660,6 +673,15 @@ export default function AgentDashboard() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={confirmDialog.open}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        variant={confirmDialog.variant}
+        confirmText={confirmDialog.confirmText}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={closeConfirm}
+      />
     </>
   );
 }
