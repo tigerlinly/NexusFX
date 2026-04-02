@@ -30,6 +30,7 @@ export default function TerminalPage({ embedded = false }) {
   const [fetchingAll, setFetchingAll] = useState(false);
   const [selectedOrders, setSelectedOrders] = useState([]);
   const [viewMode, setViewMode] = useState('single');
+  const [activeTab, setActiveTab] = useState('trade');
 
   // Refs to avoid useEffect dependency restarts (prevents flickering)
   const viewModeRef = useRef(viewMode);
@@ -311,13 +312,42 @@ export default function TerminalPage({ embedded = false }) {
       )}
 
       <div className={embedded ? '' : 'content-area'}>
+        <div style={{ display: 'flex', gap: 24, borderBottom: '1px solid var(--border-color)', marginBottom: 24, paddingBottom: 0 }}>
+          <button 
+            onClick={() => setActiveTab('trade')}
+            style={{ 
+              padding: '12px 4px', background: 'transparent', border: 'none', 
+              borderBottom: activeTab === 'trade' ? '2px solid var(--accent-primary)' : '2px solid transparent', 
+              color: activeTab === 'trade' ? 'var(--accent-primary)' : 'var(--text-secondary)', 
+              fontWeight: 600, cursor: 'pointer', fontSize: 15, display: 'flex', alignItems: 'center', gap: 8,
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <Activity size={18} />
+            ส่งคำสั่งซื้อขาย
+          </button>
+          <button 
+            onClick={() => setActiveTab('orders')}
+            style={{ 
+              padding: '12px 4px', background: 'transparent', border: 'none', 
+              borderBottom: activeTab === 'orders' ? '2px solid var(--accent-secondary)' : '2px solid transparent', 
+              color: activeTab === 'orders' ? 'var(--accent-secondary)' : 'var(--text-secondary)', 
+              fontWeight: 600, cursor: 'pointer', fontSize: 15, display: 'flex', alignItems: 'center', gap: 8,
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <Crosshair size={18} />
+            ออเดอร์ล่าสุด (Session Orders)
+          </button>
+        </div>
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xl)' }}>
           {/* Action Panel */}
+          {activeTab === 'trade' && (
           <div className="chart-card">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <h3 className="chart-title" style={{ display: 'flex', alignItems: 'center', gap: 8, margin: 0 }}>
-                <Activity size={18} style={{ color: 'var(--accent-primary)' }} />
-                ส่งคำสั่งซื้อขาย
+                ส่งคำสั่งเข้าสู่ตลาด
               </h3>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button 
@@ -456,15 +486,13 @@ export default function TerminalPage({ embedded = false }) {
             </div>
             {processing && <div style={{ textAlign: 'center', marginTop: 12, fontSize: 12, color: 'var(--text-tertiary)' }}>กำลังส่งคำสั่งเข้าสู่ตลาด...</div>}
           </div>
+          )}
 
           {/* Activity / Visualization Panel */}
+          {activeTab === 'orders' && (
           <div>
             <div className="chart-card" style={{ height: '100%' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                <h3 className="chart-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Crosshair size={18} style={{ color: 'var(--accent-secondary)' }} />
-                  ออเดอร์ล่าสุด (Session Orders)
-                </h3>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                   <button 
                     className="btn btn-sm btn-secondary" 
@@ -566,6 +594,7 @@ export default function TerminalPage({ embedded = false }) {
               )}
             </div>
           </div>
+          )}
         </div>
       </div>
     </>
