@@ -621,7 +621,7 @@ export default function BotsPage({ embedded = false, isActive = true }) {
                                   {group.symbols.map(sym => {
                                     const disabled = brokerSupported && !brokerSupported.includes(sym);
                                     return (
-                                      <label key={sym} className="checkbox-label" style={{ marginBottom: 0, padding: '4px 8px', background: disabled ? 'rgba(255,255,255,0.02)' : 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', opacity: disabled ? 0.3 : 1, cursor: disabled ? 'not-allowed' : 'pointer', flexShrink: 0 }}>
+                                      <label key={sym} className="checkbox-label" style={{ marginBottom: 0, padding: '2px 6px', fontSize: 11, background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', opacity: disabled ? 0.3 : 1, cursor: disabled ? 'not-allowed' : 'pointer', flexShrink: 0 }}>
                                         <input 
                                           type="checkbox" 
                                           checked={!disabled && (formData.symbols || []).includes(sym)}
@@ -657,31 +657,17 @@ export default function BotsPage({ embedded = false, isActive = true }) {
                   </span>
                 </div>
                 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {timeframes.slice(0, 11).map(tf => (
-                      <button 
-                        key={tf} type="button" 
-                        className={`tag-toggle ${formData.analysis_timeframes.includes(tf) ? 'active' : ''}`}
-                        onClick={() => handleToggleAnalysisTF(tf)}
-                        style={{ minWidth: 48, textAlign: 'center', justifyContent: 'center' }}
-                      >
-                        {tf}
-                      </button>
-                    ))}
-                  </div>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {timeframes.slice(11).map(tf => (
-                      <button 
-                        key={tf} type="button" 
-                        className={`tag-toggle ${formData.analysis_timeframes.includes(tf) ? 'active' : ''}`}
-                        onClick={() => handleToggleAnalysisTF(tf)}
-                        style={{ minWidth: 48, textAlign: 'center', justifyContent: 'center' }}
-                      >
-                        {tf}
-                      </button>
-                    ))}
-                  </div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {timeframes.map(tf => (
+                    <button 
+                      key={tf} type="button" 
+                      className={`tag-toggle ${formData.analysis_timeframes.includes(tf) ? 'active' : ''}`}
+                      onClick={() => handleToggleAnalysisTF(tf)}
+                      style={{ minWidth: 42, padding: '4px 8px', fontSize: 11, textAlign: 'center', justifyContent: 'center' }}
+                    >
+                      {tf}
+                    </button>
+                  ))}
                 </div>
               </div>
 
