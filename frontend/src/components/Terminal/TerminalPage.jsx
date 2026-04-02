@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../utils/api';
 import { io } from 'socket.io-client';
-import { Send, TrendingUp, TrendingDown, Crosshair, Target, ShieldAlert, Activity } from 'lucide-react';
+import { Send, TrendingUp, TrendingDown, Crosshair, Target, ShieldAlert, Activity, RefreshCw } from 'lucide-react';
 
 const BROKER_SYMBOLS = {
   exness: ['XAUUSDm', 'EURUSDm', 'GBPUSDm', 'BTCUSDm', 'XAUUSD', 'EURUSD', 'BTCUSD'],
@@ -27,6 +27,35 @@ export default function TerminalPage({ embedded = false }) {
   const [recentOrders, setRecentOrders] = useState([]);
   const [marketPrices, setMarketPrices] = useState({});
   const [livePrice, setLivePrice] = useState(null);
+  const [fetchingAll, setFetchingAll] = useState(false);
+
+  const refreshAllAccountsTrades = async () => {
+    if (accounts.length === 0) return alert('ไม่มีบัญชีให้ดึงข้อมูล');
+    setFetchingAll(true);
+    try {
+      let allTrades = [];
+      const promises = accounts.map(async (acc) => {
+        try {
+          const trades = await api.getLiveTrades(acc.id);
+          if (Array.isArray(trades)) {
+            return trades.map(t => ({ ...t, _accountId: acc.id, _accountName: acc.account_name || acc.broker_name }));
+          }
+        } catch (e) {
+          console.error(`Failed to fetch live trades for ${acc.id}`, e);
+        }
+        return [];
+      });
+      const results = await Promise.all(promises);
+      results.forEach(res => {
+        allTrades = allTrades.concat(res);
+      });
+      setRecentOrders(allTrades);
+    } catch (err) {
+      alert('Error fetching all trades');
+    } finally {
+      setFetchingAll(false);
+    }
+  };
 
   useEffect(() => {
     const fetchAccounts = async () => {
@@ -58,10 +87,15 @@ export default function TerminalPage({ embedded = false }) {
     if (!formData.account_id) return;
     let timer;
     const pollTrades = async () => {
+      // Do not poll if currently fetching all accounts to prevent overriding mixed view with single view
+      if (fetchingAll) {
+        timer = setTimeout(pollTrades, 3000);
+        return;
+      }
       try {
         const trades = await api.getLiveTrades(formData.account_id);
         if (Array.isArray(trades)) {
-          setRecentOrders(trades);
+          setRecentOrders(trades.map(t => ({...t, _accountId: formData.account_id})));
         }
       } catch (err) {
         console.error('Live trades err:', err);
@@ -70,7 +104,7 @@ export default function TerminalPage({ embedded = false }) {
     };
     pollTrades();
     return () => clearTimeout(timer);
-  }, [formData.account_id]);
+  }, [formData.account_id, fetchingAll]);
 
   // Sync live price when symbol or marketPrices change
   useEffect(() => {
@@ -145,21 +179,24 @@ export default function TerminalPage({ embedded = false }) {
   const handleCloseAll = async (type) => {
     if (!window.confirm(`ยืนยันการปิดออเดอร์ ${type} ทั้งหมด?`)) return;
     
-    // Filter by side if not ALL
-    let ticketsToClose = recentOrders
-      .filter(o => type === 'ALL' || o.side === type)
-      .map(o => o.ticket);
-
-    if (ticketsToClose.length === 0) {
-      return alert('ไม่มีออเดอร์ให้ปิด');
-    }
+    const ordersToClose = recentOrders.filter(o => type === 'ALL' || o.side === type);
+    if (ordersToClose.length === 0) return alert('ไม่มีออเดอร์ให้ปิด');
 
     setProcessing(true);
     try {
-      await api.closeTrades(formData.account_id, ticketsToClose);
+      const byAccount = {};
+      ordersToClose.forEach(o => {
+        const accId = o._accountId || formData.account_id;
+        if (!byAccount[accId]) byAccount[accId] = [];
+        byAccount[accId].push(o.ticket);
+      });
+
+      for (const [accId, tickets] of Object.entries(byAccount)) {
+        await api.closeTrades(accId, tickets);
+      }
       alert('คำสั่งปิดส่งสำเร็จ!');
-      // Optimistically remove from state or wait for poll
-      setRecentOrders(prev => prev.filter(o => !ticketsToClose.includes(o.ticket)));
+      const closedTickets = ordersToClose.map(o => o.ticket);
+      setRecentOrders(prev => prev.filter(o => !closedTickets.includes(o.ticket)));
     } catch (err) {
       alert(err || err.message || 'Error closing trades');
     } finally {
@@ -174,7 +211,8 @@ export default function TerminalPage({ embedded = false }) {
 
     setProcessing(true);
     try {
-      await api.closeTrades(formData.account_id, [order.ticket]);
+      const accId = order._accountId || formData.account_id;
+      await api.closeTrades(accId, [order.ticket]);
       alert('คำสั่งปิดสำเร็จ!');
       setRecentOrders(prev => prev.filter((_, idx) => idx !== idxToClose));
     } catch (err) {
@@ -366,14 +404,32 @@ export default function TerminalPage({ embedded = false }) {
                   <Crosshair size={18} style={{ color: 'var(--accent-secondary)' }} />
                   ออเดอร์ล่าสุด (Session Orders)
                 </h3>
-                {recentOrders.length > 0 && (
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button className="btn btn-sm" style={{ background: 'rgba(56, 189, 248, 0.1)', color: 'var(--profit)', border: 'none', padding: '4px 12px', fontSize: 12 }} onClick={() => handleCloseAll('BUY')}>Close All Buy</button>
-                    <button className="btn btn-sm" style={{ background: 'rgba(239, 68, 68, 0.1)', color: 'var(--loss)', border: 'none', padding: '4px 12px', fontSize: 12 }} onClick={() => handleCloseAll('SELL')}>Close All Sell</button>
-                    <button className="btn btn-sm" style={{ background: 'rgba(234, 179, 8, 0.1)', color: 'var(--warning)', border: 'none', padding: '4px 12px', fontSize: 12 }} onClick={() => handleCloseAll('ALL')}>Close All</button>
-                  </div>
-                )}
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <button 
+                    className="btn btn-sm btn-secondary" 
+                    title="ดึงออเดอร์จากทุกบัญชีเข้ามารวมกัน"
+                    onClick={refreshAllAccountsTrades}
+                    disabled={fetchingAll}
+                    style={{ fontSize: 12, padding: '4px 12px' }}
+                  >
+                    <RefreshCw size={14} className={fetchingAll ? "spin" : ""} style={{ marginRight: 4, display: 'inline-block', animation: fetchingAll ? 'spin 1s linear infinite' : 'none' }} /> 
+                    {fetchingAll ? 'กำลังเช็ค...' : 'เช็คจากทุกบัญชี'}
+                  </button>
+                  {recentOrders.length > 0 && (
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button className="btn btn-sm" style={{ background: 'rgba(56, 189, 248, 0.1)', color: 'var(--profit)', border: 'none', padding: '4px 12px', fontSize: 12 }} onClick={() => handleCloseAll('BUY')}>Close All Buy</button>
+                      <button className="btn btn-sm" style={{ background: 'rgba(239, 68, 68, 0.1)', color: 'var(--loss)', border: 'none', padding: '4px 12px', fontSize: 12 }} onClick={() => handleCloseAll('SELL')}>Close All Sell</button>
+                      <button className="btn btn-sm" style={{ background: 'rgba(234, 179, 8, 0.1)', color: 'var(--warning)', border: 'none', padding: '4px 12px', fontSize: 12 }} onClick={() => handleCloseAll('ALL')}>Close All</button>
+                    </div>
+                  )}
+                </div>
               </div>
+              
+              <style>{`
+                @keyframes spin {
+                  100% { transform: rotate(360deg); }
+                }
+              `}</style>
               
               {recentOrders.length === 0 ? (
                 <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)' }}>
@@ -399,7 +455,10 @@ export default function TerminalPage({ embedded = false }) {
                         const isProfit = pnl >= 0;
                         return (
                           <tr key={order.id || idx}>
-                            <td style={{ fontWeight: 600 }}>{order.symbol}</td>
+                            <td style={{ fontWeight: 600 }}>
+                              {order.symbol}
+                              {order._accountName && <div style={{ fontSize: 10, color: 'var(--text-tertiary)', fontWeight: 400, marginTop: 2 }}>{order._accountName}</div>}
+                            </td>
                             <td>
                               <span className={`badge ${order.side === 'BUY' ? 'badge-buy' : 'badge-sell'}`}>
                                 {order.side}
