@@ -110,6 +110,21 @@ export default function ReportsPage() {
           <h1 className="page-title">รายงานและวิเคราะห์</h1>
         </div>
         <div className="header-right" style={{ gap: 8 }}>
+          {activeTab === 'heatmap' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <AccountFilter />
+              <div className="filter-group" style={{ marginRight: 8 }}>
+                {[7, 14, 30, 60].map(d => (
+                  <button
+                    key={d}
+                    className={`filter-btn ${heatmapDays === d ? 'active' : ''}`}
+                    onClick={() => setHeatmapDays(d)}>
+                    {d}D
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           {(activeTab === 'analytics' || activeTab === 'psychology') && (
             <div className="filter-group" style={{ marginRight: 8 }}>
               {['7', '14', '30', '60', '90'].map(p => (
@@ -132,38 +147,21 @@ export default function ReportsPage() {
       <div className="content-area">
         {/* Tab navigation */}
         <div className="chart-card" style={{ padding: 0, overflow: 'hidden', marginBottom: 'var(--space-lg)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-primary)', background: 'rgba(0,0,0,0.1)' }}>
-            <div style={{ display: 'flex' }}>
-              {tabs.map(tab => {
-                const Icon = tab.icon;
-                return (
-                  <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
-                    display: 'flex', alignItems: 'center', gap: 8, padding: '14px 20px',
-                    background: 'transparent', border: 'none',
-                    color: activeTab === tab.id ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                    borderBottom: activeTab === tab.id ? '2px solid var(--accent-primary)' : '2px solid transparent',
-                    cursor: 'pointer', fontWeight: activeTab === tab.id ? 600 : 500, fontSize: 14, marginBottom: -1
-                  }}>
-                    <Icon size={16} />{tab.label}
-                  </button>
-                );
-              })}
-            </div>
-            {activeTab === 'heatmap' && (
-              <div style={{ display: 'flex', alignItems: 'center', paddingRight: 16, gap: 12 }}>
-                <AccountFilter />
-                <div className="filter-group">
-                  {[7, 14, 30, 60].map(d => (
-                    <button
-                      key={d}
-                      className={`filter-btn ${heatmapDays === d ? 'active' : ''}`}
-                      onClick={() => setHeatmapDays(d)}>
-                      {d}D
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+          <div style={{ display: 'flex', borderBottom: '1px solid var(--border-primary)', background: 'rgba(0,0,0,0.1)' }}>
+            {tabs.map(tab => {
+              const Icon = tab.icon;
+              return (
+                <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
+                  display: 'flex', alignItems: 'center', gap: 8, padding: '14px 20px',
+                  background: 'transparent', border: 'none',
+                  color: activeTab === tab.id ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                  borderBottom: activeTab === tab.id ? '2px solid var(--accent-primary)' : '2px solid transparent',
+                  cursor: 'pointer', fontWeight: activeTab === tab.id ? 600 : 500, fontSize: 14, marginBottom: -1
+                }}>
+                  <Icon size={16} />{tab.label}
+                </button>
+              );
+            })}
           </div>
 
           <div style={{ padding: 'var(--space-xl)' }}>
