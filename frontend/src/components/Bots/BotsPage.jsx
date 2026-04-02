@@ -4,7 +4,7 @@ import { Bot, Play, Square, Settings, Activity, Plus, Trash2, Cpu, ShoppingCart 
 import { io } from 'socket.io-client';
 import { useAuth } from '../../context/AuthContext';
 
-export default function BotsPage() {
+export default function BotsPage({ embedded = false }) {
   const { user } = useAuth();
   const [bots, setBots] = useState([]);
   const [accounts, setAccounts] = useState([]);
@@ -281,11 +281,24 @@ export default function BotsPage() {
           color: var(--profit);
         }
       `}</style>
-      <div className="header">
-        <div className="header-left">
-          <h1 className="page-title">เครื่องมือเทรดอัตโนมัติ (Bots)</h1>
+      {!embedded && (
+        <div className="header">
+          <div className="header-left">
+            <h1 className="page-title">เครื่องมือเทรดอัตโนมัติ (Bots)</h1>
+          </div>
+          <div className="header-right" style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-secondary btn-sm" onClick={() => window.location.href = '/store'} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <ShoppingCart size={14} /> เพิ่มจาก Store
+            </button>
+            <button className="btn btn-primary btn-sm" onClick={openCreateModal}>
+              <Plus size={14} /> สร้าง Bot
+            </button>
+          </div>
         </div>
-        <div className="header-right" style={{ display: 'flex', gap: 8 }}>
+      )}
+
+      {embedded && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 'var(--space-md)' }}>
           <button className="btn btn-secondary btn-sm" onClick={() => window.location.href = '/store'} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <ShoppingCart size={14} /> เพิ่มจาก Store
           </button>
@@ -293,9 +306,9 @@ export default function BotsPage() {
             <Plus size={14} /> สร้าง Bot
           </button>
         </div>
-      </div>
+      )}
 
-      <div className="content-area">
+      <div className={embedded ? '' : 'content-area'}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: 'var(--space-lg)' }}>
           {/* Bots Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 'var(--space-md)', alignContent: 'start' }}>

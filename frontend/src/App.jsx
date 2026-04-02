@@ -18,6 +18,7 @@ import AdminPage from './components/Admin/AdminPage';
 import AdminBillingPage from './components/Admin/AdminBillingPage';
 import BotsPage from './components/Bots/BotsPage';
 import TerminalPage from './components/Terminal/TerminalPage';
+import TradingPage from './components/Trading/TradingPage';
 import ForgotPasswordPage from './components/Auth/ForgotPasswordPage';
 import ResetPasswordPage from './components/Auth/ResetPasswordPage';
 import HeatmapPage from './components/Heatmap/HeatmapPage';
@@ -59,7 +60,9 @@ function AppRoutes() {
         </ProtectedRoute>
       }>
         <Route index element={<DashboardPage />} />
-        <Route path="terminal" element={<TerminalPage />} />
+        <Route path="trading" element={<TradingPage />} />
+        <Route path="bots" element={<Navigate to="/trading" replace />} />
+        <Route path="terminal" element={<Navigate to="/trading" replace />} />
         <Route path="trades" element={<TradeHistoryPage />} />
         <Route path="targets" element={<DailyTargetPage />} />
         <Route path="accounts" element={<AccountsPage />} />
@@ -72,7 +75,6 @@ function AppRoutes() {
         <Route path="heatmap" element={<HeatmapPage />} />
         <Route path="admin" element={<AdminPage />} />
         <Route path="admin/billing" element={<AdminBillingPage />} />
-        <Route path="bots" element={<BotsPage />} />
         <Route path="forums" element={<ForumsPage />} />
         <Route path="brokers" element={<BrokersPage />} />
         <Route path="agent" element={<AgentDashboard />} />

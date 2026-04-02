@@ -12,7 +12,7 @@ const BROKER_SYMBOLS = {
   fbs: ['XAUUSD', 'EURUSD', 'GBPUSD']
 };
 
-export default function TerminalPage() {
+export default function TerminalPage({ embedded = false }) {
   const [accounts, setAccounts] = useState([]);
   const [formData, setFormData] = useState({
     account_id: '',
@@ -120,13 +120,15 @@ export default function TerminalPage() {
 
   return (
     <>
-      <div className="header">
-        <div className="header-left">
-          <h1 className="page-title">เทอร์มินัลคำสั่ง (Terminal)</h1>
+      {!embedded && (
+        <div className="header">
+          <div className="header-left">
+            <h1 className="page-title">เทอร์มินัลคำสั่ง (Terminal)</h1>
+          </div>
         </div>
-      </div>
+      )}
 
-      <div className="content-area">
+      <div className={embedded ? '' : 'content-area'}>
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(350px, 450px) 1fr', gap: 'var(--space-xl)' }}>
           {/* Action Panel */}
           <div className="chart-card">

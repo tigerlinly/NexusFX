@@ -91,9 +91,9 @@ export default function Layout() {
             <LayoutDashboard size={18} className="nav-icon" />
             {showLabels && <span>Dashboard</span>}
           </NavLink>
-          <NavLink to="/terminal" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="เทอร์มินัลคำสั่ง (Terminal)">
-            <TerminalSquare size={18} className="nav-icon" />
-            {showLabels && <span>ส่งคำสั่ง (Terminal)</span>}
+          <NavLink to="/trading" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="Trading">
+            <Cpu size={18} className="nav-icon" />
+            {showLabels && <span>Trading</span>}
           </NavLink>
           <NavLink to="/trades" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="ประวัติการเทรด">
             <History size={18} className="nav-icon" />
@@ -110,10 +110,6 @@ export default function Layout() {
           <NavLink to="/heatmap" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="Exposure Heatmap">
             <Flame size={18} className="nav-icon" />
             {showLabels && <span>Exposure Heatmap</span>}
-          </NavLink>
-          <NavLink to="/bots" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="Trading Bots">
-            <Cpu size={18} className="nav-icon" />
-            {showLabels && <span>Trading Bots</span>}
           </NavLink>
 
           <NavLink to="/store" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="Marketplace">
