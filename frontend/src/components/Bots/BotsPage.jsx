@@ -528,7 +528,7 @@ export default function BotsPage({ embedded = false, isActive = true }) {
       {/* Create / Edit Modal */}
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal" style={{ width: 900, maxWidth: '95vw' }} onClick={e => e.stopPropagation()}>
+          <div className="modal" style={{ width: 950, maxWidth: '95vw' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
               <h2 className="modal-title" style={{ marginBottom: 0 }}>🤖 {isEditMode ? 'ตั้งค่า Trading Bot' : 'สร้าง Trading Bot ใหม่'}</h2>
               <button 
@@ -580,11 +580,18 @@ export default function BotsPage({ embedded = false, isActive = true }) {
                   <label className="form-label">คู่เงินที่เทรด (Symbols)</label>
                   {(() => {
                      const selectedAccount = accounts.find(a => a.id.toString() === formData.account_id?.toString());
-                     let matchedSymbols = [];
-                     if (selectedAccount?.supported_symbols && Array.isArray(selectedAccount.supported_symbols) && selectedAccount.supported_symbols.length > 0) {
-                       matchedSymbols = selectedAccount.supported_symbols;
-                     } else {
-                       matchedSymbols = ['XAUUSD', 'EURUSD', 'GBPUSD', 'BTCUSDT'];
+                     
+                     const SYMBOL_GROUPS = [
+                       { label: 'คู่เงินหลัก', symbols: ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] },
+                       { label: 'คู่เงินรอง', symbols: ['EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'GBPAUD', 'EURAUD'] },
+                       { label: 'โลหะมีค่า', symbols: ['XAUUSD', 'XAGUSD'] },
+                       { label: 'พลังงาน', symbols: ['USOIL', 'UKOIL'] },
+                       { label: 'คริปโต', symbols: ['BTCUSD', 'BTCUSDT', 'ETHUSD', 'ETHUSDT'] }
+                     ];
+
+                     let brokerSupported = null;
+                     if (selectedAccount?.supported_symbols && Array.isArray(selectedAccount.supported_symbols)) {
+                       brokerSupported = selectedAccount.supported_symbols;
                      }
 
                      const handleSymbolToggle = (sym) => {
@@ -597,19 +604,30 @@ export default function BotsPage({ embedded = false, isActive = true }) {
                      };
 
                      return (
-                       <div style={{ maxHeight: 150, overflowY: 'auto', border: '1px solid var(--border-primary)', borderRadius: 'var(--radius-md)', padding: 8, background: 'var(--bg-tertiary)', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 8 }}>
-                         {matchedSymbols.map(sym => (
-                           <label key={sym} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, color: 'var(--text-secondary)' }}>
-                             <input 
-                               type="checkbox" 
-                               checked={(formData.symbols || []).includes(sym)}
-                               onChange={() => handleSymbolToggle(sym)}
-                             />
-                             {sym}
-                           </label>
-                         ))}
-                       </div>
-                     );
+                        <div style={{ maxHeight: 220, overflowY: 'auto', border: '1px solid var(--border-primary)', borderRadius: 'var(--radius-md)', padding: 12, background: 'var(--bg-tertiary)', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                          {SYMBOL_GROUPS.map(group => (
+                            <div key={group.label}>
+                              <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 6, fontWeight: 500 }}>{group.label}</div>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                                {group.symbols.map(sym => {
+                                  const disabled = brokerSupported && !brokerSupported.includes(sym);
+                                  return (
+                                    <label key={sym} className="checkbox-label" style={{ marginBottom: 0, padding: '4px 8px', background: disabled ? 'rgba(255,255,255,0.02)' : 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', opacity: disabled ? 0.3 : 1, cursor: disabled ? 'not-allowed' : 'pointer' }}>
+                                      <input 
+                                        type="checkbox" 
+                                        checked={!disabled && (formData.symbols || []).includes(sym)}
+                                        onChange={() => { if (!disabled) handleSymbolToggle(sym); }}
+                                        disabled={disabled}
+                                      />
+                                      {sym}
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                     )
                   })()}
                   <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4 }}>
                     เลือกสกุลเงินที่ต้องการให้ Bot ทำงาน
@@ -663,25 +681,29 @@ export default function BotsPage({ embedded = false, isActive = true }) {
                 {formData.indicators_config.length === 0 && (
                   <div style={{ color: 'var(--text-tertiary)', fontSize: 12, textAlign: 'center', padding: 10 }}>ไม่มีการตั้งค่า Indicator ใช้การตัดสินใจพื้นฐาน</div>
                 )}
-                {formData.indicators_config.map((ind, idx) => (
-                  <div key={idx} style={{ display: 'flex', gap: 10, marginBottom: 8, alignItems: 'center' }}>
-                    <select className="filter-select" value={ind.name} onChange={e => handleIndicatorChange(idx, 'name', e.target.value)} style={{ flex: 1 }}>
-                      {availableIndicators.map(a => <option key={a} value={a}>{a}</option>)}
-                    </select>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>น้ำหนัก:</span>
-                      <input 
-                        type="number" min="0" max="100" 
-                        className="form-input" 
-                        style={{ width: 80, padding: '4px 8px', height: 'auto' }} 
-                        value={ind.weight} 
-                        onChange={e => handleIndicatorChange(idx, 'weight', e.target.value)} 
-                      />
-                      <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>%</span>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+                  {formData.indicators_config.map((ind, idx) => (
+                    <div key={idx} style={{ display: 'flex', gap: 8, alignItems: 'center', background: 'var(--bg-tertiary)', padding: '6px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-primary)' }}>
+                      <select className="filter-select" value={ind.name} onChange={e => handleIndicatorChange(idx, 'name', e.target.value)} style={{ flex: 1, padding: '4px 8px' }}>
+                        {availableIndicators.map(a => <option key={a} value={a}>{a}</option>)}
+                      </select>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>น้ำหนัก:</span>
+                        <input 
+                          type="number" min="0" max="100" 
+                          className="form-input" 
+                          style={{ width: 50, padding: '4px', height: 'auto', textAlign: 'center' }} 
+                          value={ind.weight} 
+                          onChange={e => handleIndicatorChange(idx, 'weight', e.target.value)} 
+                        />
+                        <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>%</span>
+                      </div>
+                      <button type="button" className="btn btn-ghost btn-icon" onClick={() => handleRemoveIndicator(idx)} style={{ padding: 2, color: 'var(--loss)' }}>
+                        <Trash2 size={14} />
+                      </button>
                     </div>
-                    <button type="button" className="btn-icon" onClick={() => handleRemoveIndicator(idx)} style={{ color: 'var(--loss)' }}><Trash2 size={16} /></button>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
 
               <div className="form-group" style={{ marginBottom: 24 }}>
