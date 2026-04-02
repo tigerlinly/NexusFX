@@ -2,8 +2,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { api } from '../../utils/api';
 import {
   BarChart3, PieChart, Clock, Calendar, Download, FileText,
-  TrendingUp, TrendingDown, Target, Award, AlertTriangle, Brain
+  TrendingUp, TrendingDown, Target, Award, AlertTriangle, Brain, Flame
 } from 'lucide-react';
+import HeatmapPage from '../Heatmap/HeatmapPage';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart as RPieChart, Pie, Cell, RadarChart,
@@ -14,7 +15,7 @@ const COLORS = ['#00c896', '#0ea5e9', '#8b5cf6', '#f59e0b', '#ef4444', '#ec4899'
 const DAY_NAMES = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
 
 export default function ReportsPage() {
-  const [activeTab, setActiveTab] = useState('analytics');
+  const [activeTab, setActiveTab] = useState('heatmap');
   const [period, setPeriod] = useState('30');
   const [analytics, setAnalytics] = useState(null);
   const [weeklyData, setWeeklyData] = useState([]);
@@ -76,6 +77,7 @@ export default function ReportsPage() {
   };
 
   const tabs = [
+    { id: 'heatmap', label: 'Exposure Heatmap', icon: Flame },
     { id: 'analytics', label: 'วิเคราะห์การเทรด', icon: BarChart3 },
     { id: 'psychology', label: 'จิตวิทยาการเทรด', icon: Brain },
     { id: 'weekly', label: 'สรุปรายสัปดาห์', icon: Calendar },
@@ -136,6 +138,11 @@ export default function ReportsPage() {
           </div>
 
           <div style={{ padding: 'var(--space-xl)' }}>
+            {/* Heatmap Tab */}
+            {activeTab === 'heatmap' && (
+              <HeatmapPage embedded={true} />
+            )}
+
             {/* Analytics Tab */}
             {activeTab === 'analytics' && analytics && (
               <div>

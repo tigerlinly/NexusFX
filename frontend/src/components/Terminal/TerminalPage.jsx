@@ -53,6 +53,25 @@ export default function TerminalPage({ embedded = false }) {
     };
   }, []);
 
+  // Poll Live Trades Every 3 Seconds
+  useEffect(() => {
+    if (!formData.account_id) return;
+    let timer;
+    const pollTrades = async () => {
+      try {
+        const trades = await api.getLiveTrades(formData.account_id);
+        if (Array.isArray(trades)) {
+          setRecentOrders(trades);
+        }
+      } catch (err) {
+        console.error('Live trades err:', err);
+      }
+      timer = setTimeout(pollTrades, 3000);
+    };
+    pollTrades();
+    return () => clearTimeout(timer);
+  }, [formData.account_id]);
+
   // Sync live price when symbol or marketPrices change
   useEffect(() => {
     const symbolKey = formData.symbol?.toUpperCase();
@@ -123,16 +142,46 @@ export default function TerminalPage({ embedded = false }) {
     }
   };
 
-  const handleCloseAll = (type) => {
+  const handleCloseAll = async (type) => {
     if (!window.confirm(`ยืนยันการปิดออเดอร์ ${type} ทั้งหมด?`)) return;
-    setRecentOrders(prev => {
-      if (type === 'ALL') return [];
-      return prev.filter(o => o.side !== type);
-    });
+    
+    // Filter by side if not ALL
+    let ticketsToClose = recentOrders
+      .filter(o => type === 'ALL' || o.side === type)
+      .map(o => o.ticket);
+
+    if (ticketsToClose.length === 0) {
+      return alert('ไม่มีออเดอร์ให้ปิด');
+    }
+
+    setProcessing(true);
+    try {
+      await api.closeTrades(formData.account_id, ticketsToClose);
+      alert('คำสั่งปิดส่งสำเร็จ!');
+      // Optimistically remove from state or wait for poll
+      setRecentOrders(prev => prev.filter(o => !ticketsToClose.includes(o.ticket)));
+    } catch (err) {
+      alert(err || err.message || 'Error closing trades');
+    } finally {
+      setProcessing(false);
+    }
   };
 
-  const handleCloseOrder = (idxToClose) => {
-    setRecentOrders(prev => prev.filter((_, idx) => idx !== idxToClose));
+  const handleCloseOrder = async (idxToClose) => {
+    const order = recentOrders[idxToClose];
+    if (!order || !order.ticket) return alert('รหัสออเดอร์ไม่ถูกต้อง');
+    if (!window.confirm(`ยืนยันการปิดออเดอร์ ${order.ticket}?`)) return;
+
+    setProcessing(true);
+    try {
+      await api.closeTrades(formData.account_id, [order.ticket]);
+      alert('คำสั่งปิดสำเร็จ!');
+      setRecentOrders(prev => prev.filter((_, idx) => idx !== idxToClose));
+    } catch (err) {
+      alert(err || err.message || 'Error closing trade');
+    } finally {
+      setProcessing(false);
+    }
   };
 
   return (

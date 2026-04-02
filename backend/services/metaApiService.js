@@ -48,6 +48,61 @@ class MetaApiService {
       throw err;
     }
   }
+
+  async closePosition(accountId, token, positionId) {
+    let connection;
+    try {
+      const api = this.getApi(token);
+      const account = await api.metatraderAccountApi.getAccount(accountId);
+      
+      if (account.state !== 'DEPLOYED') {
+         await account.deploy();
+      }
+      
+      connection = account.getRPCConnection();
+      await connection.connect();
+      await connection.waitSynchronized();
+      
+      console.log(`🚀 [MetaAPI] Closing position ${positionId} on ${accountId}`);
+      const result = await connection.closePosition(positionId);
+      console.log(`✅ [MetaAPI] Closed position ${positionId} success!`);
+      return result;
+    } catch (err) {
+      console.error(`❌ [MetaAPI] Close Position Error for ${positionId}:`, err.message);
+      throw err;
+    } finally {
+      if (connection) {
+        try { await connection.close(); } catch(e) {}
+      }
+    }
+  }
+
+  async getLivePositions(accountId, token) {
+    let connection;
+    try {
+      const api = this.getApi(token);
+      const account = await api.metatraderAccountApi.getAccount(accountId);
+      
+      if (account.state !== 'DEPLOYED') {
+         await account.deploy();
+      }
+
+      connection = account.getRPCConnection();
+      await connection.connect();
+      await connection.waitSynchronized();
+
+      const positions = await connection.getPositions();
+      return positions;
+    } catch (err) {
+      console.error(`❌ [MetaAPI] getLivePositions Error:`, err.message);
+      throw err;
+    } finally {
+      if (connection) {
+        try { await connection.close(); } catch(e) {}
+      }
+    }
+  }
+
   async getAccountInfo(accountId, token) {
     let connection;
     try {

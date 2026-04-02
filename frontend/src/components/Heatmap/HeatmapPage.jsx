@@ -4,7 +4,7 @@ import { useAccounts } from '../../context/AccountContext';
 import AccountFilter from '../Dashboard/AccountFilter';
 import { Flame, TrendingUp, TrendingDown, BarChart3, Activity, AlertTriangle, Clock } from 'lucide-react';
 
-export default function HeatmapPage() {
+export default function HeatmapPage({ embedded = false }) {
   const { getFilterParams } = useAccounts();
   const [data, setData] = useState({ symbols: [], accounts: [], hourly: [] });
   const [loading, setLoading] = useState(true);
@@ -57,25 +57,43 @@ export default function HeatmapPage() {
   const maxHourlyTrades = hourly.length > 0 ? Math.max(...hourly.map(h => h.trade_count), 1) : 1;
 
   return (
-    <>
-      <div className="header">
-        <div className="header-left">
-          <h1 className="page-title"><Flame size={22} style={{ color: 'var(--accent-primary)', marginRight: 8, verticalAlign: 'middle' }} />Exposure Heatmap</h1>
-        </div>
-        <div className="header-right">
-          <AccountFilter />
-          <div className="filter-group" style={{ display: 'flex', border: '1px solid var(--border-secondary)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
-            {[7, 14, 30, 60].map(d => (
-              <button
-                key={d}
-                className={`filter-btn ${days === d ? 'active' : ''}`}
-                onClick={() => setDays(d)}
-                style={{ border: 'none', borderRadius: 0, padding: '4px 12px' }}
-              >{d}D</button>
-            ))}
+    <div style={embedded ? { padding: 0 } : {}}>
+      {!embedded ? (
+        <div className="header">
+          <div className="header-left">
+            <h1 className="page-title"><Flame size={22} style={{ color: 'var(--accent-primary)', marginRight: 8, verticalAlign: 'middle' }} />Exposure Heatmap</h1>
+          </div>
+          <div className="header-right">
+            <AccountFilter />
+            <div className="filter-group" style={{ display: 'flex', border: '1px solid var(--border-secondary)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
+              {[7, 14, 30, 60].map(d => (
+                <button
+                  key={d}
+                  className={`filter-btn ${days === d ? 'active' : ''}`}
+                  onClick={() => setDays(d)}
+                  style={{ border: 'none', borderRadius: 0, padding: '4px 12px' }}
+                >{d}D</button>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      ) : (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 'var(--space-md)' }}>
+          <div className="header-right">
+            <AccountFilter />
+            <div className="filter-group" style={{ display: 'flex', border: '1px solid var(--border-secondary)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
+              {[7, 14, 30, 60].map(d => (
+                <button
+                  key={d}
+                  className={`filter-btn ${days === d ? 'active' : ''}`}
+                  onClick={() => setDays(d)}
+                  style={{ border: 'none', borderRadius: 0, padding: '4px 12px' }}
+                >{d}D</button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="content-area">
         {loading ? (
@@ -282,6 +300,6 @@ export default function HeatmapPage() {
           </>
         )}
       </div>
-    </>
+    </div>
   );
 }

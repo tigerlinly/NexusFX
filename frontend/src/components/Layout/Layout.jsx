@@ -101,10 +101,6 @@ export default function Layout() {
             <BarChart3 size={18} className="nav-icon" />
             {showLabels && <span>รายงาน/วิเคราะห์</span>}
           </NavLink>
-          <NavLink to="/heatmap" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="Exposure Heatmap">
-            <Flame size={18} className="nav-icon" />
-            {showLabels && <span>Exposure Heatmap</span>}
-          </NavLink>
 
           <NavLink to="/store" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="Marketplace">
             <Store size={18} className="nav-icon" />

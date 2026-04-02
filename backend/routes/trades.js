@@ -492,4 +492,83 @@ router.post('/sync/:accountId', auditLog('SYNC_TRADES', 'ACCOUNT'), async (req, 
   }
 });
 
+// GET /api/trades/live/:accountId
+router.get('/live/:accountId', auditLog('VIEW_LIVE_TRADES', 'ACCOUNT'), async (req, res) => {
+  try {
+    const accountId = req.params.accountId;
+    
+    const accQuery = await pool.query(`
+      SELECT a.id, a.metaapi_account_id, us.metaapi_token
+      FROM accounts a
+      LEFT JOIN user_settings us ON us.user_id = a.user_id
+      WHERE a.id = $1 AND a.user_id = $2 AND a.is_active = true
+    `, [accountId, req.user.id]);
+
+    if (accQuery.rows.length === 0) return res.status(404).json({ error: 'Account not found' });
+    
+    const { metaapi_account_id, metaapi_token: rawToken } = accQuery.rows[0];
+    const token = decrypt(rawToken) || process.env.METAAPI_TOKEN;
+    if (!metaapi_account_id || !token) return res.status(400).json({ error: 'Missing MetaAPI configuration' });
+
+    const metaApiService = require('../services/metaApiService');
+    const positions = await metaApiService.getLivePositions(metaapi_account_id, token);
+    
+    const mapped = positions.map(pos => ({
+      ticket: pos.id,
+      symbol: pos.symbol,
+      side: pos.type === 'POSITION_TYPE_BUY' ? 'BUY' : 'SELL',
+      lot_size: pos.volume,
+      entry_price: pos.openPrice,
+      current_price: pos.currentPrice,
+      pnl: pos.profit,
+      status: 'OPEN',
+      opened_at: pos.time
+    }));
+
+    res.json(mapped);
+  } catch (err) {
+    console.error('Live trades error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/trades/close/:accountId
+router.post('/close/:accountId', auditLog('CLOSE_TRADE', 'ACCOUNT'), async (req, res) => {
+  try {
+    const accountId = req.params.accountId;
+    const { tickets } = req.body; // array of positionIds
+
+    const accQuery = await pool.query(`
+      SELECT a.id, a.metaapi_account_id, us.metaapi_token
+      FROM accounts a
+      LEFT JOIN user_settings us ON us.user_id = a.user_id
+      WHERE a.id = $1 AND a.user_id = $2 AND a.is_active = true
+    `, [accountId, req.user.id]);
+
+    if (accQuery.rows.length === 0) return res.status(404).json({ error: 'Account not found' });
+    
+    const { metaapi_account_id, metaapi_token: rawToken } = accQuery.rows[0];
+    const token = decrypt(rawToken) || process.env.METAAPI_TOKEN;
+    if (!metaapi_account_id || !token) return res.status(400).json({ error: 'Missing configuration' });
+
+    const metaApiService = require('../services/metaApiService');
+    const results = [];
+    
+    for (const ticket of tickets) {
+      if (!ticket) continue;
+      try {
+        const resObj = await metaApiService.closePosition(metaapi_account_id, token, ticket);
+        results.push({ ticket, success: true, result: resObj });
+      } catch (e) {
+        results.push({ ticket, success: false, error: e.message });
+      }
+    }
+
+    res.json({ success: true, results });
+  } catch (err) {
+    console.error('Close trades error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

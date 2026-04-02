@@ -72,7 +72,7 @@ function AppRoutes() {
         <Route path="strategies" element={<Navigate to="/store" replace />} />
         <Route path="groups" element={<GroupsPage />} />
         <Route path="reports" element={<ReportsPage />} />
-        <Route path="heatmap" element={<HeatmapPage />} />
+        <Route path="heatmap" element={<Navigate to="/reports" replace />} />
         <Route path="admin" element={<AdminPage />} />
         <Route path="admin/billing" element={<AdminBillingPage />} />
         <Route path="forums" element={<ForumsPage />} />

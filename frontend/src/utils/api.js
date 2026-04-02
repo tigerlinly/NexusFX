@@ -70,11 +70,13 @@ export const api = {
 
   // Trades
   getTrades: (params) => request(`/trades?${new URLSearchParams(params)}`),
+  getLiveTrades: (accountId) => request(`/trades/live/${accountId}`),
   getTradeStats: (params) => request(`/trades/stats?${new URLSearchParams(params)}`),
   getSymbols: () => request('/trades/symbols'),
   placeManualTrade: (body) => request('/trades', { method: 'POST', body: JSON.stringify(body) }),
   syncTrades: (accountId) => request(`/trades/sync/${accountId}`, { method: 'POST' }),
   syncAllTrades: () => request('/trades/sync-all', { method: 'POST' }),
+  closeTrades: (accountId, tickets) => request(`/trades/close/${accountId}`, { method: 'POST', body: JSON.stringify({ tickets }) }),
 
   // Bots
   getBots: () => request('/bots'),
@@ -202,7 +204,6 @@ export const api = {
   likeForumPost: (id) => request(`/forums/${id}/like`, { method: 'POST' }),
   getLeaderboard: () => request('/forums/leaderboard'),
 
-  // =============================================
   // Brokers (CRUD)
   // =============================================
   createBroker: (body) => request('/brokers', { method: 'POST', body: JSON.stringify(body) }),
