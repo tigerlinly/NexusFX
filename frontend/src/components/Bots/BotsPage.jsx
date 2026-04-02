@@ -523,7 +523,18 @@ export default function BotsPage({ embedded = false, isActive = true }) {
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal" style={{ width: 900, maxWidth: '95vw' }} onClick={e => e.stopPropagation()}>
-            <h2 className="modal-title">🤖 {isEditMode ? 'ตั้งค่า Trading Bot' : 'สร้าง Trading Bot ใหม่'}</h2>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+              <h2 className="modal-title" style={{ marginBottom: 0 }}>🤖 {isEditMode ? 'ตั้งค่า Trading Bot' : 'สร้าง Trading Bot ใหม่'}</h2>
+              <button 
+                type="button" 
+                className="btn btn-sm btn-secondary"
+                onClick={handleLoadStrategyDefaults}
+                style={{ padding: '4px 16px', whiteSpace: 'nowrap' }}
+                title="ดึงค่าตั้งต้นของกลยุทธ์"
+              >
+                ดึงค่าตั้งต้น
+              </button>
+            </div>
             <form onSubmit={handleSubmit} className="modal-body-scroll">
               
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 20 }}>
@@ -542,24 +553,13 @@ export default function BotsPage({ embedded = false, isActive = true }) {
                 </div>
                 <div className="form-group">
                   <label className="form-label">ประเภทกลยุทธ์พื้นฐาน</label>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <select className="filter-select" value={formData.strategy_type} onChange={e => setFormData({ ...formData, strategy_type: e.target.value })} style={{ flex: 1 }}>
-                      <option value="Scalper">Scalper (เก็บสั้น)</option>
-                      <option value="Swing">Swing Trade</option>
-                      <option value="Grid">Grid Trading</option>
-                      <option value="Martingale">Martingale</option>
-                      <option value="Custom">Custom (ปรับแต่งเอง)</option>
-                    </select>
-                    <button 
-                      type="button" 
-                      className="btn btn-sm btn-secondary"
-                      onClick={handleLoadStrategyDefaults}
-                      style={{ padding: '0 12px', whiteSpace: 'nowrap' }}
-                      title="ดึงค่าตั้งต้นของกลยุทธ์นี้"
-                    >
-                      ดึงค่าตั้งต้น
-                    </button>
-                  </div>
+                  <select className="filter-select" value={formData.strategy_type} onChange={e => setFormData({ ...formData, strategy_type: e.target.value })} style={{ width: '100%' }}>
+                    <option value="Scalper">Scalper (เก็บสั้น)</option>
+                    <option value="Swing">Swing Trade</option>
+                    <option value="Grid">Grid Trading</option>
+                    <option value="Martingale">Martingale</option>
+                    <option value="Custom">Custom (ปรับแต่งเอง)</option>
+                  </select>
                 </div>
                 <div className="form-group">
                   <label className="form-label">Timeframe หลัก (ในการเข้าไม้)</label>
