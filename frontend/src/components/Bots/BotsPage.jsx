@@ -612,20 +612,36 @@ export default function BotsPage({ embedded = false, isActive = true }) {
               </div>
 
               <div className="form-group" style={{ marginBottom: 24 }}>
-                <label className="form-label">ต้องวิเคราะห์จากกราฟใดบ้าง (Analysis Timeframes)</label>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {timeframes.map(tf => (
-                    <button 
-                      key={tf} type="button" 
-                      className={`tag-toggle ${formData.analysis_timeframes.includes(tf) ? 'active' : ''}`}
-                      onClick={() => handleToggleAnalysisTF(tf)}
-                    >
-                      {tf}
-                    </button>
-                  ))}
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 12 }}>
+                  <label className="form-label" style={{ margin: 0 }}>ต้องวิเคราะห์จากกราฟใดบ้าง (Analysis Timeframes)</label>
+                  <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                    เลือก Timeframe ให้อัลกอริทึมวิเคราะห์เทรนด์และสัญญาณประกอบการตัดสินใจ
+                  </span>
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4 }}>
-                  เลือก Timeframe ให้อัลกอริทึมวิเคราะห์เทรนด์และสัญญาณประกอบการตัดสินใจ
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {timeframes.slice(0, 11).map(tf => (
+                      <button 
+                        key={tf} type="button" 
+                        className={`tag-toggle ${formData.analysis_timeframes.includes(tf) ? 'active' : ''}`}
+                        onClick={() => handleToggleAnalysisTF(tf)}
+                      >
+                        {tf}
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {timeframes.slice(11).map(tf => (
+                      <button 
+                        key={tf} type="button" 
+                        className={`tag-toggle ${formData.analysis_timeframes.includes(tf) ? 'active' : ''}`}
+                        onClick={() => handleToggleAnalysisTF(tf)}
+                      >
+                        {tf}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
