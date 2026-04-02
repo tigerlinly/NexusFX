@@ -314,10 +314,28 @@ export default function TerminalPage({ embedded = false }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xl)' }}>
           {/* Action Panel */}
           <div className="chart-card">
-            <h3 className="chart-title" style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-              <Activity size={18} style={{ color: 'var(--accent-primary)' }} />
-              ส่งคำสั่งซื้อขาย
-            </h3>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <h3 className="chart-title" style={{ display: 'flex', alignItems: 'center', gap: 8, margin: 0 }}>
+                <Activity size={18} style={{ color: 'var(--accent-primary)' }} />
+                ส่งคำสั่งซื้อขาย
+              </h3>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button 
+                  className="btn" 
+                  style={{ width: 100, height: 42, background: 'var(--loss)', color: '#fff', border: 'none', fontWeight: 600, fontSize: 13, padding: '0 8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  onClick={() => handleTrade('SELL')} disabled={processing}
+                >
+                  <TrendingDown size={14} style={{ marginRight: 4 }} /> SELL
+                </button>
+                <button 
+                  className="btn" 
+                  style={{ width: 100, height: 42, background: 'var(--profit)', color: '#000', border: 'none', fontWeight: 600, fontSize: 13, padding: '0 8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  onClick={() => handleTrade('BUY')} disabled={processing}
+                >
+                  <TrendingUp size={14} style={{ marginRight: 4 }} /> BUY
+                </button>
+              </div>
+            </div>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'flex-end' }}>
               <div className="form-group" style={{ flex: '1 1 200px' }}>
@@ -386,23 +404,6 @@ export default function TerminalPage({ embedded = false }) {
                   onChange={e => setFormData({ ...formData, lot_size: parseFloat(e.target.value) || 0 })}
                   required
                 />
-              </div>
-
-              <div style={{ display: 'flex', gap: 8, flex: '1 1 200px' }}>
-                <button 
-                  className="btn" 
-                  style={{ flex: 1, height: 42, background: 'var(--loss)', color: '#fff', border: 'none', fontWeight: 600, fontSize: 13, padding: '0 8px' }}
-                  onClick={() => handleTrade('SELL')} disabled={processing}
-                >
-                  <TrendingDown size={14} style={{ marginRight: 4 }} /> SELL
-                </button>
-                <button 
-                  className="btn" 
-                  style={{ flex: 1, height: 42, background: 'var(--profit)', color: '#000', border: 'none', fontWeight: 600, fontSize: 13, padding: '0 8px' }}
-                  onClick={() => handleTrade('BUY')} disabled={processing}
-                >
-                  <TrendingUp size={14} style={{ marginRight: 4 }} /> BUY
-                </button>
               </div>
 
               <div className="form-group" style={{ flex: '1 1 120px' }}>
