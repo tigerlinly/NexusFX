@@ -378,6 +378,33 @@ export default function TerminalPage({ embedded = false }) {
                 </select>
               </div>
 
+              <div className="form-group" style={{ flex: '0 1 80px' }}>
+                <label className="form-label" style={{ marginBottom: 6 }}>Lot Size</label>
+                <input 
+                  type="number" step="0.01" min="0.01"
+                  className="form-input" value={formData.lot_size}
+                  onChange={e => setFormData({ ...formData, lot_size: parseFloat(e.target.value) || 0 })}
+                  required
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: 8, flex: '1 1 200px' }}>
+                <button 
+                  className="btn" 
+                  style={{ flex: 1, height: 42, background: 'var(--loss)', color: '#fff', border: 'none', fontWeight: 600, fontSize: 13, padding: '0 8px' }}
+                  onClick={() => handleTrade('SELL')} disabled={processing}
+                >
+                  <TrendingDown size={14} style={{ marginRight: 4 }} /> SELL
+                </button>
+                <button 
+                  className="btn" 
+                  style={{ flex: 1, height: 42, background: 'var(--profit)', color: '#000', border: 'none', fontWeight: 600, fontSize: 13, padding: '0 8px' }}
+                  onClick={() => handleTrade('BUY')} disabled={processing}
+                >
+                  <TrendingUp size={14} style={{ marginRight: 4 }} /> BUY
+                </button>
+              </div>
+
               <div className="form-group" style={{ flex: '1 1 120px' }}>
                 <label className="form-label" style={{ marginBottom: 6 }}>ประเภท</label>
                 <select 
@@ -404,16 +431,6 @@ export default function TerminalPage({ embedded = false }) {
                 )}
               </div>
 
-              <div className="form-group" style={{ flex: '0 1 80px' }}>
-                <label className="form-label" style={{ marginBottom: 6 }}>Lot Size</label>
-                <input 
-                  type="number" step="0.01" min="0.01"
-                  className="form-input" value={formData.lot_size}
-                  onChange={e => setFormData({ ...formData, lot_size: parseFloat(e.target.value) || 0 })}
-                  required
-                />
-              </div>
-
               <div className="form-group" style={{ flex: '1 1 100px' }}>
                 <label className="form-label" style={{ marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
                   <ShieldAlert size={12} style={{ color: 'var(--loss)' }} /> SL
@@ -434,23 +451,6 @@ export default function TerminalPage({ embedded = false }) {
                   className="form-input" placeholder="ราคา TP"
                   value={formData.tp} onChange={e => setFormData({ ...formData, tp: e.target.value })}
                 />
-              </div>
-
-              <div style={{ display: 'flex', gap: 8, flex: '1 1 200px' }}>
-                <button 
-                  className="btn" 
-                  style={{ flex: 1, height: 42, background: 'var(--loss)', color: '#fff', border: 'none', fontWeight: 600, fontSize: 13, padding: '0 8px' }}
-                  onClick={() => handleTrade('SELL')} disabled={processing}
-                >
-                  <TrendingDown size={14} style={{ marginRight: 4 }} /> SELL
-                </button>
-                <button 
-                  className="btn" 
-                  style={{ flex: 1, height: 42, background: 'var(--profit)', color: '#000', border: 'none', fontWeight: 600, fontSize: 13, padding: '0 8px' }}
-                  onClick={() => handleTrade('BUY')} disabled={processing}
-                >
-                  <TrendingUp size={14} style={{ marginRight: 4 }} /> BUY
-                </button>
               </div>
             </div>
             {processing && <div style={{ textAlign: 'center', marginTop: 12, fontSize: 12, color: 'var(--text-tertiary)' }}>กำลังส่งคำสั่งเข้าสู่ตลาด...</div>}
