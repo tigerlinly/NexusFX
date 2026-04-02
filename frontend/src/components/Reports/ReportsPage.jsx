@@ -5,6 +5,7 @@ import {
   TrendingUp, TrendingDown, Target, Award, AlertTriangle, Brain, Flame
 } from 'lucide-react';
 import HeatmapPage from '../Heatmap/HeatmapPage';
+import AccountFilter from '../Dashboard/AccountFilter';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart as RPieChart, Pie, Cell, RadarChart,
@@ -17,6 +18,7 @@ const DAY_NAMES = ['อาทิตย์', 'จันทร์', 'อังค�
 export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState('heatmap');
   const [period, setPeriod] = useState('30');
+  const [heatmapDays, setHeatmapDays] = useState(30);
   const [analytics, setAnalytics] = useState(null);
   const [weeklyData, setWeeklyData] = useState([]);
   const [monthlyData, setMonthlyData] = useState([]);
@@ -130,27 +132,44 @@ export default function ReportsPage() {
       <div className="content-area">
         {/* Tab navigation */}
         <div className="chart-card" style={{ padding: 0, overflow: 'hidden', marginBottom: 'var(--space-lg)' }}>
-          <div style={{ display: 'flex', borderBottom: '1px solid var(--border-primary)', background: 'rgba(0,0,0,0.1)' }}>
-            {tabs.map(tab => {
-              const Icon = tab.icon;
-              return (
-                <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
-                  display: 'flex', alignItems: 'center', gap: 8, padding: '14px 20px',
-                  background: 'transparent', border: 'none',
-                  color: activeTab === tab.id ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                  borderBottom: activeTab === tab.id ? '2px solid var(--accent-primary)' : '2px solid transparent',
-                  cursor: 'pointer', fontWeight: activeTab === tab.id ? 600 : 500, fontSize: 14, marginBottom: -1
-                }}>
-                  <Icon size={16} />{tab.label}
-                </button>
-              );
-            })}
+          <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-primary)', background: 'rgba(0,0,0,0.1)' }}>
+            <div style={{ display: 'flex' }}>
+              {tabs.map(tab => {
+                const Icon = tab.icon;
+                return (
+                  <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
+                    display: 'flex', alignItems: 'center', gap: 8, padding: '14px 20px',
+                    background: 'transparent', border: 'none',
+                    color: activeTab === tab.id ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                    borderBottom: activeTab === tab.id ? '2px solid var(--accent-primary)' : '2px solid transparent',
+                    cursor: 'pointer', fontWeight: activeTab === tab.id ? 600 : 500, fontSize: 14, marginBottom: -1
+                  }}>
+                    <Icon size={16} />{tab.label}
+                  </button>
+                );
+              })}
+            </div>
+            {activeTab === 'heatmap' && (
+              <div style={{ display: 'flex', alignItems: 'center', paddingRight: 16, gap: 12 }}>
+                <AccountFilter />
+                <div className="filter-group">
+                  {[7, 14, 30, 60].map(d => (
+                    <button
+                      key={d}
+                      className={`filter-btn ${heatmapDays === d ? 'active' : ''}`}
+                      onClick={() => setHeatmapDays(d)}>
+                      {d}D
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div style={{ padding: 'var(--space-xl)' }}>
             {/* Heatmap Tab */}
             {activeTab === 'heatmap' && (
-              <HeatmapPage embedded={true} />
+              <HeatmapPage embedded={true} externalDays={heatmapDays} />
             )}
 
             {/* Analytics Tab */}

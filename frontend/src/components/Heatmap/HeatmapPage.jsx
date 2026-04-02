@@ -4,11 +4,13 @@ import { useAccounts } from '../../context/AccountContext';
 import AccountFilter from '../Dashboard/AccountFilter';
 import { Flame, TrendingUp, TrendingDown, BarChart3, Activity, AlertTriangle, Clock } from 'lucide-react';
 
-export default function HeatmapPage({ embedded = false }) {
+export default function HeatmapPage({ embedded = false, externalDays = null }) {
   const { getFilterParams } = useAccounts();
   const [data, setData] = useState({ symbols: [], accounts: [], hourly: [] });
   const [loading, setLoading] = useState(true);
-  const [days, setDays] = useState(30);
+  const [localDays, setLocalDays] = useState(30);
+
+  const days = embedded && externalDays ? externalDays : localDays;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -58,7 +60,7 @@ export default function HeatmapPage({ embedded = false }) {
 
   return (
     <div style={embedded ? { padding: 0 } : {}}>
-      {!embedded ? (
+      {!embedded && (
         <div className="header">
           <div className="header-left">
             <h1 className="page-title"><Flame size={22} style={{ color: 'var(--accent-primary)', marginRight: 8, verticalAlign: 'middle' }} />Exposure Heatmap</h1>
@@ -69,24 +71,8 @@ export default function HeatmapPage({ embedded = false }) {
               {[7, 14, 30, 60].map(d => (
                 <button
                   key={d}
-                  className={`filter-btn ${days === d ? 'active' : ''}`}
-                  onClick={() => setDays(d)}
-                  style={{ border: 'none', borderRadius: 0, padding: '4px 12px' }}
-                >{d}D</button>
-              ))}
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 'var(--space-md)' }}>
-          <div className="header-right">
-            <AccountFilter />
-            <div className="filter-group" style={{ display: 'flex', border: '1px solid var(--border-secondary)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
-              {[7, 14, 30, 60].map(d => (
-                <button
-                  key={d}
-                  className={`filter-btn ${days === d ? 'active' : ''}`}
-                  onClick={() => setDays(d)}
+                  className={`filter-btn ${localDays === d ? 'active' : ''}`}
+                  onClick={() => setLocalDays(d)}
                   style={{ border: 'none', borderRadius: 0, padding: '4px 12px' }}
                 >{d}D</button>
               ))}
