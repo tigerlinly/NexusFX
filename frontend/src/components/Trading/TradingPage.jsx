@@ -34,43 +34,28 @@ export default function TradingPage() {
 
       <div className="content-area">
         {/* Tab Navigation */}
-        <div style={{
-          display: 'flex',
-          gap: 4,
-          marginBottom: 'var(--space-lg)',
-          background: 'var(--bg-secondary)',
-          padding: 4,
-          borderRadius: 'var(--radius-md)',
-          border: '1px solid var(--border-primary)',
-          width: 'fit-content',
-        }}>
-          {TABS.map(tab => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  padding: '8px 16px',
-                  borderRadius: 'var(--radius-sm)',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: 13,
-                  fontWeight: isActive ? 600 : 400,
-                  background: isActive ? 'var(--accent-primary)' : 'transparent',
-                  color: isActive ? '#0a0e17' : 'var(--text-secondary)',
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                <Icon size={15} />
-                {tab.label}
-              </button>
-            );
-          })}
+        <div className="chart-card" style={{ padding: 0, overflow: 'hidden', marginBottom: 'var(--space-lg)' }}>
+          <div style={{ display: 'flex', borderBottom: '1px solid var(--border-primary)', background: 'rgba(0,0,0,0.1)', overflowX: 'auto' }}>
+            {TABS.map(tab => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8, padding: '14px 20px',
+                    background: 'transparent', border: 'none',
+                    color: activeTab === tab.id ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                    borderBottom: activeTab === tab.id ? '2px solid var(--accent-primary)' : '2px solid transparent',
+                    cursor: 'pointer', fontWeight: activeTab === tab.id ? 600 : 500, fontSize: 14, marginBottom: -1,
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  <Icon size={16} />{tab.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Tab Content - render both but hide inactive for state preservation */}
