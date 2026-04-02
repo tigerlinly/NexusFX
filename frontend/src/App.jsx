@@ -66,7 +66,7 @@ function AppRoutes() {
         <Route path="wallet" element={<WalletPage />} />
         <Route path="billing" element={<BillingPage />} />
         <Route path="store" element={<StorePage />} />
-        <Route path="strategies" element={<StrategiesPage />} />
+        <Route path="strategies" element={<Navigate to="/store" replace />} />
         <Route path="groups" element={<GroupsPage />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="heatmap" element={<HeatmapPage />} />

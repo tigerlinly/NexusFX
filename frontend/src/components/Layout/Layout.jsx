@@ -116,14 +116,9 @@ export default function Layout() {
             {showLabels && <span>Trading Bots</span>}
           </NavLink>
 
-          <NavLink to="/store" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="สโตร์กลยุทธ์">
+          <NavLink to="/store" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="Marketplace">
             <Store size={18} className="nav-icon" />
-            {showLabels && <span>สโตร์กลยุทธ์</span>}
-          </NavLink>
-
-          <NavLink to="/strategies" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="ตลาด Copy Trading">
-            <Copy size={18} className="nav-icon" />
-            {showLabels && <span>Copy Trading</span>}
+            {showLabels && <span>Marketplace</span>}
           </NavLink>
 
           {showLabels && <div className="sidebar-section-title">สังคมการเทรด (Community)</div>}

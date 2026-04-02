@@ -274,31 +274,31 @@ export default function DashboardPage() {
             </div>
           );
           return (
-            <div style={{ marginBottom: 'var(--space-lg)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${targetStatus.length}, 1fr)`, gap: 12, marginBottom: 'var(--space-lg)' }}>
               {targetStatus.map(t => (
-                <div key={t.id} className={`target-widget ${t.reached ? 'reached' : ''}`}>
-                  <div className="flex items-center justify-between" style={{ marginBottom: 'var(--space-md)' }}>
+                <div key={t.id} className={`target-widget ${t.reached ? 'reached' : ''}`} style={{ padding: '10px 14px' }}>
+                  <div className="flex items-center justify-between" style={{ marginBottom: 6 }}>
                     <div className="flex items-center gap-sm">
-                      <Target size={18} style={{ color: t.reached ? 'var(--profit)' : 'var(--accent-primary)' }} />
-                      <span style={{ fontSize: 13, fontWeight: 600 }}>
-                        เป้ากำไรวันนี้ {t.account_name ? `(${t.account_name})` : '(รวมทั้งหมด)'} <span style={{ color: 'var(--text-tertiary)', fontWeight: 'normal', marginLeft: 6 }}>{t.progress.toFixed(1)}%</span>
-                      </span>
-                    </div>
-                    <div className="flex items-baseline" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                      <span className="target-pnl" style={{ color: t.current_pnl >= 0 ? 'var(--profit)' : 'var(--loss)', fontSize: 24, fontWeight: 700 }}>
-                        {formatCurrency(t.current_pnl)}
-                      </span>
-                      <span style={{ color: 'var(--text-tertiary)', fontSize: 24, margin: '0 8px', fontWeight: 700 }}>/</span>
-                      <span className="target-amount" style={{ color: 'var(--text-secondary)', fontSize: 24, fontWeight: 700 }}>
-                        ${parseFloat(t.target_amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      <Target size={14} style={{ color: t.reached ? 'var(--profit)' : 'var(--accent-primary)' }} />
+                      <span style={{ fontSize: 11, fontWeight: 600 }}>
+                        เป้ากำไรวันนี้ {t.account_name ? `(${t.account_name})` : ''} <span style={{ color: 'var(--text-tertiary)', fontWeight: 'normal', marginLeft: 4 }}>{t.progress.toFixed(1)}%</span>
                       </span>
                     </div>
                   </div>
-                  <div className="progress-bar">
+                  <div className="flex items-baseline justify-end" style={{ fontFamily: "'JetBrains Mono', monospace", marginBottom: 6 }}>
+                    <span style={{ color: t.current_pnl >= 0 ? 'var(--profit)' : 'var(--loss)', fontSize: 16, fontWeight: 700 }}>
+                      {formatCurrency(t.current_pnl)}
+                    </span>
+                    <span style={{ color: 'var(--text-tertiary)', fontSize: 14, margin: '0 4px', fontWeight: 600 }}>/</span>
+                    <span style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 600 }}>
+                      ${parseFloat(t.target_amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <div className="progress-bar" style={{ height: 4 }}>
                     <div className={`progress-fill ${t.reached ? 'reached' : ''}`} style={{ width: `${Math.min(100, Math.max(0, t.progress))}%` }} />
                   </div>
                   {t.reached && (
-                    <div className="flex justify-end mt-md" style={{ fontSize: 11 }}>
+                    <div style={{ textAlign: 'right', fontSize: 10, marginTop: 4 }}>
                       <span style={{ color: 'var(--profit)', fontWeight: 600 }}>🎯 ถึงเป้าแล้ว!</span>
                     </div>
                   )}

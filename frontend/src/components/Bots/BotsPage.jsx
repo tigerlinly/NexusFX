@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../../utils/api';
-import { Bot, Play, Square, Settings, Activity, Plus, Trash2, Cpu } from 'lucide-react';
+import { Bot, Play, Square, Settings, Activity, Plus, Trash2, Cpu, ShoppingCart } from 'lucide-react';
 import { io } from 'socket.io-client';
 import { useAuth } from '../../context/AuthContext';
 
@@ -285,7 +285,10 @@ export default function BotsPage() {
         <div className="header-left">
           <h1 className="page-title">เครื่องมือเทรดอัตโนมัติ (Bots)</h1>
         </div>
-        <div className="header-right">
+        <div className="header-right" style={{ display: 'flex', gap: 8 }}>
+          <button className="btn btn-secondary btn-sm" onClick={() => window.location.href = '/store'} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <ShoppingCart size={14} /> เพิ่มจาก Store
+          </button>
           <button className="btn btn-primary btn-sm" onClick={openCreateModal}>
             <Plus size={14} /> สร้าง Bot
           </button>
