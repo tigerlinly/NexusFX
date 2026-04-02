@@ -33,7 +33,7 @@ export default function BotsPage({ embedded = false, isActive = true }) {
   const [editingBotId, setEditingBotId] = useState(null);
 
   const availableIndicators = ['RSI', 'MACD', 'EMA', 'BollingerBands', 'Engulfing', 'PinBar'];
-  const timeframes = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M10', 'M12', 'M15', 'M20', 'M30', 'H1', 'H2', 'H3', 'H4', 'H6', 'H8', 'H12', 'D1', 'W1', 'WN'];
+  const timeframes = ['M1', 'M2', 'M5', 'M10', 'M12', 'M15', 'M20', 'M30', 'H1', 'H2', 'H3', 'H4', 'H6', 'H8', 'H12', 'D1', 'W1', 'WN'];
 
   const fetchData = async () => {
     try {
