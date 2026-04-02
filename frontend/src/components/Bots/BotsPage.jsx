@@ -608,29 +608,35 @@ export default function BotsPage({ embedded = false, isActive = true }) {
                        }
                      };
 
+                     const renderGroup = (group) => (
+                              <div key={group.label} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                <div style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 500, minWidth: 60, flexShrink: 0 }}>{group.label}</div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                                  {group.symbols.map(sym => {
+                                    const disabled = brokerSupported && !brokerSupported.includes(sym);
+                                    return (
+                                      <label key={sym} className="checkbox-label" style={{ marginBottom: 0, padding: '4px 8px', background: disabled ? 'rgba(255,255,255,0.02)' : 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', opacity: disabled ? 0.3 : 1, cursor: disabled ? 'not-allowed' : 'pointer', flexShrink: 0 }}>
+                                        <input 
+                                          type="checkbox" 
+                                          checked={!disabled && (formData.symbols || []).includes(sym)}
+                                          onChange={() => { if (!disabled) handleSymbolToggle(sym); }}
+                                          disabled={disabled}
+                                        />
+                                        {sym}
+                                      </label>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                     );
+
                      return (
                         <div style={{ maxHeight: 220, overflowY: 'auto', border: '1px solid var(--border-primary)', borderRadius: 'var(--radius-md)', padding: 12, background: 'var(--bg-tertiary)', display: 'flex', flexDirection: 'column', gap: 12 }}>
-                          {SYMBOL_GROUPS.map(group => (
-                            <div key={group.label} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                              <div style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 500, minWidth: 60, flexShrink: 0 }}>{group.label}</div>
-                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, flex: 1 }}>
-                                {group.symbols.map(sym => {
-                                  const disabled = brokerSupported && !brokerSupported.includes(sym);
-                                  return (
-                                    <label key={sym} className="checkbox-label" style={{ marginBottom: 0, padding: '4px 8px', background: disabled ? 'rgba(255,255,255,0.02)' : 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', opacity: disabled ? 0.3 : 1, cursor: disabled ? 'not-allowed' : 'pointer' }}>
-                                      <input 
-                                        type="checkbox" 
-                                        checked={!disabled && (formData.symbols || []).includes(sym)}
-                                        onChange={() => { if (!disabled) handleSymbolToggle(sym); }}
-                                        disabled={disabled}
-                                      />
-                                      {sym}
-                                    </label>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          ))}
+                          {renderGroup(SYMBOL_GROUPS[0])}
+                          {renderGroup(SYMBOL_GROUPS[1])}
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px 24px' }}>
+                            {SYMBOL_GROUPS.slice(2).map(group => renderGroup(group))}
+                          </div>
                         </div>
                      )
                   })()}
