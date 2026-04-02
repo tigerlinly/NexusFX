@@ -672,28 +672,25 @@ export default function BotsPage({ embedded = false, isActive = true }) {
               </div>
 
               <div className="form-group" style={{ marginBottom: 16, borderTop: '1px solid var(--border-primary)', paddingTop: 16 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                  <label className="form-label" style={{ margin: 0 }}>ตั้งค่า Indicators (กำหนดน้ำหนักคะแนนรวม = 100%)</label>
-                  <button type="button" className="btn btn-sm btn-ghost" onClick={handleAddIndicator}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 24, flex: 1 }}>
+                    <label className="form-label" style={{ margin: 0 }}>ตั้งค่า Indicators (กำหนดน้ำหนักคะแนนรวม = 100%)</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, maxWidth: 300 }} title="คะแนนที่คำนวณจาก Indicators ต้องถึงเป้าหมายจึงจะเปิดออเดอร์">
+                      <span style={{ fontSize: 13, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                        Min Confidence: <span style={{ color: 'var(--profit)', fontWeight: 600 }}>{formData.min_confidence}%</span>
+                      </span>
+                      <input 
+                        type="range" 
+                        min="0" max="100" step="1"
+                        style={{ flex: 1, accentColor: 'var(--profit)' }}
+                        value={formData.min_confidence}
+                        onChange={e => setFormData({ ...formData, min_confidence: parseInt(e.target.value) })}
+                      />
+                    </div>
+                  </div>
+                  <button type="button" className="btn btn-sm btn-ghost" style={{ whiteSpace: 'nowrap' }} onClick={handleAddIndicator}>
                     <Plus size={14} /> เพิ่ม Indicator
                   </button>
-                </div>
-
-                <div style={{ marginBottom: 20, background: 'rgba(255,255,255,0.02)', padding: '12px 16px', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <span>ความเชื่อมั่นขั้นต่ำในการออกไม้ (Min Confidence)</span>
-                    <span style={{ color: 'var(--profit)', fontWeight: 600 }}>{formData.min_confidence}%</span>
-                  </label>
-                  <input 
-                    type="range" 
-                    min="0" max="100" step="1"
-                    style={{ width: '100%', accentColor: 'var(--profit)' }}
-                    value={formData.min_confidence}
-                    onChange={e => setFormData({ ...formData, min_confidence: parseInt(e.target.value) })}
-                  />
-                  <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 6 }}>
-                    คะแนนที่คำนวณจาก Indicators ต้องถึงเป้าหมายจึงจะเปิดออเดอร์
-                  </div>
                 </div>
 
                 {formData.indicators_config.length === 0 && (
