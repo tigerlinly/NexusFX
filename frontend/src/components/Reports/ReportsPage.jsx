@@ -108,6 +108,17 @@ export default function ReportsPage() {
           <h1 className="page-title">รายงานและวิเคราะห์</h1>
         </div>
         <div className="header-right" style={{ gap: 8 }}>
+          {(activeTab === 'analytics' || activeTab === 'psychology') && (
+            <div style={{ display: 'flex', gap: 8, marginRight: 8 }}>
+              {['7', '14', '30', '60', '90'].map(p => (
+                <button key={p} className={`filter-btn ${period === p ? 'active' : ''}`}
+                  onClick={() => setPeriod(p)}
+                  style={{ padding: '6px 16px', fontSize: 13, borderRadius: 6, border: '1px solid var(--border-primary)' }}>
+                  {p} วัน
+                </button>
+              ))}
+            </div>
+          )}
           <button className="btn btn-primary btn-sm" onClick={() => handleExport('TRADES')} disabled={exporting}>
             <Download size={14} /> {exporting ? 'กำลังส่งออก...' : 'Export เทรด'}
           </button>
@@ -146,17 +157,6 @@ export default function ReportsPage() {
             {/* Analytics Tab */}
             {activeTab === 'analytics' && analytics && (
               <div>
-                {/* Period Selector */}
-                <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
-                  {['7', '14', '30', '60', '90'].map(p => (
-                    <button key={p} className={`filter-btn ${period === p ? 'active' : ''}`}
-                      onClick={() => setPeriod(p)}
-                      style={{ padding: '6px 16px', fontSize: 13, borderRadius: 6, border: '1px solid var(--border-primary)' }}>
-                      {p} วัน
-                    </button>
-                  ))}
-                </div>
-
                 {/* Risk Metrics */}
                 <div className="stat-grid" style={{ marginBottom: 24 }}>
                   <div className="card" style={{ background: 'var(--bg-tertiary)' }}>
@@ -381,16 +381,6 @@ export default function ReportsPage() {
             {/* Psychology Tab */}
             {activeTab === 'psychology' && psychologyData && (
               <div>
-                <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
-                  {['7', '14', '30', '60', '90'].map(p => (
-                    <button key={p} className={`filter-btn ${period === p ? 'active' : ''}`}
-                      onClick={() => setPeriod(p)}
-                      style={{ padding: '6px 16px', fontSize: 13, borderRadius: 6, border: '1px solid var(--border-primary)' }}>
-                      {p} วัน
-                    </button>
-                  ))}
-                </div>
-
                 <div className="stat-grid" style={{ marginBottom: 24, gridTemplateColumns: '1fr 3fr' }}>
                   <div className="card" style={{ background: 'var(--bg-tertiary)', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                     <div style={{ fontSize: 14, color: 'var(--text-tertiary)', marginBottom: 8 }}>คะแนนวินัยการเทรด</div>
