@@ -606,9 +606,9 @@ export default function BotsPage({ embedded = false, isActive = true }) {
                      return (
                         <div style={{ maxHeight: 220, overflowY: 'auto', border: '1px solid var(--border-primary)', borderRadius: 'var(--radius-md)', padding: 12, background: 'var(--bg-tertiary)', display: 'flex', flexDirection: 'column', gap: 12 }}>
                           {SYMBOL_GROUPS.map(group => (
-                            <div key={group.label}>
-                              <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 6, fontWeight: 500 }}>{group.label}</div>
-                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                            <div key={group.label} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                              <div style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 500, minWidth: 60, flexShrink: 0 }}>{group.label}</div>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, flex: 1 }}>
                                 {group.symbols.map(sym => {
                                   const disabled = brokerSupported && !brokerSupported.includes(sym);
                                   return (
