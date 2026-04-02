@@ -123,6 +123,18 @@ export default function TerminalPage({ embedded = false }) {
     }
   };
 
+  const handleCloseAll = (type) => {
+    if (!window.confirm(`ยืนยันการปิดออเดอร์ ${type} ทั้งหมด?`)) return;
+    setRecentOrders(prev => {
+      if (type === 'ALL') return [];
+      return prev.filter(o => o.side !== type);
+    });
+  };
+
+  const handleCloseOrder = (idxToClose) => {
+    setRecentOrders(prev => prev.filter((_, idx) => idx !== idxToClose));
+  };
+
   return (
     <>
       {!embedded && (
@@ -300,10 +312,19 @@ export default function TerminalPage({ embedded = false }) {
           {/* Activity / Visualization Panel */}
           <div>
             <div className="chart-card" style={{ height: '100%' }}>
-              <h3 className="chart-title" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Crosshair size={18} style={{ color: 'var(--accent-secondary)' }} />
-                ออเดอร์ล่าสุด (Session Orders)
-              </h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <h3 className="chart-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Crosshair size={18} style={{ color: 'var(--accent-secondary)' }} />
+                  ออเดอร์ล่าสุด (Session Orders)
+                </h3>
+                {recentOrders.length > 0 && (
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button className="btn btn-sm" style={{ background: 'rgba(56, 189, 248, 0.1)', color: 'var(--profit)', border: 'none', padding: '4px 12px', fontSize: 12 }} onClick={() => handleCloseAll('BUY')}>Close All Buy</button>
+                    <button className="btn btn-sm" style={{ background: 'rgba(239, 68, 68, 0.1)', color: 'var(--loss)', border: 'none', padding: '4px 12px', fontSize: 12 }} onClick={() => handleCloseAll('SELL')}>Close All Sell</button>
+                    <button className="btn btn-sm" style={{ background: 'rgba(234, 179, 8, 0.1)', color: 'var(--warning)', border: 'none', padding: '4px 12px', fontSize: 12 }} onClick={() => handleCloseAll('ALL')}>Close All</button>
+                  </div>
+                )}
+              </div>
               
               {recentOrders.length === 0 ? (
                 <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)' }}>
@@ -317,26 +338,38 @@ export default function TerminalPage({ embedded = false }) {
                         <th>สัญลักษณ์</th>
                         <th>ประเภท</th>
                         <th>ขนาด (Lot)</th>
+                        <th>กำไร/ขาดทุน</th>
                         <th>สถานะ</th>
                         <th>เวลาส่งคำสั่ง</th>
+                        <th style={{ textAlign: 'right' }}>จัดการ</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {recentOrders.map((order, idx) => (
-                        <tr key={order.id || idx}>
-                          <td style={{ fontWeight: 600 }}>{order.symbol}</td>
-                          <td>
-                            <span className={`badge ${order.side === 'BUY' ? 'badge-buy' : 'badge-sell'}`}>
-                              {order.side}
-                            </span>
-                          </td>
-                          <td>{order.lot_size}</td>
-                          <td>
-                            <span className="badge badge-open">{order.status}</span>
-                          </td>
-                          <td style={{ color: 'var(--text-tertiary)' }}>เพิ่งส่ง</td>
-                        </tr>
-                      ))}
+                      {recentOrders.map((order, idx) => {
+                        const pnl = order.pnl || 0;
+                        const isProfit = pnl >= 0;
+                        return (
+                          <tr key={order.id || idx}>
+                            <td style={{ fontWeight: 600 }}>{order.symbol}</td>
+                            <td>
+                              <span className={`badge ${order.side === 'BUY' ? 'badge-buy' : 'badge-sell'}`}>
+                                {order.side}
+                              </span>
+                            </td>
+                            <td>{order.lot_size}</td>
+                            <td style={{ color: isProfit ? 'var(--profit)' : 'var(--loss)', fontWeight: 600 }}>
+                              {isProfit ? '+' : ''}{pnl.toFixed(2)}
+                            </td>
+                            <td>
+                              <span className="badge badge-open">{order.status}</span>
+                            </td>
+                            <td style={{ color: 'var(--text-tertiary)' }}>เพิ่งส่ง</td>
+                            <td style={{ textAlign: 'right' }}>
+                              <button className="btn btn-sm" style={{ background: 'transparent', color: 'var(--loss)', border: '1px solid var(--loss)', padding: '2px 8px', fontSize: 11 }} onClick={() => handleCloseOrder(idx)}>Close</button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
