@@ -698,7 +698,7 @@ export default function BotsPage({ embedded = false, isActive = true }) {
                 )}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
                   {formData.indicators_config.map((ind, idx) => (
-                    <div key={idx} style={{ display: 'flex', gap: 8, alignItems: 'center', background: 'var(--bg-tertiary)', padding: '5px 5px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-primary)' }}>
+                    <div key={idx} style={{ display: 'flex', gap: 8, alignItems: 'center', background: 'var(--bg-tertiary)', padding: '6px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-primary)' }}>
                       <select className="filter-select" value={ind.name} onChange={e => handleIndicatorChange(idx, 'name', e.target.value)} style={{ flex: 1, padding: '4px 8px' }}>
                         {availableIndicators.map(a => <option key={a} value={a}>{a}</option>)}
                       </select>
@@ -725,26 +725,26 @@ export default function BotsPage({ embedded = false, isActive = true }) {
 
               <div style={{ borderTop: '1px solid var(--border-primary)', paddingTop: 16, marginBottom: 16 }}>
                 <h4 style={{ marginBottom: 12, fontSize: 13, color: 'var(--text-primary)' }}>ตั้งค่าความเสี่ยง และ Trailing Stop / TP</h4>
-                <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 12 }}>
-                  <div className="form-group" style={{ display: 'flex', flexDirection: 'column', flex: '0 0 250px' }}>
-                    <label className="form-label" style={{ whiteSpace: 'normal', lineHeight: 1.2, minHeight: 28, fontSize: 10 }}>Stop Loss (Pips)</label>
-                    <input type="number" step="0.1" min="1" className="form-input" style={{ width: '100%', height: 38, minWidth: 0, paddingRight: 4, paddingLeft: 8 }} required value={formData.sl_pips} onChange={e => setFormData({ ...formData, sl_pips: e.target.value })} placeholder="15" />
+                <div style={{ display: 'flex', gap: 16, flexWrap: 'nowrap', marginBottom: 12 }}>
+                  <div className="form-group" style={{ display: 'flex', flexDirection: 'column', flex: '0 0 auto' }}>
+                    <label className="form-label" style={{ whiteSpace: 'nowrap' }}>Stop Loss (Pips)</label>
+                    <input type="number" step="0.1" min="1" className="form-input" style={{ width: '100%', minWidth: 0, paddingRight: 8 }} required value={formData.sl_pips} onChange={e => setFormData({ ...formData, sl_pips: e.target.value })} placeholder="15" />
                   </div>
-                  <div className="form-group" style={{ display: 'flex', flexDirection: 'column', flex: '0 0 250px' }}>
-                    <label className="form-label" style={{ whiteSpace: 'normal', lineHeight: 1.2, minHeight: 28, fontSize: 10 }}>TP Ratio (Risk:Reward)</label>
-                    <input type="number" step="0.1" min="0.1" className="form-input" style={{ width: '100%', height: 38, minWidth: 0, paddingRight: 4, paddingLeft: 8 }} required value={formData.tp_ratio} onChange={e => setFormData({ ...formData, tp_ratio: e.target.value })} placeholder="1.5 = 1.5x ของ SL" />
+                  <div className="form-group" style={{ display: 'flex', flexDirection: 'column', flex: '0 0 auto' }}>
+                    <label className="form-label" style={{ whiteSpace: 'nowrap' }}>TP Ratio (Risk:Reward)</label>
+                    <input type="number" step="0.1" min="0.1" className="form-input" style={{ width: '100%', minWidth: 0, paddingRight: 8 }} required value={formData.tp_ratio} onChange={e => setFormData({ ...formData, tp_ratio: e.target.value })} placeholder="1.5 = 1.5x ของ SL" />
                   </div>
-                  <div className="form-group" style={{ display: 'flex', flexDirection: 'column', flex: '0 0 250px' }} title="เลื่อน SL มาคุ้มทุนเมื่อกำไรถึง (Pips)">
-                    <label className="form-label" style={{ whiteSpace: 'normal', lineHeight: 1.2, minHeight: 28, fontSize: 10 }}>Breakeven Pips</label>
-                    <input type="number" step="0.1" min="0" className="form-input" style={{ width: '100%', height: 38, minWidth: 0, paddingRight: 4, paddingLeft: 8 }} required value={formData.breakeven_trigger_pips} onChange={e => setFormData({ ...formData, breakeven_trigger_pips: e.target.value })} />
+                  <div className="form-group" style={{ display: 'flex', flexDirection: 'column', flex: '0 0 auto' }} title="เลื่อน SL มาคุ้มทุนเมื่อกำไรถึง (Pips)">
+                    <label className="form-label" style={{ whiteSpace: 'nowrap' }}>Breakeven Pips</label>
+                    <input type="number" step="0.1" min="0" className="form-input" style={{ width: '100%', minWidth: 0, paddingRight: 8 }} required value={formData.breakeven_trigger_pips} onChange={e => setFormData({ ...formData, breakeven_trigger_pips: e.target.value })} />
                   </div>
-                  <div className="form-group" style={{ display: 'flex', flexDirection: 'column', flex: '0 0 250px' }} title="เริ่ม Trailing เมื่อกำไรถึง (Pips)">
-                    <label className="form-label" style={{ whiteSpace: 'normal', lineHeight: 1.2, minHeight: 28, fontSize: 10 }}>Trail Start Pips</label>
-                    <input type="number" step="0.1" min="0" className="form-input" style={{ width: '100%', height: 38, minWidth: 0, paddingRight: 4, paddingLeft: 8 }} required value={formData.trail_trigger_pips} onChange={e => setFormData({ ...formData, trail_trigger_pips: e.target.value })} />
+                  <div className="form-group" style={{ display: 'flex', flexDirection: 'column', flex: '0 0 auto' }} title="เริ่ม Trailing เมื่อกำไรถึง (Pips)">
+                    <label className="form-label" style={{ whiteSpace: 'nowrap' }}>Trail Start Pips</label>
+                    <input type="number" step="0.1" min="0" className="form-input" style={{ width: '100%', minWidth: 0, paddingRight: 8 }} required value={formData.trail_trigger_pips} onChange={e => setFormData({ ...formData, trail_trigger_pips: e.target.value })} />
                   </div>
-                  <div className="form-group" style={{ display: 'flex', flexDirection: 'column', flex: '0 0 250px' }} title="ระยะ SL จากจุดราคาสูงสุด (Pips)">
-                    <label className="form-label" style={{ whiteSpace: 'normal', lineHeight: 1.2, minHeight: 28, fontSize: 10 }}>Trail Distance</label>
-                    <input type="number" step="0.1" min="1" className="form-input" style={{ width: '100%', height: 38, minWidth: 0, paddingRight: 4, paddingLeft: 8 }} required value={formData.trail_distance_pips} onChange={e => setFormData({ ...formData, trail_distance_pips: e.target.value })} />
+                  <div className="form-group" style={{ display: 'flex', flexDirection: 'column', flex: '0 0 auto' }} title="ระยะ SL จากจุดราคาสูงสุด (Pips)">
+                    <label className="form-label" style={{ whiteSpace: 'nowrap' }}>Trail Distance</label>
+                    <input type="number" step="0.1" min="1" className="form-input" style={{ width: '100%', minWidth: 0, paddingRight: 8 }} required value={formData.trail_distance_pips} onChange={e => setFormData({ ...formData, trail_distance_pips: e.target.value })} />
                   </div>
                 </div>
               </div>
