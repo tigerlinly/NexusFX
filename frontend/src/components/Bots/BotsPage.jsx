@@ -686,12 +686,30 @@ export default function BotsPage({ embedded = false, isActive = true }) {
               </div>
 
               <div className="form-group" style={{ marginBottom: 16, borderTop: '1px solid var(--border-primary)', paddingTop: 16 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                   <label className="form-label" style={{ margin: 0 }}>ตั้งค่า Indicators (กำหนดน้ำหนักคะแนนรวม = 100%)</label>
                   <button type="button" className="btn btn-sm btn-ghost" onClick={handleAddIndicator}>
                     <Plus size={14} /> เพิ่ม Indicator
                   </button>
                 </div>
+
+                <div style={{ marginBottom: 20, background: 'rgba(255,255,255,0.02)', padding: '12px 16px', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <span>ความเชื่อมั่นขั้นต่ำในการออกไม้ (Min Confidence)</span>
+                    <span style={{ color: 'var(--profit)', fontWeight: 600 }}>{formData.min_confidence}%</span>
+                  </label>
+                  <input 
+                    type="range" 
+                    min="0" max="100" step="1"
+                    style={{ width: '100%', accentColor: 'var(--profit)' }}
+                    value={formData.min_confidence}
+                    onChange={e => setFormData({ ...formData, min_confidence: parseInt(e.target.value) })}
+                  />
+                  <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 6 }}>
+                    คะแนนที่คำนวณจาก Indicators ต้องถึงเป้าหมายจึงจะเปิดออเดอร์
+                  </div>
+                </div>
+
                 {formData.indicators_config.length === 0 && (
                   <div style={{ color: 'var(--text-tertiary)', fontSize: 12, textAlign: 'center', padding: 10 }}>ไม่มีการตั้งค่า Indicator ใช้การตัดสินใจพื้นฐาน</div>
                 )}
@@ -720,22 +738,7 @@ export default function BotsPage({ embedded = false, isActive = true }) {
                 </div>
               </div>
 
-              <div className="form-group" style={{ marginBottom: 24 }}>
-                <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>ความเชื่อมั่นขั้นต่ำในการออกไม้ (Min Confidence)</span>
-                  <span style={{ color: 'var(--profit)' }}>{formData.min_confidence}%</span>
-                </label>
-                <input 
-                  type="range" 
-                  min="0" max="100" step="1"
-                  style={{ width: '100%', accentColor: 'var(--profit)' }}
-                  value={formData.min_confidence}
-                  onChange={e => setFormData({ ...formData, min_confidence: parseInt(e.target.value) })}
-                />
-                <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4 }}>
-                  คะแนนที่คำนวณจาก Indicators ต้องถึงเป้าหมายจึงจะเปิดออเดอร์
-                </div>
-              </div>
+
 
               <div style={{ borderTop: '1px solid var(--border-primary)', paddingTop: 16, marginBottom: 16 }}>
                 <h4 style={{ marginBottom: 12, fontSize: 13, color: 'var(--text-primary)' }}>ตั้งค่าความเสี่ยง และ Trailing Stop / TP</h4>
