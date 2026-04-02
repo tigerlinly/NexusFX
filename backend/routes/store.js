@@ -14,28 +14,52 @@ const storeBots = [
     author: 'NexusFX Labs', roi: '+142%', drawdown: '2.4%', rating: 4.8, users: 1240,
     description: 'บอทเทรดแบบ Scalping เน้นเก็บสั้นรอบ 1-15 นาที ทำกำไรจากความผันผวนของราคา XAUUSD ในช่วง London/NY Session ความเสี่ยงต่ำ เหมาะสำหรับผู้เริ่มต้น',
     isHot: true,
-    config: { strategy: 'scalper', timeframe: '1m', sl_pct: 1.0, tp_pct: 2.0, symbols: ['XAUUSD'], session: 'london_ny' }
+    config: { strategy: 'scalper', timeframe: '1m', sl_pct: 1.0, tp_pct: 2.0, symbols: ['XAUUSD'], session: 'london_ny' },
+    strategy_details: {
+      indicators: 'EMA (Exponential Moving Average) 5 & 15 จุดตัดกัน, RSI (Relative Strength Index) สำหรับดู Overbought/Oversold, และ MACD',
+      entry_tf: 'M1 และ M5',
+      trend_tf: 'H1 เพื่อดูแนวโน้มหลัก (Main Trend) และดึง Signal การเข้าทำรอบ',
+      extra_details: 'เน้นเข้าทำรอบในช่วงเวลาที่มี Volume ตลาดสูง (ตลาดยุโรปและอเมริกา) ตัดขาดทุน (SL) ไว และล็อคกำไร (Trailing Stop) ต่อเนื่อง'
+    }
   },
   {
     id: 2, name: 'Trend Follower Pro', type: 'Swing Trade', price: 0,
     author: 'NexusFX Labs', roi: '+85%', drawdown: '10.5%', rating: 4.5, users: 890,
     description: 'กลยุทธ์ Swing Trade จับเทรนด์ขาขึ้น-ขาลงของคู่เงินหลัก EURUSD, GBPUSD ทิ้งออเดอร์ข้ามคืน 1-5 วัน ใช้ Moving Average + RSI ยืนยันทิศทาง เหมาะกับตลาดที่มีเทรนด์ชัดเจน',
     isHot: false,
-    config: { strategy: 'swing', timeframe: '1h', sl_pct: 2.0, tp_pct: 5.0, symbols: ['EURUSD', 'GBPUSD'], indicators: ['MA200', 'RSI14'] }
+    config: { strategy: 'swing', timeframe: '1h', sl_pct: 2.0, tp_pct: 5.0, symbols: ['EURUSD', 'GBPUSD'], indicators: ['MA200', 'RSI14'] },
+    strategy_details: {
+      indicators: 'SMA 200 (Simple Moving Average) เป็นตัวแบ่งโซนเทรนย่อยกับเทรนหลัก, Fibonacci Retracement ช่วยจับจุดพักตัว, Stochastic RSI',
+      entry_tf: 'H1 และ H4',
+      trend_tf: 'D1 (Daily) และ W1 (Weekly) เพื่อหา Swing High / Swing Low ที่แข็งแกร่ง',
+      extra_details: 'ตั้งเป้า Risk:Reward ratio ระดับ 1:2.5 ขึ้นไป ลดการดูจอ เหมาะสำหรับสายลงทุนที่ต้องการถือโพสิชั่นข้ามวันหรือช่วงสัปดาห์'
+    }
   },
   {
     id: 3, name: 'Grid Master Recovery', type: 'Grid Trading', price: 0,
     author: 'NexusFX Labs', roi: '+210%', drawdown: '25.0%', rating: 4.9, users: 2100,
     description: 'ระบบ Grid Trading วางออเดอร์เป็นตาราง (Grid Spacing) ทุกระยะราคาที่กำหนด ทำกำไรจากตลาด Sideway โดยอัตโนมัติ มีระบบ Recovery ฟื้นฟูเงินทุนในกรณีราคาวิ่งทิศทางเดียว',
     isHot: true,
-    config: { strategy: 'grid', grid_spacing: 10, sl_pct: 5.0, tp_pct: 3.0, grid_levels: 10, symbols: ['XAUUSD', 'EURUSD'] }
+    config: { strategy: 'grid', grid_spacing: 10, sl_pct: 5.0, tp_pct: 3.0, grid_levels: 10, symbols: ['XAUUSD', 'EURUSD'] },
+    strategy_details: {
+      indicators: 'Bollinger Bands (BB) สำหรับการวัดความผันผวน, ATR (Average True Range) คำนวณความกว้างของแต่ละขั้น Grid แบบไดนามิก',
+      entry_tf: 'M15',
+      trend_tf: 'H4 เพื่อดูรอบการแกว่งตัว Sideway แบบกว้าง หากเทรนด์แตกจะเปิดโหมด Hedging หรือปรับระยะ Grid ทันที',
+      extra_details: 'รองรับการแกว่งของราคาได้อย่างปลอดภัย โดยมีการเฉลี่ยไม้ (Recovery) ในกรณีตลาดวิ่งทิศทางเดียวยาวๆ ใช้เงินทุนสูงขึ้นบ้างแต่รอดได้ในหลายสภาวะ'
+    }
   },
   {
     id: 4, name: 'Martingale Bouncer', type: 'Martingale', price: 0,
     author: 'NexusFX Labs', roi: '+320%', drawdown: '35.0%', rating: 4.3, users: 1680,
     description: 'ระบบ Martingale เพิ่มขนาด Lot ทุกครั้งที่ขาดทุน เพื่อรอให้กำไรหนึ่งครั้งเอาคืนทุกออเดอร์ที่แพ้ เหมาะกับผู้ที่กล้ารับความเสี่ยงสูง มีระบบ Max Step จำกัดการเพิ่ม Lot ไม่ให้เกินที่ตั้ง',
     isHot: false,
-    config: { strategy: 'martingale', multiplier: 2.0, max_steps: 5, sl_pct: 3.0, tp_pct: 1.5, symbols: ['XAUUSD'], base_lot: 0.01 }
+    config: { strategy: 'martingale', multiplier: 2.0, max_steps: 5, sl_pct: 3.0, tp_pct: 1.5, symbols: ['XAUUSD'], base_lot: 0.01 },
+    strategy_details: {
+      indicators: 'Price Action ล้วนๆ ประกอบกับการรับส่งค่า Support / Resistance Level ที่แม่นยำ',
+      entry_tf: 'M5',
+      trend_tf: 'H1 ในการดูภาพรวมระยะกลาง',
+      extra_details: 'ระบบจะทบไม้ (Martingale Multiplier) เมื่อเปิดออเดอร์ผิดทาง และมี Max Step Safety Limit เมื่อถึงไม้สูงสุดจะสั่งคัทล็อตใหญ่ เพื่อป้องกันพอร์ตแตก'
+    }
   }
 ];
 

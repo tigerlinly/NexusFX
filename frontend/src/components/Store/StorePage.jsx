@@ -23,6 +23,10 @@ export default function StorePage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createForm, setCreateForm] = useState({ name: '', description: '', risk_level: 'medium', price_monthly: 0 });
 
+  // Strategy Details Modal
+  const [showStrategyDetailsModal, setShowStrategyDetailsModal] = useState(false);
+  const [activeStrategyDetails, setActiveStrategyDetails] = useState(null);
+
   // Signal Modal
   const [showSignalModal, setShowSignalModal] = useState(false);
   const [activeStrategyId, setActiveStrategyId] = useState(null);
@@ -333,17 +337,24 @@ export default function StorePage() {
                       </div>
                     </div>
 
-                    <div style={{ borderTop: '1px solid var(--border-primary)', paddingTop: 12 }}>
+                    <div style={{ borderTop: '1px solid var(--border-primary)', paddingTop: 12, display: 'flex', gap: 8 }}>
+                      <button
+                        className="btn btn-sm btn-secondary"
+                        style={{ flex: 1, borderColor: 'var(--border-primary)', color: 'var(--text-secondary)' }}
+                        onClick={() => { setActiveStrategyDetails(bot); setShowStrategyDetailsModal(true); }}
+                      >
+                        <Info size={14} /> กลยุทธ์
+                      </button>
                       <button 
                         className={`btn btn-sm ${isOwned ? 'btn-secondary' : 'btn-primary'}`}
                         disabled={isOwned || processing}
-                        style={{ width: '100%' }}
+                        style={{ flex: 2 }}
                         onClick={() => handlePurchase(bot)}
                       >
                         {isOwned ? (
-                          <><CheckCircle2 size={14} /> ติดตั้งลงพอร์ตแล้ว</>
+                          <><CheckCircle2 size={14} /> ติดตั้งแล้ว</>
                         ) : (
-                          <><ShoppingCart size={14} /> หยิบใส่พอร์ต (Copy Trade)</>
+                          <><ShoppingCart size={14} /> หยิบใส่พอร์ต</>
                         )}
                       </button>
                     </div>
@@ -426,13 +437,20 @@ export default function StorePage() {
                         </div>
                       </div>
 
-                      <div style={{ borderTop: '1px solid var(--border-primary)', paddingTop: 12 }}>
+                      <div style={{ borderTop: '1px solid var(--border-primary)', paddingTop: 12, display: 'flex', gap: 8 }}>
+                        <button
+                          className="btn btn-sm btn-secondary"
+                          style={{ flex: 1, borderColor: 'var(--border-primary)', color: 'var(--text-secondary)' }}
+                          onClick={() => { setActiveStrategyDetails(strat); setShowStrategyDetailsModal(true); }}
+                        >
+                          <Info size={14} /> กลยุทธ์
+                        </button>
                         {isSubscribed ? (
-                          <button className="btn btn-sm btn-secondary" style={{ width: '100%', color: 'var(--loss)', borderColor: 'var(--loss)' }} onClick={() => handleUnsubscribe(strat.id)}>
-                            ยกเลิกการติดตาม
+                          <button className="btn btn-sm btn-secondary" style={{ flex: 2, color: 'var(--loss)', borderColor: 'var(--loss)' }} onClick={() => handleUnsubscribe(strat.id)}>
+                            ยกเลิกติดตาม
                           </button>
                         ) : (
-                          <button className="btn btn-sm btn-primary" style={{ width: '100%' }} onClick={() => handleSubscribe(strat)}>
+                          <button className="btn btn-sm btn-primary" style={{ flex: 2 }} onClick={() => handleSubscribe(strat)}>
                             <Copy size={14} /> คัดลอกเทรด
                           </button>
                         )}
@@ -615,6 +633,72 @@ export default function StorePage() {
                 <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>ยืนยันส่ง Signal</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* === Strategy Details Modal === */}
+      {showStrategyDetailsModal && activeStrategyDetails && (
+        <div className="modal-overlay" onClick={() => setShowStrategyDetailsModal(false)}>
+          <div className="modal-content" style={{ maxWidth: 600 }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+              <div>
+                <h2 style={{ marginBottom: 4 }}>รายละเอียดกลยุทธ์ ({activeStrategyDetails.name})</h2>
+                <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>เทคนิคการเทรดและเงื่อนไขการออกไม้</div>
+              </div>
+              <button 
+                className="btn btn-secondary btn-sm" 
+                onClick={() => setShowStrategyDetailsModal(false)}
+                style={{ padding: '4px 8px' }}
+              >
+                ปิด
+              </button>
+            </div>
+
+            {activeStrategyDetails.strategy_details ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div style={{ background: 'var(--bg-tertiary)', padding: 16, borderRadius: 8, border: '1px solid var(--border-primary)' }}>
+                  <div style={{ color: 'var(--accent-primary)', fontWeight: 600, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Activity size={16} /> อินดิเคเตอร์ที่ใช้ (Indicators)
+                  </div>
+                  <div style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                    {activeStrategyDetails.strategy_details.indicators}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 16 }}>
+                  <div style={{ flex: 1, background: 'var(--bg-tertiary)', padding: 16, borderRadius: 8, border: '1px solid var(--border-primary)' }}>
+                    <div style={{ color: 'var(--warning)', fontWeight: 600, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Activity size={16} /> Timeframe (เข้าเทรด)
+                    </div>
+                    <div style={{ fontSize: 13, color: 'var(--text-primary)' }}>
+                      {activeStrategyDetails.strategy_details.entry_tf}
+                    </div>
+                  </div>
+                  <div style={{ flex: 1, background: 'var(--bg-tertiary)', padding: 16, borderRadius: 8, border: '1px solid var(--border-primary)' }}>
+                    <div style={{ color: 'var(--success)', fontWeight: 600, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Activity size={16} /> Timeframe (ดูเทรนด์)
+                    </div>
+                    <div style={{ fontSize: 13, color: 'var(--text-primary)' }}>
+                      {activeStrategyDetails.strategy_details.trend_tf}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ background: 'var(--bg-tertiary)', padding: 16, borderRadius: 8, border: '1px solid var(--border-primary)' }}>
+                  <div style={{ color: 'var(--text-primary)', fontWeight: 600, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Info size={16} /> รายละเอียดอื่นๆ
+                  </div>
+                  <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                    {activeStrategyDetails.strategy_details.extra_details}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-tertiary)' }}>
+                ไม่มีข้อมูลรายละเอียดเชิงลึกสำหรับกลยุทธ์นี้
+              </div>
+            )}
           </div>
         </div>
       )}
