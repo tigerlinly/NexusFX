@@ -91,19 +91,6 @@ export default function StorePage() {
       </div>
 
       <div className="content-area">
-        {/* Free Strategy Banner */}
-        <div style={{ 
-          background: 'linear-gradient(135deg, rgba(0,255,136,0.08), rgba(0,200,255,0.05))', 
-          border: '1px solid rgba(0,255,136,0.15)', 
-          borderRadius: 10, padding: '14px 20px', marginBottom: 20,
-          display: 'flex', alignItems: 'center', gap: 12
-        }}>
-          <Shield size={22} style={{ color: 'var(--profit)', flexShrink: 0 }} />
-          <div>
-            <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--profit)', marginBottom: 2 }}>กลยุทธ์พื้นฐาน — ฟรีสำหรับสมาชิกทุกคน</div>
-            <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>ระบบจัดเตรียมกลยุทธ์พื้นฐาน 4 รูปแบบ ได้แก่ Scalper, Swing Trade, Grid Trading และ Martingale ให้ใช้งานได้ฟรีไม่มีค่าใช้จ่าย</div>
-          </div>
-        </div>
 
         <div style={{
           display: 'grid',
@@ -113,74 +100,86 @@ export default function StorePage() {
           {strategies.map(bot => {
             const isOwned = purchased.includes(bot.id);
             return (
-              <div key={bot.id} className="summary-card" style={{ padding: 16, position: 'relative' }}>
-                {bot.isHot && (
-                  <div style={{ position: 'absolute', top: 12, right: 12, display: 'flex', alignItems: 'center', gap: 4, color: 'var(--warning)', fontSize: 11, fontWeight: 700 }}>
-                    <Zap size={12} fill="currentColor" /> HOT
+              <div key={bot.id} className="card">
+                {/* Card Header — matches BotsPage style */}
+                <div className="card-header" style={{ marginBottom: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{
+                      width: 32, height: 32, borderRadius: 'var(--radius-sm)',
+                      background: 'var(--profit-bg)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    }}>
+                      <Shield size={18} style={{ color: 'var(--profit)' }} />
+                    </div>
+                    <div>
+                      <div className="card-title" style={{ fontSize: 14, textTransform: 'none', letterSpacing: 0 }}>{bot.name}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>โดย: {bot.author}</div>
+                    </div>
                   </div>
-                )}
-                
-                <h3 style={{ fontSize: 16, marginBottom: 6, paddingRight: 50 }}>{bot.name}</h3>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-                  <span style={{ 
-                    fontSize: 10, background: 'rgba(0,200,255,0.1)', color: 'var(--accent-primary)', 
-                    padding: '1px 6px', borderRadius: 3, fontWeight: 600, border: '1px solid rgba(0,200,255,0.2)'
-                  }}>
-                    {bot.type}
-                  </span>
-                  <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>โดย: <span style={{ color: 'var(--accent-primary)' }}>{bot.author}</span></span>
+                  {bot.isHot ? (
+                    <span className="badge badge-buy" style={{ background: 'rgba(251,191,36,0.15)', color: 'var(--warning)' }}>
+                      <Zap size={10} fill="currentColor" style={{ marginRight: 3 }} /> HOT
+                    </span>
+                  ) : (
+                    <span className="badge" style={{ background: 'rgba(0,200,255,0.1)', color: 'var(--accent-primary)', border: '1px solid rgba(0,200,255,0.2)' }}>
+                      {bot.type}
+                    </span>
+                  )}
                 </div>
-                
-                <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 14, minHeight: 50 }}>
+
+                {/* Strategy type + Author row */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 12, color: 'var(--text-secondary)' }}>
+                  <div>กลยุทธ์: <strong style={{ color: 'var(--accent-secondary)' }}>{bot.type}</strong></div>
+                  <div style={{ fontWeight: 700, color: bot.price === 0 ? 'var(--profit)' : 'var(--text-primary)' }}>
+                    {bot.price === 0 ? '🆓 ฟรี' : `$${bot.price}`}
+                  </div>
+                </div>
+
+                {/* Description */}
+                <div style={{ fontSize: 11, color: 'var(--text-tertiary)', lineHeight: 1.5, marginBottom: 12, minHeight: 42 }}>
                   {bot.description}
-                </p>
+                </div>
 
+                {/* ROI + DD Stats — compact */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
-                  <div style={{ background: 'rgba(0,255,136,0.05)', padding: '8px 10px', borderRadius: 6, border: '1px solid rgba(0,255,136,0.1)' }}>
+                  <div style={{ background: 'rgba(0,255,136,0.05)', padding: '6px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(0,255,136,0.1)' }}>
                     <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 2 }}>ผลตอบแทน (ROI)</div>
-                    <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--profit)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <TrendingUp size={14} /> {bot.roi}
+                    <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--profit)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <TrendingUp size={13} /> {bot.roi}
                     </div>
                   </div>
-                  <div style={{ background: 'var(--bg-secondary)', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--border-primary)' }}>
+                  <div style={{ background: 'var(--bg-tertiary)', padding: '6px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-primary)' }}>
                     <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 2 }}>ความเสี่ยง (DD)</div>
-                    <div style={{ fontSize: 16, fontWeight: 600, color: getRiskColor(bot.drawdown), display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <BarChart2 size={14} /> -{bot.drawdown}
+                    <div style={{ fontSize: 14, fontWeight: 600, color: getRiskColor(bot.drawdown), display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <BarChart2 size={13} /> -{bot.drawdown}
                     </div>
-                    <div style={{ fontSize: 9, color: getRiskColor(bot.drawdown), marginTop: 1 }}>{getRiskLabel(bot.drawdown)}</div>
+                    <div style={{ fontSize: 9, color: getRiskColor(bot.drawdown) }}>{getRiskLabel(bot.drawdown)}</div>
                   </div>
                 </div>
 
+                {/* Rating + Users */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, fontSize: 11, color: 'var(--text-tertiary)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     <Star size={12} style={{ color: '#FAAD14' }} fill="#FAAD14" />
                     <span>{bot.rating} ({bot.users} ผู้ติดตาม)</span>
                   </div>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: bot.price === 0 ? 'var(--profit)' : 'var(--text-primary)' }}>
-                    {bot.price === 0 ? '🆓 ฟรี' : `$${bot.price}`}
-                  </div>
                 </div>
 
-                <button 
-                  className="btn" 
-                  disabled={isOwned || processing}
-                  style={{ 
-                    width: '100%', 
-                    padding: '8px 0',
-                    background: isOwned ? 'var(--bg-secondary)' : 'var(--gradient-primary)',
-                    color: isOwned ? 'var(--profit)' : '#000',
-                    border: 'none',
-                    fontWeight: 600,
-                    fontSize: 13
-                  }}
-                  onClick={() => handlePurchase(bot)}
-                >
-                  {isOwned ? (
-                    <><CheckCircle2 size={14} style={{ marginRight: 6 }} /> ติดตั้งลงพอร์ตแล้ว</>
-                  ) : (
-                    <><ShoppingCart size={14} style={{ marginRight: 6 }} /> หยิบใส่พอร์ต (Copy Trade)</>
-                  )}
-                </button>
+                {/* Action button — with border separator like BotsPage */}
+                <div style={{ borderTop: '1px solid var(--border-primary)', paddingTop: 12 }}>
+                  <button 
+                    className={`btn btn-sm ${isOwned ? 'btn-secondary' : 'btn-primary'}`}
+                    disabled={isOwned || processing}
+                    style={{ width: '100%' }}
+                    onClick={() => handlePurchase(bot)}
+                  >
+                    {isOwned ? (
+                      <><CheckCircle2 size={14} /> ติดตั้งลงพอร์ตแล้ว</>
+                    ) : (
+                      <><ShoppingCart size={14} /> หยิบใส่พอร์ต (Copy Trade)</>
+                    )}
+                  </button>
+                </div>
               </div>
             );
           })}
