@@ -99,10 +99,7 @@ export default function Layout() {
             <History size={18} className="nav-icon" />
             {showLabels && <span>ประวัติการเทรด</span>}
           </NavLink>
-          <NavLink to="/targets" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="เป้ากำไรรายวัน">
-            <Target size={18} className="nav-icon" />
-            {showLabels && <span>เป้ากำไรรายวัน</span>}
-          </NavLink>
+
           <NavLink to="/reports" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="รายงาน/วิเคราะห์">
             <BarChart3 size={18} className="nav-icon" />
             {showLabels && <span>รายงาน/วิเคราะห์</span>}

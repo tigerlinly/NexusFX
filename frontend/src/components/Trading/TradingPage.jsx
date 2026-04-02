@@ -1,15 +1,25 @@
-import { useState } from 'react';
-import { Cpu, TerminalSquare } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
+import { Cpu, TerminalSquare, Target } from 'lucide-react';
 import BotsPage from '../Bots/BotsPage';
 import TerminalPage from '../Terminal/TerminalPage';
+import DailyTargetPage from '../Targets/DailyTargetPage';
 
 const TABS = [
   { id: 'bots', label: 'Trading Bots', icon: Cpu },
   { id: 'terminal', label: 'ส่งคำสั่ง (Terminal)', icon: TerminalSquare },
+  { id: 'targets', label: 'เป้ากำไรรายวัน', icon: Target },
 ];
 
 export default function TradingPage() {
-  const [activeTab, setActiveTab] = useState('bots');
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState(location.state?.tab || 'bots');
+
+  useEffect(() => {
+    if (location.state?.tab) {
+      setActiveTab(location.state.tab);
+    }
+  }, [location.state?.tab]);
 
   return (
     <>
@@ -67,6 +77,9 @@ export default function TradingPage() {
         <div style={{ display: activeTab === 'terminal' ? 'block' : 'none' }}>
           <TerminalContent />
         </div>
+        <div style={{ display: activeTab === 'targets' ? 'block' : 'none' }}>
+          <TargetsContent />
+        </div>
       </div>
     </>
   );
@@ -79,4 +92,8 @@ function BotsContent() {
 
 function TerminalContent() {
   return <TerminalPage embedded />;
+}
+
+function TargetsContent() {
+  return <DailyTargetPage embedded />;
 }

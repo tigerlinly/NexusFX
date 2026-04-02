@@ -64,7 +64,7 @@ function AppRoutes() {
         <Route path="bots" element={<Navigate to="/trading" replace />} />
         <Route path="terminal" element={<Navigate to="/trading" replace />} />
         <Route path="trades" element={<TradeHistoryPage />} />
-        <Route path="targets" element={<DailyTargetPage />} />
+        <Route path="targets" element={<Navigate to="/trading" replace state={{ tab: 'targets' }} />} />
         <Route path="accounts" element={<AccountsPage />} />
         <Route path="wallet" element={<WalletPage />} />
         <Route path="billing" element={<BillingPage />} />

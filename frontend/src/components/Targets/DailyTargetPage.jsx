@@ -5,7 +5,7 @@ import {
   Target, Plus, Trash2, Check, Play, Pause, Clock, Trophy, History
 } from 'lucide-react';
 
-export default function DailyTargetPage() {
+export default function DailyTargetPage({ embedded = false }) {
   const { accounts } = useAccounts();
   const [targets, setTargets] = useState([]);
   const [targetStatus, setTargetStatus] = useState([]);
@@ -84,6 +84,7 @@ export default function DailyTargetPage() {
 
   return (
     <>
+      {!embedded && (
       <div className="header">
         <div className="header-left">
           <h1 className="page-title">เป้ากำไรรายวัน</h1>
@@ -94,8 +95,17 @@ export default function DailyTargetPage() {
           </button>
         </div>
       </div>
+      )}
 
-      <div className="content-area">
+      {embedded && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 'var(--space-md)' }}>
+          <button className="btn btn-primary btn-sm" onClick={() => setShowForm(!showForm)}>
+            <Plus size={14} /> ตั้งเป้าใหม่
+          </button>
+        </div>
+      )}
+
+      <div className={embedded ? "" : "content-area"}>
         {/* Create Form */}
         {showForm && (
           <div className="settings-section" style={{ marginBottom: 'var(--space-lg)' }}>
