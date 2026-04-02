@@ -484,16 +484,43 @@ export default function BotsPage({ embedded = false, isActive = true }) {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">คู่เงินที่เทรด (Symbols - คั่นด้วยจุลภาค)</label>
-                  <input className="form-input" required value={formData.symbols.join(', ')} onChange={e => setFormData({ ...formData, symbols: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })} placeholder="XAUUSD, EURUSD" />
+                  <label className="form-label">คู่เงินที่เทรด (Symbols)</label>
                   {(() => {
                      const selectedAccount = accounts.find(a => a.id.toString() === formData.account_id?.toString());
+                     let matchedSymbols = [];
                      if (selectedAccount?.supported_symbols && Array.isArray(selectedAccount.supported_symbols) && selectedAccount.supported_symbols.length > 0) {
-                       const exampleSyms = selectedAccount.supported_symbols.slice(0, 30).join(', ');
-                       return <div style={{ fontSize: 11, color: 'var(--accent-secondary)', marginTop: 4 }}>สัญลักษณ์ที่บัญชีนี้รองรับ: {exampleSyms}</div>;
+                       matchedSymbols = selectedAccount.supported_symbols;
+                     } else {
+                       matchedSymbols = ['XAUUSD', 'EURUSD', 'GBPUSD', 'BTCUSDT'];
                      }
-                     return null;
+
+                     const handleSymbolToggle = (sym) => {
+                       const arr = formData.symbols || [];
+                       if (arr.includes(sym)) {
+                         setFormData({ ...formData, symbols: arr.filter(s => s !== sym) });
+                       } else {
+                         setFormData({ ...formData, symbols: [...arr, sym] });
+                       }
+                     };
+
+                     return (
+                       <div style={{ maxHeight: 150, overflowY: 'auto', border: '1px solid var(--border-primary)', borderRadius: 'var(--radius-md)', padding: 8, background: 'var(--bg-tertiary)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                         {matchedSymbols.map(sym => (
+                           <label key={sym} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, color: 'var(--text-secondary)' }}>
+                             <input 
+                               type="checkbox" 
+                               checked={(formData.symbols || []).includes(sym)}
+                               onChange={() => handleSymbolToggle(sym)}
+                             />
+                             {sym}
+                           </label>
+                         ))}
+                       </div>
+                     );
                   })()}
+                  <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4 }}>
+                    เลือกสกุลเงินที่ต้องการให้ Bot ทำงาน
+                  </div>
                 </div>
               </div>
 
