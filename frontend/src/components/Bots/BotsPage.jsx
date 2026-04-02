@@ -530,18 +530,24 @@ export default function BotsPage({ embedded = false, isActive = true }) {
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal" style={{ width: 1000, maxWidth: '95vw' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-              <h2 className="modal-title" style={{ marginBottom: 0 }}>🤖 {isEditMode ? 'ตั้งค่า Trading Bot' : 'สร้าง Trading Bot ใหม่'}</h2>
-              <button 
-                type="button" 
-                className="btn btn-sm btn-secondary"
-                onClick={handleLoadStrategyDefaults}
-                style={{ padding: '4px 16px', whiteSpace: 'nowrap' }}
-                title="ดึงค่าตั้งต้นของกลยุทธ์"
-              >
-                ดึงค่าตั้งต้น
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                <h2 className="modal-title" style={{ marginBottom: 0 }}>🤖 {isEditMode ? 'ตั้งค่า Trading Bot' : 'สร้าง Trading Bot ใหม่'}</h2>
+                <button 
+                  type="button" 
+                  className="btn btn-sm btn-secondary"
+                  onClick={handleLoadStrategyDefaults}
+                  style={{ padding: '4px 16px', whiteSpace: 'nowrap' }}
+                  title="ดึงค่าตั้งต้นของกลยุทธ์"
+                >
+                  ดึงค่าตั้งต้น
+                </button>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>ยกเลิก</button>
+                <button type="submit" form="bot-form" className="btn btn-primary">{isEditMode ? 'บันทึกการแก้ไข' : 'สร้าง Bot'}</button>
+              </div>
             </div>
-            <form onSubmit={handleSubmit} className="modal-body-scroll">
+            <form id="bot-form" onSubmit={handleSubmit} className="modal-body-scroll">
               
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 20 }}>
                 <div className="form-group">
@@ -757,10 +763,6 @@ export default function BotsPage({ embedded = false, isActive = true }) {
                 </div>
               </div>
 
-              <div className="modal-actions" style={{ borderTop: '1px solid var(--border-primary)', paddingTop: 16 }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>ยกเลิก</button>
-                <button type="submit" className="btn btn-primary">{isEditMode ? 'บันทึกการแก้ไข' : 'สร้าง Bot'}</button>
-              </div>
             </form>
           </div>
         </div>
