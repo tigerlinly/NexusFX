@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useAccounts } from '../../context/AccountContext';
 import { api } from '../../utils/api';
 import AccountFilter from '../Dashboard/AccountFilter';
@@ -7,7 +8,7 @@ import {
   TrendingUp, TrendingDown, BarChart3, Award, Bot, Hand
 } from 'lucide-react';
 
-export default function TradeHistoryPage() {
+export default function TradeHistoryPage({ embedded = false, isActive = true }) {
   const { getFilterParams, viewMode, selectedBrokerId, selectedAccountId } = useAccounts();
   const [trades, setTrades] = useState([]);
   const [stats, setStats] = useState(null);
@@ -79,6 +80,13 @@ export default function TradeHistoryPage() {
       setLoading(false);
     }
   };
+
+  const [portalTarget, setPortalTarget] = useState(null);
+  useEffect(() => {
+    if (embedded) {
+      setPortalTarget(document.getElementById('trading-header-actions'));
+    }
+  }, [embedded]);
 
   useEffect(() => { fetchData(); }, [viewMode, selectedBrokerId, selectedAccountId, page, sortBy, sortDir, symbolFilter, sideFilter, sourceFilter, statusFilter, dateFrom, dateTo]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -196,6 +204,7 @@ export default function TradeHistoryPage() {
 
   return (
     <>
+      {!embedded && (
       <div className="header">
         <div className="header-left">
           <h1 className="page-title">ประวัติการเทรด</h1>
@@ -213,8 +222,25 @@ export default function TradeHistoryPage() {
           <AccountFilter />
         </div>
       </div>
+      )}
 
-      <div className="content-area">
+      {embedded && isActive && portalTarget && createPortal(
+        <>
+          <button 
+            className="btn btn-primary" 
+            onClick={handleSyncBroker} 
+            disabled={syncing || loading}
+            style={{ marginRight: 'var(--space-md)' }}
+          >
+            {syncing ? <RefreshCw className="spin" size={16} /> : <Download size={16} />}
+            อัพเดตข้อมูลกับโบรกเกอร์
+          </button>
+          <AccountFilter />
+        </>,
+        portalTarget
+      )}
+
+      <div className={embedded ? "" : "content-area"}>
         {/* Stats Cards */}
         {stats && (
           <div className="stat-grid">

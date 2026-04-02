@@ -63,7 +63,7 @@ function AppRoutes() {
         <Route path="trading" element={<TradingPage />} />
         <Route path="bots" element={<Navigate to="/trading" replace />} />
         <Route path="terminal" element={<Navigate to="/trading" replace />} />
-        <Route path="trades" element={<TradeHistoryPage />} />
+        <Route path="trades" element={<Navigate to="/trading" replace state={{ tab: 'history' }} />} />
         <Route path="targets" element={<Navigate to="/trading" replace state={{ tab: 'targets' }} />} />
         <Route path="accounts" element={<AccountsPage />} />
         <Route path="wallet" element={<WalletPage />} />
