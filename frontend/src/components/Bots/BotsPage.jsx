@@ -698,7 +698,7 @@ export default function BotsPage({ embedded = false, isActive = true }) {
                 )}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
                   {formData.indicators_config.map((ind, idx) => (
-                    <div key={idx} style={{ display: 'flex', gap: 8, alignItems: 'center', background: 'var(--bg-tertiary)', padding: '6px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-primary)' }}>
+                    <div key={idx} style={{ display: 'flex', gap: 8, alignItems: 'center', background: 'var(--bg-tertiary)', padding: '5px 5px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-primary)' }}>
                       <select className="filter-select" value={ind.name} onChange={e => handleIndicatorChange(idx, 'name', e.target.value)} style={{ flex: 1, padding: '4px 8px' }}>
                         {availableIndicators.map(a => <option key={a} value={a}>{a}</option>)}
                       </select>
