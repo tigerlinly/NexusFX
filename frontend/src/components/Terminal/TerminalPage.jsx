@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api } from '../../utils/api';
 import { io } from 'socket.io-client';
 import { Send, TrendingUp, TrendingDown, Crosshair, Target, ShieldAlert, Activity, RefreshCw } from 'lucide-react';
@@ -31,27 +31,39 @@ export default function TerminalPage({ embedded = false }) {
   const [selectedOrders, setSelectedOrders] = useState([]);
   const [viewMode, setViewMode] = useState('single');
 
+  // Refs to avoid useEffect dependency restarts (prevents flickering)
+  const viewModeRef = useRef(viewMode);
+  const fetchingAllRef = useRef(fetchingAll);
+  const accountsRef = useRef(accounts);
+  useEffect(() => { viewModeRef.current = viewMode; }, [viewMode]);
+  useEffect(() => { fetchingAllRef.current = fetchingAll; }, [fetchingAll]);
+  useEffect(() => { accountsRef.current = accounts; }, [accounts]);
+
+  const fetchAllTrades = async () => {
+    const accs = accountsRef.current;
+    let allTrades = [];
+    const promises = accs.map(async (acc) => {
+      try {
+        const trades = await api.getLiveTrades(acc.id);
+        if (Array.isArray(trades)) {
+          return trades.map(t => ({ ...t, _accountId: acc.id, _accountName: acc.account_name || acc.broker_name }));
+        }
+      } catch (e) {
+        console.error(`Failed to fetch live trades for ${acc.id}`, e);
+      }
+      return [];
+    });
+    const results = await Promise.all(promises);
+    results.forEach(res => { allTrades = allTrades.concat(res); });
+    return allTrades;
+  };
+
   const refreshAllAccountsTrades = async () => {
     if (accounts.length === 0) return alert('ไม่มีบัญชีให้ดึงข้อมูล');
     setFetchingAll(true);
     setViewMode('all');
     try {
-      let allTrades = [];
-      const promises = accounts.map(async (acc) => {
-        try {
-          const trades = await api.getLiveTrades(acc.id);
-          if (Array.isArray(trades)) {
-            return trades.map(t => ({ ...t, _accountId: acc.id, _accountName: acc.account_name || acc.broker_name }));
-          }
-        } catch (e) {
-          console.error(`Failed to fetch live trades for ${acc.id}`, e);
-        }
-        return [];
-      });
-      const results = await Promise.all(promises);
-      results.forEach(res => {
-        allTrades = allTrades.concat(res);
-      });
+      const allTrades = await fetchAllTrades();
       setRecentOrders(allTrades);
 
       // Auto-sync live trades to history database
@@ -96,49 +108,37 @@ export default function TerminalPage({ embedded = false }) {
     };
   }, []);
 
-  // Poll Live Trades Every 3 Seconds
+  // Poll Live Trades Every 3 Seconds — only restart when account_id changes
   useEffect(() => {
-    if (!formData.account_id && viewMode === 'single') return;
+    if (!formData.account_id) return;
     let timer;
+    let cancelled = false;
+
     const pollTrades = async () => {
-      // Do not poll if currently fetching all accounts to prevent overriding mixed view with single view
-      if (fetchingAll) {
+      if (cancelled) return;
+      // Skip this tick if a manual fetch-all is in progress
+      if (fetchingAllRef.current) {
         timer = setTimeout(pollTrades, 3000);
         return;
       }
       try {
-        if (viewMode === 'all') {
-          let allTrades = [];
-          const promises = accounts.map(async (acc) => {
-            try {
-              const trades = await api.getLiveTrades(acc.id);
-              if (Array.isArray(trades)) {
-                return trades.map(t => ({ ...t, _accountId: acc.id, _accountName: acc.account_name || acc.broker_name }));
-              }
-            } catch (e) {
-              console.error(e);
-            }
-            return [];
-          });
-          const results = await Promise.all(promises);
-          results.forEach(res => {
-            allTrades = allTrades.concat(res);
-          });
-          setRecentOrders(allTrades);
+        if (viewModeRef.current === 'all') {
+          const allTrades = await fetchAllTrades();
+          if (!cancelled) setRecentOrders(allTrades);
         } else {
           const trades = await api.getLiveTrades(formData.account_id);
-          if (Array.isArray(trades)) {
+          if (!cancelled && Array.isArray(trades)) {
             setRecentOrders(trades.map(t => ({...t, _accountId: formData.account_id})));
           }
         }
       } catch (err) {
         console.error('Live trades err:', err);
       }
-      timer = setTimeout(pollTrades, 3000);
+      if (!cancelled) timer = setTimeout(pollTrades, 3000);
     };
     pollTrades();
-    return () => clearTimeout(timer);
-  }, [formData.account_id, fetchingAll, viewMode, accounts]);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [formData.account_id]);
 
   // Sync live price when symbol or marketPrices change
   useEffect(() => {
