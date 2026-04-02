@@ -528,7 +528,7 @@ export default function BotsPage({ embedded = false, isActive = true }) {
       {/* Create / Edit Modal */}
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal" style={{ width: 950, maxWidth: '95vw' }} onClick={e => e.stopPropagation()}>
+          <div className="modal" style={{ width: 1000, maxWidth: '95vw' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
               <h2 className="modal-title" style={{ marginBottom: 0 }}>🤖 {isEditMode ? 'ตั้งค่า Trading Bot' : 'สร้าง Trading Bot ใหม่'}</h2>
               <button 
