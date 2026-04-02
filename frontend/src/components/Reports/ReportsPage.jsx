@@ -109,12 +109,11 @@ export default function ReportsPage() {
         </div>
         <div className="header-right" style={{ gap: 8 }}>
           {(activeTab === 'analytics' || activeTab === 'psychology') && (
-            <div style={{ display: 'flex', gap: 8, marginRight: 8 }}>
+            <div className="filter-group" style={{ marginRight: 8 }}>
               {['7', '14', '30', '60', '90'].map(p => (
                 <button key={p} className={`filter-btn ${period === p ? 'active' : ''}`}
-                  onClick={() => setPeriod(p)}
-                  style={{ padding: '6px 16px', fontSize: 13, borderRadius: 6, border: '1px solid var(--border-primary)' }}>
-                  {p} วัน
+                  onClick={() => setPeriod(p)}>
+                  {p}D
                 </button>
               ))}
             </div>
