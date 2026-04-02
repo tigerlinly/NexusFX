@@ -83,12 +83,10 @@ class TelegramNotify {
   static async notifyTradeOpened(userId, trade) {
     const message = [
       `📈 *เปิดออเดอร์ใหม่*`,
-      `Symbol: ${trade.symbol}`,
-      `Side: ${trade.side}`,
-      `Lot Size: ${trade.lot_size}`,
-      `Entry: ${trade.entry_price || 'Market'}`,
-      `SL: ${trade.stop_loss || '-'} \\| TP: ${trade.take_profit || '-'}`,
-      `เวลา: ${new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}`
+      `Broker : ${trade.broker_name || '-'} ( ${trade.account_number || '-'} : ${trade.account_name || '-'} )`,
+      `Symbol : ${trade.symbol || '-'} ( ${trade.side === 'BUY' ? 'Buy' : 'Sell'} )  ${trade.timeframe !== '-' ? 'TF ' + trade.timeframe : ''}`,
+      `Lot Size :  ${trade.lot_size || '-'} ( SL :  ${trade.stop_loss || '-'}  / TP :  ${trade.take_profit || '-'}   )`,
+      `Price :  ${trade.entry_price || 'Market'}     ( ${trade.pattern || '-'} )`
     ].join('\n');
     return this.sendAlert(userId, message);
   }

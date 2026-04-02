@@ -28,10 +28,13 @@ export default function TerminalPage({ embedded = false }) {
   const [marketPrices, setMarketPrices] = useState({});
   const [livePrice, setLivePrice] = useState(null);
   const [fetchingAll, setFetchingAll] = useState(false);
+  const [selectedOrders, setSelectedOrders] = useState([]);
+  const [viewMode, setViewMode] = useState('single');
 
   const refreshAllAccountsTrades = async () => {
     if (accounts.length === 0) return alert('ไม่มีบัญชีให้ดึงข้อมูล');
     setFetchingAll(true);
+    setViewMode('all');
     try {
       let allTrades = [];
       const promises = accounts.map(async (acc) => {
@@ -61,6 +64,7 @@ export default function TerminalPage({ embedded = false }) {
         }
       }
     } catch (err) {
+      console.error(err);
       alert('Error fetching all trades');
     } finally {
       setFetchingAll(false);
@@ -94,7 +98,7 @@ export default function TerminalPage({ embedded = false }) {
 
   // Poll Live Trades Every 3 Seconds
   useEffect(() => {
-    if (!formData.account_id) return;
+    if (!formData.account_id && viewMode === 'single') return;
     let timer;
     const pollTrades = async () => {
       // Do not poll if currently fetching all accounts to prevent overriding mixed view with single view
@@ -103,9 +107,29 @@ export default function TerminalPage({ embedded = false }) {
         return;
       }
       try {
-        const trades = await api.getLiveTrades(formData.account_id);
-        if (Array.isArray(trades)) {
-          setRecentOrders(trades.map(t => ({...t, _accountId: formData.account_id})));
+        if (viewMode === 'all') {
+          let allTrades = [];
+          const promises = accounts.map(async (acc) => {
+            try {
+              const trades = await api.getLiveTrades(acc.id);
+              if (Array.isArray(trades)) {
+                return trades.map(t => ({ ...t, _accountId: acc.id, _accountName: acc.account_name || acc.broker_name }));
+              }
+            } catch (e) {
+              console.error(e);
+            }
+            return [];
+          });
+          const results = await Promise.all(promises);
+          results.forEach(res => {
+            allTrades = allTrades.concat(res);
+          });
+          setRecentOrders(allTrades);
+        } else {
+          const trades = await api.getLiveTrades(formData.account_id);
+          if (Array.isArray(trades)) {
+            setRecentOrders(trades.map(t => ({...t, _accountId: formData.account_id})));
+          }
         }
       } catch (err) {
         console.error('Live trades err:', err);
@@ -114,7 +138,7 @@ export default function TerminalPage({ embedded = false }) {
     };
     pollTrades();
     return () => clearTimeout(timer);
-  }, [formData.account_id, fetchingAll]);
+  }, [formData.account_id, fetchingAll, viewMode, accounts]);
 
   // Sync live price when symbol or marketPrices change
   useEffect(() => {
@@ -225,10 +249,54 @@ export default function TerminalPage({ embedded = false }) {
       await api.closeTrades(accId, [order.ticket]);
       alert('คำสั่งปิดสำเร็จ!');
       setRecentOrders(prev => prev.filter((_, idx) => idx !== idxToClose));
+      setSelectedOrders(prev => prev.filter(t => t !== order.ticket));
     } catch (err) {
       alert(err || err.message || 'Error closing trade');
     } finally {
       setProcessing(false);
+    }
+  };
+
+  const handleCloseSelected = async () => {
+    if (selectedOrders.length === 0) return alert('กรุณาเลือกรายการที่ต้องการปิด');
+    if (!window.confirm(`ยืนยันการปิดออเดอร์ที่เลือก (${selectedOrders.length} รายการ)?`)) return;
+
+    setProcessing(true);
+    try {
+      const ordersToClose = recentOrders.filter(o => selectedOrders.includes(o.ticket));
+      const byAccount = {};
+      ordersToClose.forEach(o => {
+        const accId = o._accountId || formData.account_id;
+        if (!byAccount[accId]) byAccount[accId] = [];
+        byAccount[accId].push(o.ticket);
+      });
+
+      for (const [accId, tickets] of Object.entries(byAccount)) {
+        await api.closeTrades(accId, tickets);
+      }
+      alert('คำสั่งปิดรายการที่เลือกสำเร็จ!');
+      const closedTickets = ordersToClose.map(o => o.ticket);
+      setRecentOrders(prev => prev.filter(o => !closedTickets.includes(o.ticket)));
+      setSelectedOrders([]);
+    } catch (err) {
+      alert(err || err.message || 'Error closing selected trades');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleSelectOrder = (ticket) => {
+    setSelectedOrders(prev => {
+      if (prev.includes(ticket)) return prev.filter(t => t !== ticket);
+      return [...prev, ticket];
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedOrders.length === recentOrders.length) {
+      setSelectedOrders([]);
+    } else {
+      setSelectedOrders(recentOrders.map(o => o.ticket));
     }
   };
 
@@ -256,7 +324,10 @@ export default function TerminalPage({ embedded = false }) {
               <select 
                 className="form-input" 
                 value={formData.account_id}
-                onChange={e => setFormData({ ...formData, account_id: e.target.value })}
+                onChange={e => {
+                  setFormData({ ...formData, account_id: e.target.value });
+                  setViewMode('single');
+                }}
               >
                 {accounts.length === 0 ? <option value="">ไม่มีบัญชี - โปรดสร้างใหม่</option> : null}
                 {accounts.map(acc => (
@@ -423,10 +494,15 @@ export default function TerminalPage({ embedded = false }) {
                     style={{ fontSize: 12, padding: '4px 12px' }}
                   >
                     <RefreshCw size={14} className={fetchingAll ? "spin" : ""} style={{ marginRight: 4, display: 'inline-block', animation: fetchingAll ? 'spin 1s linear infinite' : 'none' }} /> 
-                    {fetchingAll ? 'กำลังเช็ค...' : 'เช็คจากทุกบัญชี'}
+                    {fetchingAll ? 'กำลังดึงข้อมูล...' : 'ดึงข้อมูล'}
                   </button>
                   {recentOrders.length > 0 && (
                     <div style={{ display: 'flex', gap: 8 }}>
+                      {selectedOrders.length > 0 && (
+                        <button className="btn btn-sm" style={{ background: 'rgba(234, 179, 8, 0.1)', color: 'var(--warning)', border: 'none', padding: '4px 12px', fontSize: 12 }} onClick={handleCloseSelected}>
+                          Close Selected ({selectedOrders.length})
+                        </button>
+                      )}
                       <button className="btn btn-sm" style={{ background: 'rgba(56, 189, 248, 0.1)', color: 'var(--profit)', border: 'none', padding: '4px 12px', fontSize: 12 }} onClick={() => handleCloseAll('BUY')}>Close All Buy</button>
                       <button className="btn btn-sm" style={{ background: 'rgba(239, 68, 68, 0.1)', color: 'var(--loss)', border: 'none', padding: '4px 12px', fontSize: 12 }} onClick={() => handleCloseAll('SELL')}>Close All Sell</button>
                       <button className="btn btn-sm" style={{ background: 'rgba(234, 179, 8, 0.1)', color: 'var(--warning)', border: 'none', padding: '4px 12px', fontSize: 12 }} onClick={() => handleCloseAll('ALL')}>Close All</button>
@@ -450,6 +526,14 @@ export default function TerminalPage({ embedded = false }) {
                   <table className="data-table" style={{ fontSize: 13 }}>
                     <thead>
                       <tr>
+                        <th style={{ width: 40, textAlign: 'center' }}>
+                          <input 
+                            type="checkbox" 
+                            checked={recentOrders.length > 0 && selectedOrders.length === recentOrders.length}
+                            onChange={handleSelectAll}
+                            style={{ cursor: 'pointer' }}
+                          />
+                        </th>
                         <th>สัญลักษณ์</th>
                         <th>ประเภท</th>
                         <th>ขนาด (Lot)</th>
@@ -464,7 +548,15 @@ export default function TerminalPage({ embedded = false }) {
                         const pnl = order.pnl || 0;
                         const isProfit = pnl >= 0;
                         return (
-                          <tr key={order.id || idx}>
+                          <tr key={order.ticket || order.id || idx}>
+                            <td style={{ textAlign: 'center' }}>
+                               <input 
+                                 type="checkbox"
+                                 checked={selectedOrders.includes(order.ticket)}
+                                 onChange={() => handleSelectOrder(order.ticket)}
+                                 style={{ cursor: 'pointer' }}
+                               />
+                            </td>
                             <td style={{ fontWeight: 600 }}>
                               {order.symbol}
                               {order._accountName && <div style={{ fontSize: 10, color: 'var(--text-tertiary)', fontWeight: 400, marginTop: 2 }}>{order._accountName}</div>}

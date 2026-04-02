@@ -55,6 +55,10 @@ class OrderSyncEngine {
   async syncAccountPositions(accountInfo) {
     const { account_id, user_id, metaapi_account_id, metaapi_token: rawToken } = accountInfo;
     
+    // Add missing account details
+    const accountDetailsRes = await pool.query(`SELECT a.account_number, a.account_name, b.name as broker_name FROM accounts a LEFT JOIN brokers b ON a.broker_id = b.id WHERE a.id = $1`, [account_id]);
+    const accountMeta = accountDetailsRes.rows[0] || {};
+
     // Decrypt the token (supports both encrypted and legacy plaintext)
     const metaapi_token = decrypt(rawToken);
     if (!metaapi_token) {
@@ -169,17 +173,41 @@ class OrderSyncEngine {
       }
     }
 
-    // 4. Sync new OPEN positions
+    // 4. Sync new OPEN positions and Update existing SL/TP
     for (const pos of livePositions) {
       const exists = dbOpenTrades.find(t => String(t.ticket) === String(pos.id));
       if (!exists) {
         const side = pos.type === 'POSITION_TYPE_BUY' ? 'BUY' : 'SELL';
+        
+        // Notify of new trade
+        const tradeInfo = {
+          broker_name: accountMeta.broker_name || 'Unknown Broker',
+          account_number: accountMeta.account_number || metaapi_account_id,
+          account_name: accountMeta.account_name || 'Unknown Account',
+          symbol: pos.symbol,
+          side: side,
+          lot_size: pos.volume,
+          entry_price: pos.openPrice,
+          stop_loss: pos.stopLoss || '-',
+          take_profit: pos.takeProfit || '-',
+          timeframe: '-',
+          pattern: 'EXTERNAL'
+        };
+        TelegramNotify.notifyTradeOpened(user_id, tradeInfo).catch(()=>{});
+        LineNotify.notifyTradeOpened(user_id, tradeInfo).catch(()=>{});
+
         await pool.query(
-          `INSERT INTO trades (account_id, ticket, symbol, side, lot_size, entry_price, status, pnl, opened_at)
-           VALUES ($1, $2, $3, $4, $5, $6, 'OPEN', $7, NOW())
+          `INSERT INTO trades (account_id, ticket, symbol, side, lot_size, entry_price, status, pnl, opened_at, stop_loss, take_profit)
+           VALUES ($1, $2, $3, $4, $5, $6, 'OPEN', $7, NOW(), $8, $9)
            ON CONFLICT DO NOTHING`,
-          [account_id, pos.id, pos.symbol, side, pos.volume, pos.openPrice, pos.profit]
+          [account_id, pos.id, pos.symbol, side, pos.volume, pos.openPrice, pos.profit, pos.stopLoss || null, pos.takeProfit || null]
         );
+      } else {
+        // Trade is OPEN and exists. Update floating PNL, SL, and TP.
+        await pool.query(
+          `UPDATE trades SET pnl = $1, current_price = $2, stop_loss = $3, take_profit = $4 WHERE id = $5`,
+           [pos.profit, pos.currentPrice, pos.stopLoss || null, pos.takeProfit || null, exists.id]
+        ).catch(()=>{});
       }
     }
 

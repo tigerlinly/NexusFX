@@ -273,7 +273,12 @@ router.post('/', auditLog('PLACE_TRADE', 'ORDER'), async (req, res) => {
     }
 
     // Verify account ownership
-    const account = await pool.query('SELECT * FROM accounts WHERE id = $1 AND user_id = $2', [account_id, req.user.id]);
+    const account = await pool.query(`
+      SELECT a.*, b.display_name as broker_name 
+      FROM accounts a 
+      LEFT JOIN brokers b ON a.broker_id = b.id 
+      WHERE a.id = $1 AND a.user_id = $2
+    `, [account_id, req.user.id]);
     if (account.rows.length === 0) {
       return res.status(403).json({ error: 'Account not found or not authorized' });
     }
@@ -300,12 +305,17 @@ router.post('/', auditLog('PLACE_TRADE', 'ORDER'), async (req, res) => {
 
     // 🔔 Auto-trigger Line + Telegram Notify
     const tradeInfo = {
+      broker_name: account.rows[0].broker_name || 'Unknown',
+      account_number: account.rows[0].account_number || '',
+      account_name: account.rows[0].account_name || '',
       symbol: symbol.toUpperCase(),
       side: side.toUpperCase(),
       lot_size,
       entry_price,
       stop_loss: sl,
-      take_profit: tp
+      take_profit: tp,
+      timeframe: req.body.tf || '-',
+      pattern: order_type
     };
     LineNotify.notifyTradeOpened(req.user.id, tradeInfo).catch(err => console.warn('[LineNotify] Trade notify failed:', err.message));
     TelegramNotify.notifyTradeOpened(req.user.id, tradeInfo).catch(err => console.warn('[TelegramNotify] Trade notify failed:', err.message));
@@ -522,7 +532,9 @@ router.get('/live/:accountId', auditLog('VIEW_LIVE_TRADES', 'ACCOUNT'), async (r
       current_price: pos.currentPrice,
       pnl: pos.profit,
       status: 'OPEN',
-      opened_at: pos.time
+      opened_at: pos.time,
+      stop_loss: pos.stopLoss || null,
+      take_profit: pos.takeProfit || null
     }));
 
     res.json(mapped);
@@ -540,19 +552,39 @@ router.post('/sync-live', async (req, res) => {
       return res.json({ success: true, synced: 0, message: 'No trades to sync' });
     }
 
-    // Get all active account IDs for this user to verify ownership
+    // Get all active account IDs for this user to verify ownership and fetch meta
     const userAccounts = await pool.query(
-      'SELECT id FROM accounts WHERE user_id = $1 AND is_active = true',
+      `SELECT a.id, a.account_number, a.account_name, b.name as broker_name 
+       FROM accounts a LEFT JOIN brokers b ON a.broker_id = b.id 
+       WHERE a.user_id = $1 AND a.is_active = true`,
       [req.user.id]
     );
-    const validAccountIds = new Set(userAccounts.rows.map(r => r.id.toString()));
+    const validAccountMap = {};
+    for (const acc of userAccounts.rows) {
+      validAccountMap[acc.id.toString()] = acc;
+    }
+
+    const validAccountIds = Object.keys(validAccountMap);
+    if (validAccountIds.length === 0) {
+      return res.json({ success: true, synced: 0, skipped: liveTrades.length, message: 'No valid accounts found.' });
+    }
+
+    // Find existing open tickets to distinguish new vs existing
+    const existingQuery = await pool.query(
+      `SELECT ticket FROM trades WHERE account_id = ANY($1) AND status = 'OPEN'`,
+      [validAccountIds]
+    );
+    const existingTickets = new Set(existingQuery.rows.map(r => String(r.ticket)));
 
     let synced = 0;
     let skipped = 0;
 
+    const LineNotify = require('../services/lineNotify');
+    const TelegramNotify = require('../services/telegramNotify');
+
     for (const trade of liveTrades) {
       const accountId = (trade._accountId || trade.account_id || '').toString();
-      if (!accountId || !validAccountIds.has(accountId)) {
+      if (!accountId || !validAccountMap[accountId]) {
         skipped++;
         continue;
       }
@@ -570,15 +602,40 @@ router.post('/sync-live', async (req, res) => {
       const currentPrice = parseFloat(trade.current_price) || 0;
       const pnl = parseFloat(trade.pnl) || 0;
       const openedAt = trade.opened_at || new Date().toISOString();
+      const sl = trade.stop_loss || null;
+      const tp = trade.take_profit || null;
+
+      const isNew = !existingTickets.has(ticket);
+      if (isNew) {
+        const accountMeta = validAccountMap[accountId];
+        const tradeInfo = {
+          broker_name: accountMeta.broker_name || 'Unknown',
+          account_number: accountMeta.account_number || '',
+          account_name: accountMeta.account_name || 'Unknown',
+          symbol: symbol,
+          side: side,
+          lot_size: lotSize,
+          entry_price: entryPrice,
+          stop_loss: sl || '-',
+          take_profit: tp || '-',
+          timeframe: '-',
+          pattern: 'EXTERNAL'
+        };
+        TelegramNotify.notifyTradeOpened(req.user.id, tradeInfo).catch(()=>{});
+        LineNotify.notifyTradeOpened(req.user.id, tradeInfo).catch(()=>{});
+        existingTickets.add(ticket); // prevents duplicate notify edge case
+      }
 
       const insertQuery = `
         INSERT INTO trades (
           account_id, ticket, symbol, side, lot_size, entry_price, exit_price, pnl,
-          commission, swap, opened_at, closed_at, status, magic_number
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 0, 0, $9, NULL, 'OPEN', 0)
+          commission, swap, opened_at, closed_at, status, magic_number, stop_loss, take_profit
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 0, 0, $9, NULL, 'OPEN', 0, $10, $11)
         ON CONFLICT (account_id, ticket) DO UPDATE SET
           pnl = EXCLUDED.pnl,
           exit_price = EXCLUDED.exit_price,
+          stop_loss = EXCLUDED.stop_loss,
+          take_profit = EXCLUDED.take_profit,
           status = CASE 
             WHEN trades.status = 'CLOSED' THEN trades.status
             ELSE EXCLUDED.status
@@ -586,7 +643,7 @@ router.post('/sync-live', async (req, res) => {
       `;
 
       await pool.query(insertQuery, [
-        parseInt(accountId), ticket, symbol, side, lotSize, entryPrice, currentPrice, pnl, openedAt
+        parseInt(accountId), ticket, symbol, side, lotSize, entryPrice, currentPrice, pnl, openedAt, sl, tp
       ]);
       synced++;
     }
