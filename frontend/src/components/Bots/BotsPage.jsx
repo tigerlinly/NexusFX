@@ -577,7 +577,12 @@ export default function BotsPage({ embedded = false, isActive = true }) {
 
               <div style={{ marginBottom: 20 }}>
                 <div className="form-group">
-                  <label className="form-label">คู่เงินที่เทรด (Symbols)</label>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 8 }}>
+                    <label className="form-label" style={{ margin: 0 }}>คู่เงินที่เทรด (Symbols)</label>
+                    <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                      เลือกสกุลเงินที่ต้องการให้ Bot ทำงาน
+                    </span>
+                  </div>
                   {(() => {
                      const selectedAccount = accounts.find(a => a.id.toString() === formData.account_id?.toString());
                      
@@ -629,9 +634,6 @@ export default function BotsPage({ embedded = false, isActive = true }) {
                         </div>
                      )
                   })()}
-                  <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4 }}>
-                    เลือกสกุลเงินที่ต้องการให้ Bot ทำงาน
-                  </div>
                 </div>
               </div>
 
