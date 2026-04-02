@@ -337,8 +337,8 @@ export default function TerminalPage({ embedded = false }) {
               </div>
             </div>
 
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'flex-end' }}>
-              <div className="form-group" style={{ flex: '1 1 200px' }}>
+            <div style={{ display: 'flex', flexWrap: 'nowrap', gap: 12, alignItems: 'flex-end' }}>
+              <div className="form-group" style={{ flex: '1 1 140px', minWidth: 100 }}>
                 <label className="form-label" style={{ marginBottom: 6 }}>บัญชีเทรด</label>
                 <select 
                   className="form-input" 
@@ -357,7 +357,7 @@ export default function TerminalPage({ embedded = false }) {
                 </select>
               </div>
 
-              <div className="form-group" style={{ flex: '1 1 120px' }}>
+              <div className="form-group" style={{ flex: '1 1 90px', minWidth: 80 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                   <label className="form-label" style={{ marginBottom: 0 }}>คู่ (Symbol)</label>
                   {livePrice && (
@@ -396,7 +396,7 @@ export default function TerminalPage({ embedded = false }) {
                 </select>
               </div>
 
-              <div className="form-group" style={{ flex: '1 1 50px' }}>
+              <div className="form-group" style={{ flex: '1 1 50px', minWidth: 50 }}>
                 <label className="form-label" style={{ marginBottom: 6 }}>Lot Size</label>
                 <input 
                   type="number" step="0.01" min="0.01"
@@ -406,7 +406,7 @@ export default function TerminalPage({ embedded = false }) {
                 />
               </div>
 
-              <div className="form-group" style={{ flex: '1 1 80px' }}>
+              <div className="form-group" style={{ flex: '1 1 70px', minWidth: 70 }}>
                 <label className="form-label" style={{ marginBottom: 6 }}>ประเภท</label>
                 <select 
                   className="form-input" 
@@ -419,7 +419,7 @@ export default function TerminalPage({ embedded = false }) {
                 </select>
               </div>
 
-              <div className="form-group" style={{ flex: '1 1 75px' }}>
+              <div className="form-group" style={{ flex: '1 1 70px', minWidth: 70 }}>
                 <label className="form-label" style={{ marginBottom: 6 }}>ราคา</label>
                 {formData.orderType !== 'MARKET' ? (
                   <input 
@@ -432,7 +432,7 @@ export default function TerminalPage({ embedded = false }) {
                 )}
               </div>
 
-              <div className="form-group" style={{ flex: '1 1 50px' }}>
+              <div className="form-group" style={{ flex: '1 1 50px', minWidth: 50 }}>
                 <label className="form-label" style={{ marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
                   <ShieldAlert size={12} style={{ color: 'var(--loss)' }} /> SL
                 </label>
@@ -443,7 +443,7 @@ export default function TerminalPage({ embedded = false }) {
                 />
               </div>
 
-              <div className="form-group" style={{ flex: '1 1 50px' }}>
+              <div className="form-group" style={{ flex: '1 1 50px', minWidth: 50 }}>
                 <label className="form-label" style={{ marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
                   <Target size={12} style={{ color: 'var(--profit)' }} /> TP
                 </label>
