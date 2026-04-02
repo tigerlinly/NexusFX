@@ -103,10 +103,45 @@ router.post('/purchase', async (req, res) => {
 
     // Provision the bot to the user's trading_bots table
     const botName = `Copied: ${botToBuy.name}`;
+    
+    // Map store bot config to trading_bots columns
+    const cfg = botToBuy.config || {};
+    let strategyType = 'Custom';
+    if (cfg.strategy === 'scalper') strategyType = 'Scalper';
+    if (cfg.strategy === 'swing') strategyType = 'Swing';
+    if (cfg.strategy === 'grid') strategyType = 'Grid';
+    if (cfg.strategy === 'martingale') strategyType = 'Martingale';
+
+    const pTf = cfg.timeframe || 'M5';
+    let aTfs = ['M5', 'M15'];
+    if (cfg.strategy === 'swing') aTfs = ['H1', 'H4', 'D1'];
+    if (cfg.strategy === 'grid') aTfs = ['M15', 'H1'];
+    
+    // Convert indicators from string to array of objects
+    let inds = [];
+    if (cfg.indicators) {
+      inds = cfg.indicators.map(i => ({ name: i, weight: 50 }));
+    } else {
+      if (cfg.strategy === 'scalper') inds = [{ name: 'RSI', weight: 40 }, { name: 'EMA', weight: 60 }];
+      if (cfg.strategy === 'swing') inds = [{ name: 'MACD', weight: 50 }, { name: 'EMA', weight: 50 }];
+      if (cfg.strategy === 'grid') inds = [{ name: 'BollingerBands', weight: 100 }];
+      if (cfg.strategy === 'martingale') inds = [{ name: 'RSI', weight: 100 }];
+    }
+
     const insertBot = await client.query(
-      `INSERT INTO trading_bots (account_id, bot_name, webhook_token, parameters, status, is_active)
-       VALUES ($1, $2, encode(gen_random_bytes(16), 'hex'), $3, 'AWAITING_SIGNAL', true) RETURNING *`,
-      [accountId, botName, botToBuy.config]
+      `INSERT INTO trading_bots (
+         account_id, bot_name, webhook_token, parameters, status, is_active,
+         strategy_type, primary_timeframe, analysis_timeframes, indicators_config, min_confidence
+       )
+       VALUES ($1, $2, encode(gen_random_bytes(16), 'hex'), $3, 'AWAITING_SIGNAL', true, $4, $5, $6, $7, $8) RETURNING *`,
+      [
+        accountId, botName, cfg, 
+        strategyType, 
+        pTf, 
+        JSON.stringify(aTfs), 
+        JSON.stringify(inds), 
+        60
+      ]
     );
 
     // Audit log

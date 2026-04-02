@@ -251,6 +251,82 @@ export default function BotsPage({ embedded = false, isActive = true }) {
     setFormData({ ...formData, indicators_config: list });
   };
 
+  const handleLoadStrategyDefaults = () => {
+    const type = formData.strategy_type;
+    let defaults = {};
+    if (type === 'Scalper') {
+      defaults = {
+        primary_timeframe: 'M5',
+        analysis_timeframes: ['M1', 'M5', 'M15'],
+        indicators_config: [
+          { name: 'RSI', weight: 40 },
+          { name: 'EMA', weight: 40 },
+          { name: 'MACD', weight: 20 }
+        ],
+        min_confidence: 60,
+        sl_pips: 10,
+        tp_ratio: 1.5,
+        trail_trigger_pips: 8,
+        trail_distance_pips: 5,
+        breakeven_trigger_pips: 10
+      };
+    } else if (type === 'Swing') {
+      defaults = {
+        primary_timeframe: 'H1',
+        analysis_timeframes: ['H1', 'H4', 'D1'],
+        indicators_config: [
+          { name: 'MACD', weight: 40 },
+          { name: 'EMA', weight: 40 },
+          { name: 'BollingerBands', weight: 20 }
+        ],
+        min_confidence: 70,
+        sl_pips: 40,
+        tp_ratio: 2.0,
+        trail_trigger_pips: 30,
+        trail_distance_pips: 15,
+        breakeven_trigger_pips: 35
+      };
+    } else if (type === 'Grid') {
+      defaults = {
+        primary_timeframe: 'M15',
+        analysis_timeframes: ['M15', 'H1'],
+        indicators_config: [
+          { name: 'BollingerBands', weight: 60 },
+          { name: 'RSI', weight: 40 }
+        ],
+        min_confidence: 50,
+        sl_pips: 50,
+        tp_ratio: 1.0,
+        trail_trigger_pips: 15,
+        trail_distance_pips: 10,
+        breakeven_trigger_pips: 15
+      };
+    } else if (type === 'Martingale') {
+      defaults = {
+        primary_timeframe: 'M5',
+        analysis_timeframes: ['M5', 'M15'],
+        indicators_config: [
+          { name: 'RSI', weight: 50 },
+          { name: 'Engulfing', weight: 50 }
+        ],
+        min_confidence: 60,
+        sl_pips: 100,
+        tp_ratio: 1.5,
+        trail_trigger_pips: 20,
+        trail_distance_pips: 15,
+        breakeven_trigger_pips: 20
+      };
+    } else {
+      alert('สำหรับประเภท Custom โปรดตั้งค่าตัวแปรทั้งหมดด้วยตนเองครับ');
+      return;
+    }
+    
+    setFormData(prev => ({
+      ...prev,
+      ...defaults
+    }));
+  };
+
   return (
     <>
       <style>{`
@@ -446,11 +522,11 @@ export default function BotsPage({ embedded = false, isActive = true }) {
       {/* Create / Edit Modal */}
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal" style={{ width: 600, maxWidth: '90vw' }} onClick={e => e.stopPropagation()}>
+          <div className="modal" style={{ width: 900, maxWidth: '95vw' }} onClick={e => e.stopPropagation()}>
             <h2 className="modal-title">🤖 {isEditMode ? 'ตั้งค่า Trading Bot' : 'สร้าง Trading Bot ใหม่'}</h2>
             <form onSubmit={handleSubmit} className="modal-body-scroll">
               
-              <div className="modal-grid-3">
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 20 }}>
                 <div className="form-group">
                   <label className="form-label">ชื่อ Bot</label>
                   <input className="form-input" required value={formData.bot_name} onChange={e => setFormData({ ...formData, bot_name: e.target.value })} placeholder="เช่น Sniper V1" />
@@ -466,23 +542,34 @@ export default function BotsPage({ embedded = false, isActive = true }) {
                 </div>
                 <div className="form-group">
                   <label className="form-label">ประเภทกลยุทธ์พื้นฐาน</label>
-                  <select className="filter-select" value={formData.strategy_type} onChange={e => setFormData({ ...formData, strategy_type: e.target.value })} style={{ width: '100%' }}>
-                    <option value="Scalper">Scalper (เก็บสั้น)</option>
-                    <option value="Swing">Swing Trade</option>
-                    <option value="Grid">Grid Trading</option>
-                    <option value="Martingale">Martingale</option>
-                    <option value="Custom">Custom (ปรับแต่งเอง)</option>
-                  </select>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <select className="filter-select" value={formData.strategy_type} onChange={e => setFormData({ ...formData, strategy_type: e.target.value })} style={{ flex: 1 }}>
+                      <option value="Scalper">Scalper (เก็บสั้น)</option>
+                      <option value="Swing">Swing Trade</option>
+                      <option value="Grid">Grid Trading</option>
+                      <option value="Martingale">Martingale</option>
+                      <option value="Custom">Custom (ปรับแต่งเอง)</option>
+                    </select>
+                    <button 
+                      type="button" 
+                      className="btn btn-sm btn-secondary"
+                      onClick={handleLoadStrategyDefaults}
+                      style={{ padding: '0 12px', whiteSpace: 'nowrap' }}
+                      title="ดึงค่าตั้งต้นของกลยุทธ์นี้"
+                    >
+                      ดึงค่าตั้งต้น
+                    </button>
+                  </div>
                 </div>
-              </div>
-
-              <div className="modal-grid-2">
                 <div className="form-group">
                   <label className="form-label">Timeframe หลัก (ในการเข้าไม้)</label>
                   <select className="filter-select" value={formData.primary_timeframe} onChange={e => setFormData({ ...formData, primary_timeframe: e.target.value })} style={{ width: '100%' }}>
                     {timeframes.map(tf => <option key={tf} value={tf}>{tf}</option>)}
                   </select>
                 </div>
+              </div>
+
+              <div style={{ marginBottom: 20 }}>
                 <div className="form-group">
                   <label className="form-label">คู่เงินที่เทรด (Symbols)</label>
                   {(() => {
@@ -504,7 +591,7 @@ export default function BotsPage({ embedded = false, isActive = true }) {
                      };
 
                      return (
-                       <div style={{ maxHeight: 150, overflowY: 'auto', border: '1px solid var(--border-primary)', borderRadius: 'var(--radius-md)', padding: 8, background: 'var(--bg-tertiary)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                       <div style={{ maxHeight: 150, overflowY: 'auto', border: '1px solid var(--border-primary)', borderRadius: 'var(--radius-md)', padding: 8, background: 'var(--bg-tertiary)', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 8 }}>
                          {matchedSymbols.map(sym => (
                            <label key={sym} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, color: 'var(--text-secondary)' }}>
                              <input 
@@ -592,7 +679,7 @@ export default function BotsPage({ embedded = false, isActive = true }) {
 
               <div style={{ borderTop: '1px solid var(--border-primary)', paddingTop: 16, marginBottom: 16 }}>
                 <h4 style={{ marginBottom: 12, fontSize: 13, color: 'var(--text-primary)' }}>ตั้งค่าความเสี่ยง และ Trailing Stop / TP</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16, marginBottom: 12 }}>
                   <div className="form-group">
                     <label className="form-label">Stop Loss (Pips)</label>
                     <input type="number" step="0.1" min="1" className="form-input" required value={formData.sl_pips} onChange={e => setFormData({ ...formData, sl_pips: e.target.value })} placeholder="15" />
@@ -601,9 +688,6 @@ export default function BotsPage({ embedded = false, isActive = true }) {
                     <label className="form-label">TP Ratio (Risk:Reward)</label>
                     <input type="number" step="0.1" min="0.1" className="form-input" required value={formData.tp_ratio} onChange={e => setFormData({ ...formData, tp_ratio: e.target.value })} placeholder="1.5 = 1.5x ของ SL" />
                   </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
                   <div className="form-group" title="เลื่อน SL มาคุ้มทุนเมื่อกำไรถึง (Pips)">
                     <label className="form-label">Breakeven Pips</label>
                     <input type="number" step="0.1" min="0" className="form-input" required value={formData.breakeven_trigger_pips} onChange={e => setFormData({ ...formData, breakeven_trigger_pips: e.target.value })} />
