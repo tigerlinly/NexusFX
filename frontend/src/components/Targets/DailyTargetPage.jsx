@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { api } from '../../utils/api';
 import { useAccounts } from '../../context/AccountContext';
 import {
   Target, Plus, Trash2, Check, Play, Pause, Clock, Trophy, History
 } from 'lucide-react';
 
-export default function DailyTargetPage({ embedded = false }) {
+export default function DailyTargetPage({ embedded = false, isActive = true }) {
   const { accounts } = useAccounts();
   const [targets, setTargets] = useState([]);
   const [targetStatus, setTargetStatus] = useState([]);
@@ -28,6 +29,13 @@ export default function DailyTargetPage({ embedded = false }) {
       console.error('Targets error:', err);
     }
   }, []);
+
+  const [portalTarget, setPortalTarget] = useState(null);
+  useEffect(() => {
+    if (embedded) {
+      setPortalTarget(document.getElementById('trading-header-actions'));
+    }
+  }, [embedded]);
 
   useEffect(() => { 
     fetchData(); 
@@ -97,12 +105,11 @@ export default function DailyTargetPage({ embedded = false }) {
       </div>
       )}
 
-      {embedded && (
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 'var(--space-md)' }}>
-          <button className="btn btn-primary btn-sm" onClick={() => setShowForm(!showForm)}>
-            <Plus size={14} /> ตั้งเป้าใหม่
-          </button>
-        </div>
+      {embedded && isActive && portalTarget && createPortal(
+        <button className="btn btn-primary btn-sm" onClick={() => setShowForm(!showForm)}>
+          <Plus size={14} /> ตั้งเป้าใหม่
+        </button>,
+        portalTarget
       )}
 
       <div className={embedded ? "" : "content-area"}>

@@ -27,6 +27,7 @@ export default function TradingPage() {
         <div className="header-left">
           <h1 className="page-title">Trading</h1>
         </div>
+        <div className="header-right" id="trading-header-actions" style={{ display: 'flex', gap: 8 }}></div>
       </div>
 
       <div className="content-area">
@@ -72,13 +73,13 @@ export default function TradingPage() {
 
         {/* Tab Content - render both but hide inactive for state preservation */}
         <div style={{ display: activeTab === 'bots' ? 'block' : 'none' }}>
-          <BotsContent />
+          <BotsContent isActive={activeTab === 'bots'} />
         </div>
         <div style={{ display: activeTab === 'terminal' ? 'block' : 'none' }}>
-          <TerminalContent />
+          <TerminalContent isActive={activeTab === 'terminal'} />
         </div>
         <div style={{ display: activeTab === 'targets' ? 'block' : 'none' }}>
-          <TargetsContent />
+          <TargetsContent isActive={activeTab === 'targets'} />
         </div>
       </div>
     </>
@@ -86,14 +87,14 @@ export default function TradingPage() {
 }
 
 // Wrapper components that render only the content (no header/content-area wrapper)
-function BotsContent() {
-  return <BotsPage embedded />;
+function BotsContent({ isActive }) {
+  return <BotsPage embedded isActive={isActive} />;
 }
 
-function TerminalContent() {
-  return <TerminalPage embedded />;
+function TerminalContent({ isActive }) {
+  return <TerminalPage embedded isActive={isActive} />;
 }
 
-function TargetsContent() {
-  return <DailyTargetPage embedded />;
+function TargetsContent({ isActive }) {
+  return <DailyTargetPage embedded isActive={isActive} />;
 }

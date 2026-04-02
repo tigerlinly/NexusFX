@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { api } from '../../utils/api';
 import { Bot, Play, Square, Settings, Activity, Plus, Trash2, Cpu, ShoppingCart } from 'lucide-react';
 import { io } from 'socket.io-client';
 import { useAuth } from '../../context/AuthContext';
 
-export default function BotsPage({ embedded = false }) {
+export default function BotsPage({ embedded = false, isActive = true }) {
   const { user } = useAuth();
   const [bots, setBots] = useState([]);
   const [accounts, setAccounts] = useState([]);
@@ -56,6 +57,13 @@ export default function BotsPage({ embedded = false }) {
       console.error(err);
     }
   };
+
+  const [portalTarget, setPortalTarget] = useState(null);
+  useEffect(() => {
+    if (embedded) {
+      setPortalTarget(document.getElementById('trading-header-actions'));
+    }
+  }, [embedded]);
 
   useEffect(() => { 
     fetchData(); 
@@ -297,15 +305,16 @@ export default function BotsPage({ embedded = false }) {
         </div>
       )}
 
-      {embedded && (
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 'var(--space-md)' }}>
+      {embedded && isActive && portalTarget && createPortal(
+        <>
           <button className="btn btn-secondary btn-sm" onClick={() => window.location.href = '/store'} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <ShoppingCart size={14} /> เพิ่มจาก Store
           </button>
           <button className="btn btn-primary btn-sm" onClick={openCreateModal}>
             <Plus size={14} /> สร้าง Bot
           </button>
-        </div>
+        </>,
+        portalTarget
       )}
 
       <div className={embedded ? '' : 'content-area'}>
