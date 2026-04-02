@@ -50,6 +50,16 @@ export default function TerminalPage({ embedded = false }) {
         allTrades = allTrades.concat(res);
       });
       setRecentOrders(allTrades);
+
+      // Auto-sync live trades to history database
+      if (allTrades.length > 0) {
+        try {
+          const syncResult = await api.syncLiveTrades(allTrades);
+          console.log(`[SyncLive] ${syncResult.message}`);
+        } catch (syncErr) {
+          console.warn('[SyncLive] Failed to sync live trades to history:', syncErr);
+        }
+      }
     } catch (err) {
       alert('Error fetching all trades');
     } finally {

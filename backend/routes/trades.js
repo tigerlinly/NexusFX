@@ -532,6 +532,72 @@ router.get('/live/:accountId', auditLog('VIEW_LIVE_TRADES', 'ACCOUNT'), async (r
   }
 });
 
+// POST /api/trades/sync-live — Save live (open) trades to history if not exist
+router.post('/sync-live', async (req, res) => {
+  try {
+    const { trades: liveTrades } = req.body;
+    if (!Array.isArray(liveTrades) || liveTrades.length === 0) {
+      return res.json({ success: true, synced: 0, message: 'No trades to sync' });
+    }
+
+    // Get all active account IDs for this user to verify ownership
+    const userAccounts = await pool.query(
+      'SELECT id FROM accounts WHERE user_id = $1 AND is_active = true',
+      [req.user.id]
+    );
+    const validAccountIds = new Set(userAccounts.rows.map(r => r.id.toString()));
+
+    let synced = 0;
+    let skipped = 0;
+
+    for (const trade of liveTrades) {
+      const accountId = (trade._accountId || trade.account_id || '').toString();
+      if (!accountId || !validAccountIds.has(accountId)) {
+        skipped++;
+        continue;
+      }
+
+      const ticket = (trade.ticket || '').toString();
+      if (!ticket) {
+        skipped++;
+        continue;
+      }
+
+      const symbol = trade.symbol || 'UNKNOWN';
+      const side = (trade.side || 'BUY').toUpperCase();
+      const lotSize = parseFloat(trade.lot_size) || 0;
+      const entryPrice = parseFloat(trade.entry_price) || 0;
+      const currentPrice = parseFloat(trade.current_price) || 0;
+      const pnl = parseFloat(trade.pnl) || 0;
+      const openedAt = trade.opened_at || new Date().toISOString();
+
+      const insertQuery = `
+        INSERT INTO trades (
+          account_id, ticket, symbol, side, lot_size, entry_price, exit_price, pnl,
+          commission, swap, opened_at, closed_at, status, magic_number
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 0, 0, $9, NULL, 'OPEN', 0)
+        ON CONFLICT (account_id, ticket) DO UPDATE SET
+          pnl = EXCLUDED.pnl,
+          exit_price = EXCLUDED.exit_price,
+          status = CASE 
+            WHEN trades.status = 'CLOSED' THEN trades.status
+            ELSE EXCLUDED.status
+          END
+      `;
+
+      await pool.query(insertQuery, [
+        parseInt(accountId), ticket, symbol, side, lotSize, entryPrice, currentPrice, pnl, openedAt
+      ]);
+      synced++;
+    }
+
+    res.json({ success: true, synced, skipped, message: `บันทึก ${synced} ออเดอร์เข้าประวัติเรียบร้อย` });
+  } catch (err) {
+    console.error('Sync live trades error:', err);
+    res.status(500).json({ error: 'Failed to sync live trades: ' + err.message });
+  }
+});
+
 // POST /api/trades/close/:accountId
 router.post('/close/:accountId', auditLog('CLOSE_TRADE', 'ACCOUNT'), async (req, res) => {
   try {

@@ -77,6 +77,7 @@ export const api = {
   syncTrades: (accountId) => request(`/trades/sync/${accountId}`, { method: 'POST' }),
   syncAllTrades: () => request('/trades/sync-all', { method: 'POST' }),
   closeTrades: (accountId, tickets) => request(`/trades/close/${accountId}`, { method: 'POST', body: JSON.stringify({ tickets }) }),
+  syncLiveTrades: (trades) => request('/trades/sync-live', { method: 'POST', body: JSON.stringify({ trades }) }),
 
   // Bots
   getBots: () => request('/bots'),
