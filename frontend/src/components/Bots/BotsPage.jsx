@@ -477,6 +477,14 @@ export default function BotsPage({ embedded = false }) {
                 <div className="form-group">
                   <label className="form-label">คู่เงินที่เทรด (Symbols - คั่นด้วยจุลภาค)</label>
                   <input className="form-input" required value={formData.symbols.join(', ')} onChange={e => setFormData({ ...formData, symbols: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })} placeholder="XAUUSD, EURUSD" />
+                  {(() => {
+                     const selectedAccount = accounts.find(a => a.id.toString() === formData.account_id?.toString());
+                     if (selectedAccount?.supported_symbols && Array.isArray(selectedAccount.supported_symbols) && selectedAccount.supported_symbols.length > 0) {
+                       const exampleSyms = selectedAccount.supported_symbols.slice(0, 30).join(', ');
+                       return <div style={{ fontSize: 11, color: 'var(--accent-secondary)', marginTop: 4 }}>สัญลักษณ์ที่บัญชีนี้รองรับ: {exampleSyms}</div>;
+                     }
+                     return null;
+                  })()}
                 </div>
               </div>
 

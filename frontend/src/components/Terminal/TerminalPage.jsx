@@ -67,15 +67,20 @@ export default function TerminalPage({ embedded = false }) {
   useEffect(() => {
     if (!formData.account_id || accounts.length === 0) return;
     const selectedAccount = accounts.find(a => a.id.toString() === formData.account_id.toString());
-    const bName = selectedAccount?.broker_name?.toLowerCase()?.replace(/\s/g, '') || '';
+    
     let matchedSymbols = [];
-    if (bName.includes('exness')) matchedSymbols = BROKER_SYMBOLS.exness;
-    else if (bName.includes('xm')) matchedSymbols = BROKER_SYMBOLS.xm;
-    else if (bName.includes('hfm') || bName.includes('hot')) matchedSymbols = BROKER_SYMBOLS.hfm;
-    else if (bName.includes('icmarket')) matchedSymbols = BROKER_SYMBOLS.icmarkets;
-    else if (bName.includes('binance')) matchedSymbols = BROKER_SYMBOLS.binance;
-    else if (bName.includes('fbs')) matchedSymbols = BROKER_SYMBOLS.fbs;
-    else matchedSymbols = ['BTCUSDT', 'XAUUSD', 'EURUSD'];
+    if (selectedAccount?.supported_symbols && Array.isArray(selectedAccount.supported_symbols) && selectedAccount.supported_symbols.length > 0) {
+      matchedSymbols = selectedAccount.supported_symbols;
+    } else {
+      const bName = selectedAccount?.broker_name?.toLowerCase()?.replace(/\s/g, '') || '';
+      if (bName.includes('exness')) matchedSymbols = BROKER_SYMBOLS.exness;
+      else if (bName.includes('xm')) matchedSymbols = BROKER_SYMBOLS.xm;
+      else if (bName.includes('hfm') || bName.includes('hot')) matchedSymbols = BROKER_SYMBOLS.hfm;
+      else if (bName.includes('icmarket')) matchedSymbols = BROKER_SYMBOLS.icmarkets;
+      else if (bName.includes('binance')) matchedSymbols = BROKER_SYMBOLS.binance;
+      else if (bName.includes('fbs')) matchedSymbols = BROKER_SYMBOLS.fbs;
+      else matchedSymbols = ['BTCUSDT', 'XAUUSD', 'EURUSD'];
+    }
     
     setFormData(prev => {
       if (!matchedSymbols.includes(prev.symbol)) {
@@ -171,15 +176,20 @@ export default function TerminalPage({ embedded = false }) {
         >
           {(() => {
             const selectedAccount = accounts.find(a => a.id.toString() === formData.account_id?.toString());
-            const bName = selectedAccount?.broker_name?.toLowerCase()?.replace(/\s/g, '') || '';
             let matchedSymbols = [];
-            if (bName.includes('exness')) matchedSymbols = BROKER_SYMBOLS.exness;
-            else if (bName.includes('xm')) matchedSymbols = BROKER_SYMBOLS.xm;
-            else if (bName.includes('hfm') || bName.includes('hot')) matchedSymbols = BROKER_SYMBOLS.hfm;
-            else if (bName.includes('icmarket')) matchedSymbols = BROKER_SYMBOLS.icmarkets;
-            else if (bName.includes('binance')) matchedSymbols = BROKER_SYMBOLS.binance;
-            else if (bName.includes('fbs')) matchedSymbols = BROKER_SYMBOLS.fbs;
-            else matchedSymbols = ['BTCUSDT', 'XAUUSD', 'EURUSD']; // Fallback
+            
+            if (selectedAccount?.supported_symbols && Array.isArray(selectedAccount.supported_symbols) && selectedAccount.supported_symbols.length > 0) {
+              matchedSymbols = selectedAccount.supported_symbols;
+            } else {
+              const bName = selectedAccount?.broker_name?.toLowerCase()?.replace(/\s/g, '') || '';
+              if (bName.includes('exness')) matchedSymbols = BROKER_SYMBOLS.exness;
+              else if (bName.includes('xm')) matchedSymbols = BROKER_SYMBOLS.xm;
+              else if (bName.includes('hfm') || bName.includes('hot')) matchedSymbols = BROKER_SYMBOLS.hfm;
+              else if (bName.includes('icmarket')) matchedSymbols = BROKER_SYMBOLS.icmarkets;
+              else if (bName.includes('binance')) matchedSymbols = BROKER_SYMBOLS.binance;
+              else if (bName.includes('fbs')) matchedSymbols = BROKER_SYMBOLS.fbs;
+              else matchedSymbols = ['BTCUSDT', 'XAUUSD', 'EURUSD']; // Fallback
+            }
             
             return matchedSymbols.map(sym => (
               <option key={sym} value={sym}>{sym}</option>

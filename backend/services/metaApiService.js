@@ -102,6 +102,23 @@ class MetaApiService {
         accountType = accountType.substring(0, 20);
       }
 
+      // Fetch symbols to populate the trading dropdowns dynamically
+      let supportedSymbols = [];
+      try {
+        const symbolsData = await connection.getSymbols();
+        const targetKeywords = ['USD', 'EUR', 'GBP', 'JPY', 'XAU', 'BTC', 'ETH', 'AUD', 'CAD', 'CHF', 'NZD'];
+        supportedSymbols = symbolsData
+          .map(s => typeof s === 'string' ? s : s.symbol)
+          .filter(s => {
+             if (!s) return false;
+             const upper = s.toUpperCase();
+             return targetKeywords.some(kw => upper.includes(kw));
+          })
+          .slice(0, 500); // limit to 500 options to prevent UI freeze and DB overhead
+      } catch (err) {
+        console.warn(`⚠️ [MetaAPI] Failed to fetch symbols for ${accountId}:`, err.message);
+      }
+
       return {
         balance: info.balance,
         equity: info.equity,
@@ -113,6 +130,7 @@ class MetaApiService {
         platform: info.platform || account.platform || 'MT5',
         login: info.login || account.login,
         connected: true,
+        symbols: supportedSymbols
       };
     } catch (err) {
       console.error(`❌ [MetaAPI] getAccountInfo Error for ${accountId}:`, err.message);

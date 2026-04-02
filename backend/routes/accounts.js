@@ -117,6 +117,8 @@ router.post('/:id/sync', auditLog('SYNC_ACCOUNT', 'ACCOUNT'), async (req, res) =
       // Update balance, equity AND account_name, account_type from MetaAPI
       const newName = info.account_name || acct.account_name;
       const newType = info.account_type || acct.account_type;
+      const symbolsJson = info.symbols && info.symbols.length > 0 ? JSON.stringify(info.symbols) : null;
+
       await pool.query(
         `UPDATE accounts SET 
           balance = $1, equity = $2, 
@@ -125,13 +127,14 @@ router.post('/:id/sync', auditLog('SYNC_ACCOUNT', 'ACCOUNT'), async (req, res) =
           currency = COALESCE(NULLIF($5, ''), currency),
           account_name = COALESCE(NULLIF($6, ''), account_name),
           account_type = COALESCE(NULLIF($7, ''), account_type),
+          supported_symbols = COALESCE($8::jsonb, supported_symbols),
           is_connected = true, last_sync_at = NOW() 
-        WHERE id = $8`,
-        [info.balance, info.equity, info.leverage, info.server, info.currency, newName, newType, acct.id]
+        WHERE id = $9`,
+        [info.balance, info.equity, info.leverage, info.server, info.currency, newName, newType, symbolsJson, acct.id]
       );
       res.json({ 
         success: true, balance: info.balance, equity: info.equity,
-        account_name: newName, account_type: newType 
+        account_name: newName, account_type: newType, supported_symbols: info.symbols
       });
     } else {
       await pool.query(`UPDATE accounts SET is_connected = false WHERE id = $1`, [acct.id]);
