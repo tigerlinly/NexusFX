@@ -133,12 +133,24 @@ router.post('/:id/action', auditLog('TARGET_ACTION', 'TARGET'), async (req, res)
       );
     }
 
-    // Record in target_history
-    await pool.query(
-      `INSERT INTO target_history (daily_target_id, user_id, account_id, reached_date, target_amount, pnl_at_reach, user_action)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [t.id, req.user.id, t.account_id, today, t.target_amount, pnlQuery.rows[0].current_pnl, action]
+    // Record in target_history (check if exists to avoid duplicates)
+    const existing = await pool.query(
+      `SELECT id FROM target_history WHERE daily_target_id = $1 AND user_id = $2 AND reached_date = $3`,
+      [t.id, req.user.id, today]
     );
+
+    if (existing.rows.length === 0) {
+      await pool.query(
+        `INSERT INTO target_history (daily_target_id, user_id, account_id, reached_date, target_amount, pnl_at_reach, user_action)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [t.id, req.user.id, t.account_id, today, t.target_amount, pnlQuery.rows[0].current_pnl, action]
+      );
+    } else {
+      await pool.query(
+        `UPDATE target_history SET user_action = $1, pnl_at_reach = $2 WHERE id = $3`,
+        [action, pnlQuery.rows[0].current_pnl, existing.rows[0].id]
+      );
+    }
 
     res.json({ success: true, action, pnl: parseFloat(pnlQuery.rows[0].current_pnl) });
   } catch (err) {
@@ -183,6 +195,12 @@ router.get('/status', async (req, res) => {
     const today = new Date(todayDate.toLocaleString('en-US', { timeZone: 'Asia/Bangkok' })).toISOString().split('T')[0];
     const statuses = [];
 
+    const historyRes = await pool.query(
+      `SELECT daily_target_id FROM target_history WHERE user_id = $1 AND reached_date = $2`,
+      [req.user.id, today]
+    );
+    const handledTargetIds = historyRes.rows.map(r => r.daily_target_id);
+
     for (const t of targets.rows) {
       let currentPnl;
       if (t.account_id) {
@@ -209,12 +227,14 @@ router.get('/status', async (req, res) => {
       const progress = t.target_amount > 0 ? 
         Math.max(0, Math.min(100, (currentPnl / parseFloat(t.target_amount)) * 100)).toFixed(1) : 0;
       const reached = currentPnl >= parseFloat(t.target_amount);
+      const handled = handledTargetIds.includes(t.id);
 
       statuses.push({
         ...t,
         current_pnl: currentPnl,
         progress: parseFloat(progress),
         reached,
+        handled,
       });
     }
 

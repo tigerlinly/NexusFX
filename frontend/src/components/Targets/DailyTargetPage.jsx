@@ -43,9 +43,9 @@ export default function DailyTargetPage({ embedded = false, isActive = true }) {
 
   // Check for newly reached targets
   useEffect(() => {
-    const reached = targetStatus.find(s => s.reached);
-    if (reached && !showModal) {
-      setTimeout(() => setShowModal(reached), 0);
+    const newlyReached = targetStatus.find(s => s.reached && !s.handled);
+    if (newlyReached && !showModal) {
+      setTimeout(() => setShowModal(newlyReached), 0);
     }
   }, [targetStatus, showModal]);
 
@@ -233,7 +233,7 @@ export default function DailyTargetPage({ embedded = false, isActive = true }) {
                   </span>
                 </div>
 
-                {reached && (
+                {reached && !status?.handled && (
                   <div style={{ marginTop: 'var(--space-md)', display: 'flex', gap: 'var(--space-sm)' }}>
                     <button className="btn btn-danger btn-sm" style={{ flex: 1 }} onClick={() => handleAction(t.id, 'STOPPED')}>
                       <Pause size={12} /> หยุดเทรด
@@ -241,6 +241,13 @@ export default function DailyTargetPage({ embedded = false, isActive = true }) {
                     <button className="btn btn-primary btn-sm" style={{ flex: 1 }} onClick={() => handleAction(t.id, 'CONTINUED')}>
                       <Play size={12} /> เทรดต่อ
                     </button>
+                  </div>
+                )}
+                
+                {reached && status?.handled && (
+                  <div style={{ marginTop: 'var(--space-md)', textAlign: 'center', fontSize: 13, color: 'var(--text-tertiary)', padding: '6px 0', background: 'var(--bg-secondary)', borderRadius: 4 }}>
+                    <Check size={14} style={{ marginRight: 6, display: 'inline-block', verticalAlign: 'middle', color: 'var(--success)' }} />
+                    <span style={{ display: 'inline-block', verticalAlign: 'middle' }}>บันทึกการตัดสินใจแล้ว</span>
                   </div>
                 )}
               </div>
