@@ -414,7 +414,16 @@ export default function BotsPage({ embedded = false, isActive = true }) {
                       <Cpu size={18} style={{ color: bot.is_active ? 'var(--profit)' : 'var(--text-muted)' }} />
                     </div>
                     <div>
-                      <div className="card-title" style={{ fontSize: 14 }}>{bot.bot_name}</div>
+                      <div className="card-title" style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {bot.bot_name}
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleDeleteBot(bot.id); }} 
+                          style={{ background: 'none', border: 'none', color: 'var(--loss)', cursor: 'pointer', display: 'flex', padding: 2 }}
+                          title="ลบ Bot"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                       <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>บัญชี: {bot.account_name}</div>
                     </div>
                   </div>
@@ -461,9 +470,6 @@ export default function BotsPage({ embedded = false, isActive = true }) {
                     title={bot.recent_events > 0 ? `มี ${bot.recent_events} กิจกรรมใน 24 ชม.` : 'ดูบันทึกเหตุการณ์'}
                   >
                     <Activity size={14} /> Log{bot.recent_events > 0 ? ` (${bot.recent_events})` : ''}
-                  </button>
-                  <button className="btn btn-ghost btn-sm btn-icon" onClick={() => handleDeleteBot(bot.id)} style={{ color: 'var(--loss)' }}>
-                    <Trash2 size={14} />
                   </button>
                 </div>
               </div>
