@@ -728,7 +728,7 @@ export default function BotsPage({ embedded = false, isActive = true }) {
                 <div style={{ display: 'flex', gap: 16, flexWrap: 'nowrap', marginBottom: 12 }}>
                   <div className="form-group" style={{ display: 'flex', flexDirection: 'column', flex: '0 0 auto' }}>
                     <label className="form-label" style={{ whiteSpace: 'nowrap' }}>Stop Loss (Pips)</label>
-                    <input type="number" step="0.1" min="1" className="form-input" style={{ width: '100%', minWidth: 0, paddingRight: 8 }} required value={formData.sl_pips} onChange={e => setFormData({ ...formData, sl_pips: e.target.value })} placeholder="15" />
+                    <input type="number" step="0.1" min="1" className="form-input" style={{ width: 120, height: 38, minWidth: 0, paddingRight: 8 }} required value={formData.sl_pips} onChange={e => setFormData({ ...formData, sl_pips: e.target.value })} placeholder="15" />
                   </div>
                   <div className="form-group" style={{ display: 'flex', flexDirection: 'column', flex: '0 0 auto' }}>
                     <label className="form-label" style={{ whiteSpace: 'nowrap' }}>TP Ratio (Risk:Reward)</label>
@@ -736,15 +736,15 @@ export default function BotsPage({ embedded = false, isActive = true }) {
                   </div>
                   <div className="form-group" style={{ display: 'flex', flexDirection: 'column', flex: '0 0 auto' }} title="เลื่อน SL มาคุ้มทุนเมื่อกำไรถึง (Pips)">
                     <label className="form-label" style={{ whiteSpace: 'nowrap' }}>Breakeven Pips</label>
-                    <input type="number" step="0.1" min="0" className="form-input" style={{ width: '100%', minWidth: 0, paddingRight: 8 }} required value={formData.breakeven_trigger_pips} onChange={e => setFormData({ ...formData, breakeven_trigger_pips: e.target.value })} />
+                    <input type="number" step="0.1" min="0" className="form-input" style={{ width: 120, height: 38, minWidth: 0, paddingRight: 8 }} required value={formData.breakeven_trigger_pips} onChange={e => setFormData({ ...formData, breakeven_trigger_pips: e.target.value })} />
                   </div>
                   <div className="form-group" style={{ display: 'flex', flexDirection: 'column', flex: '0 0 auto' }} title="เริ่ม Trailing เมื่อกำไรถึง (Pips)">
                     <label className="form-label" style={{ whiteSpace: 'nowrap' }}>Trail Start Pips</label>
-                    <input type="number" step="0.1" min="0" className="form-input" style={{ width: '100%', minWidth: 0, paddingRight: 8 }} required value={formData.trail_trigger_pips} onChange={e => setFormData({ ...formData, trail_trigger_pips: e.target.value })} />
+                    <input type="number" step="0.1" min="0" className="form-input" style={{ width: 120, height: 38, minWidth: 0, paddingRight: 8 }} required value={formData.trail_trigger_pips} onChange={e => setFormData({ ...formData, trail_trigger_pips: e.target.value })} />
                   </div>
                   <div className="form-group" style={{ display: 'flex', flexDirection: 'column', flex: '0 0 auto' }} title="ระยะ SL จากจุดราคาสูงสุด (Pips)">
                     <label className="form-label" style={{ whiteSpace: 'nowrap' }}>Trail Distance</label>
-                    <input type="number" step="0.1" min="1" className="form-input" style={{ width: '100%', minWidth: 0, paddingRight: 8 }} required value={formData.trail_distance_pips} onChange={e => setFormData({ ...formData, trail_distance_pips: e.target.value })} />
+                    <input type="number" step="0.1" min="1" className="form-input" style={{ width: 120, height: 38, minWidth: 0, paddingRight: 8 }} required value={formData.trail_distance_pips} onChange={e => setFormData({ ...formData, trail_distance_pips: e.target.value })} />
                   </div>
                 </div>
               </div>
