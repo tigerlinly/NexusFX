@@ -349,7 +349,11 @@ export default function AccountsPage() {
                   <BrokerLogo brokerName={group.broker_name || brokerName} size={22} />
                   <div>
                     <span style={{ fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>{acc.account_name || '-'}</span>
-                    <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>#{acc.account_number}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                      #{acc.account_number}
+                      {acc.is_master && <span style={{ marginLeft: 6, padding: '1px 4px', background: 'rgba(16, 185, 129, 0.2)', color: '#10b981', borderRadius: 4, fontSize: 9, fontWeight: 600 }}>MASTER</span>}
+                      {acc.copy_target_id && <span style={{ marginLeft: 6, padding: '1px 4px', background: 'rgba(59, 130, 246, 0.2)', color: '#3b82f6', borderRadius: 4, fontSize: 9, fontWeight: 600 }}>SLAVE</span>}
+                    </div>
                   </div>
                 </div>
 

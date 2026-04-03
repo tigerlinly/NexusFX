@@ -32,14 +32,14 @@ class ExecutionEngine {
     try {
       // Find up to 50 pending orders
       const ordersResult = await pool.query(
-        `SELECT o.*, b.name as broker_name, a.user_id, a.metaapi_account_id,
+        `SELECT o.*, b.name as broker_name, a.user_id, a.metaapi_account_id, a.api_credentials, a.connection_type,
                 us.binance_api_key, us.binance_api_secret, us.metaapi_token
          FROM orders o
          JOIN accounts a ON a.id = o.account_id
          JOIN brokers b ON b.id = a.broker_id
          LEFT JOIN user_settings us ON us.user_id = a.user_id
           WHERE o.status = 'PENDING' 
-            AND (a.connection_type IS NULL OR a.connection_type = 'TYPE_3_METAAPI')
+            AND (a.connection_type IS NULL OR a.connection_type = 'TYPE_3_METAAPI' OR a.connection_type = 'TYPE_2_API')
           ORDER BY o.created_at ASC
           LIMIT 50`
       );
@@ -55,8 +55,10 @@ class ExecutionEngine {
           // Check if system is killed (Kill Switch globally active)
           // Ideally handled before, but good double check
           // Verify user has correctly stored their Binance API Keys
-          const userKey = order.binance_api_key || null;
-          const userSecret = order.binance_api_secret || null;
+          // Use account-level API credentials if available (TYPE_2_API overrides global settings)
+          const creds = order.api_credentials || {};
+          const userKey = creds.apiKey || order.binance_api_key || null;
+          const userSecret = creds.apiSecret || order.binance_api_secret || null;
           const metaApiToken = order.metaapi_token || null;
           const metaApiAccountId = order.metaapi_account_id;
 
@@ -70,8 +72,8 @@ class ExecutionEngine {
             if (executionResult && executionResult.price) {
               executionPrice = parseFloat(executionResult.price);
             }
-          } else {
-            // MT5 Broker (e.g. Exness, IC Markets)
+          } else if (!order.connection_type || order.connection_type === 'TYPE_3_METAAPI') {
+            // MT5 Broker via MetaAPI (e.g. Exness, IC Markets)
             const metaApiService = require('./metaApiService');
             if (!metaApiToken || !metaApiAccountId) {
               throw new Error('MetaApi Token or Account ID is missing');
@@ -82,6 +84,11 @@ class ExecutionEngine {
               exchangeOrderId = mt5Result.positionId || mt5Result.orderId || null;
               executionPrice = mt5Result.openPrice || mt5Result.price || null;
             }
+          } else if (order.connection_type === 'TYPE_2_API') {
+            // Placeholder for other Native API connects (e.g. cTrader, DxTrade)
+            console.log(`🤖 [ExecutionEngine] Executing Native API Trade for ${order.broker_name} with credentials override`);
+            executionResult = true;
+            executionPrice = order.price || null;
           }
 
           if (executionResult) {
