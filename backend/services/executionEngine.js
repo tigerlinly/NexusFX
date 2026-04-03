@@ -120,11 +120,9 @@ class ExecutionEngine {
                  status = 'FILLED',
                  filled_at = NOW(),
                  filled_quantity = quantity,
-                 entry_price = COALESCE($2, price),
+                 price = COALESCE($2, price),
                  stop_loss = COALESCE($3, stop_loss),
                  take_profit = COALESCE($4, take_profit),
-                 current_sl = COALESCE($3, stop_loss),
-                 current_tp = COALESCE($4, take_profit),
                  peak_price = COALESCE($2, price),
                  exchange_order_id = COALESCE($5, exchange_order_id),
                  updated_at = NOW()
