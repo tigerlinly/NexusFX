@@ -340,6 +340,80 @@
 }
 
 /* =============================================
+   THEME: Pastel Dream
+   ============================================= */
+[data-theme="pastel-dream"] {
+  --bg-primary: #fdfaf6;
+  --bg-secondary: #f5f0ec;
+  --bg-tertiary: #ebe1da;
+  --bg-card: #ffffff;
+  --bg-card-hover: #faf6f2;
+  --bg-input: #ffffff;
+  --bg-sidebar: #f7f3f0;
+
+  --border-primary: #e6ddd6;
+  --border-secondary: #d4c6bc;
+  --border-focus: #ffa6a6;
+
+  --text-primary: #5c4f46;
+  --text-secondary: #8c7f76;
+  --text-tertiary: #b0a39a;
+  --text-muted: #cdbeaf;
+
+  --accent-primary: #ffbba6;
+  --accent-secondary: #a8d5e5;
+  --accent-tertiary: #c8b6e6;
+
+  --profit: #6fcfa3;
+  --profit-bg: rgba(111, 207, 163, 0.15);
+  --loss: #ff8b8b;
+  --loss-bg: rgba(255, 139, 139, 0.15);
+  --warning: #f7d572;
+  --warning-bg: rgba(247, 213, 114, 0.2);
+
+  --gradient-primary: linear-gradient(135deg, #ffbba6 0%, #a8d5e5 100%);
+  --gradient-card: linear-gradient(145deg, #ffffff 0%, #fcf9f7 100%);
+  --gradient-sidebar: linear-gradient(180deg, #f7f3f0 0%, #fdfaf6 100%);
+}
+
+/* =============================================
+   THEME: Pastel Night
+   ============================================= */
+[data-theme="pastel-night"] {
+  --bg-primary: #2a2731;
+  --bg-secondary: #332f3c;
+  --bg-tertiary: #3e3948;
+  --bg-card: #2e2b36;
+  --bg-card-hover: #383441;
+  --bg-input: #26232e;
+  --bg-sidebar: #28252f;
+
+  --border-primary: #4a4455;
+  --border-secondary: #5e576c;
+  --border-focus: #cda2ff;
+
+  --text-primary: #f4f0fa;
+  --text-secondary: #c2bbcc;
+  --text-tertiary: #9b94a8;
+  --text-muted: #797387;
+
+  --accent-primary: #ffb8d8;
+  --accent-secondary: #abcaff;
+  --accent-tertiary: #d0b0ff;
+
+  --profit: #8adaae;
+  --profit-bg: rgba(138, 218, 174, 0.15);
+  --loss: #ff9fb0;
+  --loss-bg: rgba(255, 159, 176, 0.15);
+  --warning: #ffda9e;
+  --warning-bg: rgba(255, 218, 158, 0.15);
+
+  --gradient-primary: linear-gradient(135deg, #ffb8d8 0%, #abcaff 100%);
+  --gradient-card: linear-gradient(145deg, #2e2b36 0%, #2a2731 100%);
+  --gradient-sidebar: linear-gradient(180deg, #28252f 0%, #2a2731 100%);
+}
+
+/* =============================================
    RESET & BASE
    ============================================= */
 *, *::before, *::after {
