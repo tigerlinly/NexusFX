@@ -4,6 +4,8 @@ description: NexusFX - Deploy to DigitalOcean Production (Docker)
 
 # NexusFX Deploy Workflow
 
+> **Note:** GitHub Actions CI/CD is now active — pushing to `main` auto-deploys via `.github/workflows/deploy.yml`
+
 ## 🖥️ Server Information (จำไว้ตลอด)
 
 | รายการ | ค่า |

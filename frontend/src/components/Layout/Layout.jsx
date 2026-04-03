@@ -177,9 +177,9 @@ export default function Layout() {
           )}
 
           {showLabels && <div className="sidebar-section-title">ตั้งค่า</div>}
-          <NavLink to="/settings" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="ตั้งค่าระบบ">
+          <NavLink to="/settings" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="ตั้งค่าโปรไฟล์">
             <Settings size={18} className="nav-icon" />
-            {showLabels && <span>ตั้งค่าระบบ</span>}
+            {showLabels && <span>ตั้งค่าโปรไฟล์</span>}
           </NavLink>
         </nav>
 

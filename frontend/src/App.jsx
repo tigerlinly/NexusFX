@@ -5,8 +5,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import Layout from './components/Layout/Layout';
 import LoginPage from './components/Auth/LoginPage';
 import DashboardPage from './components/Dashboard/DashboardPage';
-import TradeHistoryPage from './components/TradeHistory/TradeHistoryPage';
-import DailyTargetPage from './components/Targets/DailyTargetPage';
+// TradeHistoryPage & DailyTargetPage are used inside TradingPage (not imported here)
 import AccountsPage from './components/Accounts/AccountsPage';
 import SettingsPage from './components/Settings/SettingsPage';
 import WalletPage from './components/Wallet/WalletPage';
@@ -17,13 +16,12 @@ import StorePage from './components/Store/StorePage';
 import AdminPage from './components/Admin/AdminPage';
 import AdminBillingPage from './components/Admin/AdminBillingPage';
 import AdminConfigPage from './components/Admin/AdminConfigPage';
-import BotsPage from './components/Bots/BotsPage';
-import TerminalPage from './components/Terminal/TerminalPage';
+// BotsPage & TerminalPage are used inside TradingPage (not imported here)
 import TradingPage from './components/Trading/TradingPage';
 import ForgotPasswordPage from './components/Auth/ForgotPasswordPage';
 import ResetPasswordPage from './components/Auth/ResetPasswordPage';
 import HeatmapPage from './components/Heatmap/HeatmapPage';
-import StrategiesPage from './components/Strategies/StrategiesPage';
+// StrategiesPage removed — its features are fully covered by StorePage (Copy Trading tab)
 import ForumsPage from './components/Forums/ForumsPage';
 import BrokersPage from './components/Brokers/BrokersPage';
 import AgentDashboard from './components/Agent/AgentDashboard';
