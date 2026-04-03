@@ -680,7 +680,7 @@ router.post('/close/:accountId', auditLog('CLOSE_TRADE', 'ACCOUNT'), async (req,
     const { tickets } = req.body; // array of positionIds
 
     const accQuery = await pool.query(`
-      SELECT a.id, a.metaapi_account_id, us.metaapi_token
+      SELECT a.id, a.is_master, a.metaapi_account_id, us.metaapi_token
       FROM accounts a
       LEFT JOIN user_settings us ON us.user_id = a.user_id
       WHERE a.id = $1 AND a.user_id = $2 AND a.is_active = true
@@ -688,9 +688,12 @@ router.post('/close/:accountId', auditLog('CLOSE_TRADE', 'ACCOUNT'), async (req,
 
     if (accQuery.rows.length === 0) return res.status(404).json({ error: 'Account not found' });
     
-    const { metaapi_account_id, metaapi_token: rawToken } = accQuery.rows[0];
+    const account = accQuery.rows[0];
+    const { metaapi_account_id, metaapi_token: rawToken, is_master } = account;
     const token = decrypt(rawToken) || process.env.METAAPI_TOKEN;
-    if (!metaapi_account_id || !token) return res.status(400).json({ error: 'Missing configuration' });
+    
+    // We only support closing via MetaAPI right now
+    if (!metaapi_account_id || !token) return res.status(400).json({ error: 'Missing MetaAPI configuration' });
 
     const metaApiService = require('../services/metaApiService');
     const results = [];
@@ -700,6 +703,41 @@ router.post('/close/:accountId', auditLog('CLOSE_TRADE', 'ACCOUNT'), async (req,
       try {
         const resObj = await metaApiService.closePosition(metaapi_account_id, token, ticket);
         results.push({ ticket, success: true, result: resObj });
+        
+        // COPY TRADING: Cascade close to slaves
+        if (is_master) {
+          try {
+            // Find the master order to get its internal ID
+            const masterOrder = await pool.query(
+              `SELECT id FROM orders WHERE account_id = $1 AND exchange_order_id = $2 ORDER BY created_at DESC LIMIT 1`,
+              [accountId, String(ticket)]
+            );
+            
+            if (masterOrder.rows.length > 0) {
+              const mOrderId = masterOrder.rows[0].id;
+              
+              // Find all slave orders cloning this master order
+              const slaveOrders = await pool.query(
+                `SELECT o.exchange_order_id, a.metaapi_account_id 
+                 FROM orders o
+                 JOIN accounts a ON a.id = o.account_id
+                 WHERE o.copy_source_id = $1 AND o.exchange_order_id IS NOT NULL AND a.metaapi_account_id IS NOT NULL`,
+                [mOrderId]
+              );
+              
+              for (const slaveOrder of slaveOrders.rows) {
+                try {
+                  await metaApiService.closePosition(slaveOrder.metaapi_account_id, token, slaveOrder.exchange_order_id);
+                  console.log(`[CopyTrade] Closed slave position ${slaveOrder.exchange_order_id}`);
+                } catch (slaveErr) {
+                  console.error(`[CopyTrade] Failed to close slave order:`, slaveErr);
+                }
+              }
+            }
+          } catch (mErr) {
+             console.error(`[CopyTrade] Error querying master/slave link:`, mErr);
+          }
+        }
       } catch (e) {
         results.push({ ticket, success: false, error: e.message });
       }
