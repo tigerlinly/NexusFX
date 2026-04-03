@@ -305,50 +305,100 @@ export default function SettingsPage() {
                     ตัวเลือกเหล่านี้จะถูกนำไปแทนที่สีและขนาดของธีมหลัก คุณสามารถปรับจูนได้ตามต้องการ
                   </p>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 'var(--space-lg)' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xl)' }}>
                     {[
-                      { key: 'custom-text-color', label: 'สีตัวอักษร (Text Color)', type: 'color' },
-                      { key: 'custom-font-size', label: 'ขนาดตัวอักษรหลัก (px/rem)', type: 'text', placeholder: 'ex. 14px' },
-                      { key: 'custom-bg-app', label: 'สีพื้นหลังหลัก (App)', type: 'color' },
-                      { key: 'custom-bg-sidebar', label: 'สีพื้น Sidebar', type: 'color' },
-                      { key: 'custom-bg-header', label: 'สีพื้น Headbar', type: 'color' },
-                      { key: 'custom-bg-content', label: 'สีพื้น Content', type: 'color' },
-                      { key: 'custom-font-size-sidebar', label: 'ขนาดอักษร Sidebar (px)', type: 'text', placeholder: 'ex. 13px' },
-                      { key: 'custom-font-size-header', label: 'ขนาดอักษร Header (px)', type: 'text', placeholder: 'ex. 14px' },
-                      { key: 'custom-font-size-content', label: 'ขนาดอักษร Content (px)', type: 'text', placeholder: 'ex. 14px' }
-                    ].map((item) => (
-                      <div key={item.key}>
-                        <label className="form-label" style={{ fontSize: 13 }}>{item.label}</label>
-                        <div style={{ display: 'flex', gap: 8 }}>
-                          <input
-                            type={item.type}
-                            className="form-input"
-                            style={item.type === 'color' ? { padding: 4, height: 38, cursor: 'pointer' } : {}}
-                            placeholder={item.placeholder || ''}
-                            value={(settings.custom_colors && settings.custom_colors[item.key]) || ''}
-                            onChange={(e) => {
-                               const val = e.target.value;
-                               handleLocalUpdate('custom_colors', { ...(settings.custom_colors || {}), [item.key]: val });
-                               if (val) {
-                                 document.documentElement.style.setProperty(`--${item.key}`, val);
-                               } else {
-                                 document.documentElement.style.removeProperty(`--${item.key}`);
-                               }
-                            }}
-                          />
-                          {settings.custom_colors && settings.custom_colors[item.key] && (
-                            <button 
-                              className="btn btn-secondary btn-icon" 
-                              title="ล้างค่า"
-                              onClick={() => {
-                                const newCustom = { ...settings.custom_colors };
-                                delete newCustom[item.key];
-                                handleLocalUpdate('custom_colors', newCustom);
-                                document.documentElement.style.removeProperty(`--${item.key}`);
-                              }}>
-                              <Trash2 size={16} />
-                            </button>
-                          )}
+                      {
+                        category: 'แอปพลิเคชัน (General App)',
+                        items: [
+                          { key: 'custom-text-color', label: 'สีตัวอักษร (Text Color)', type: 'color' },
+                          { key: 'custom-font-size', label: 'ขนาดตัวอักษรหลัก', type: 'select', options: ['11px', '12px', '13px', '14px', '15px', '16px', '18px', '20px'] },
+                          { key: 'custom-bg-app', label: 'สีพื้นหลังหลัก (App)', type: 'color' },
+                        ]
+                      },
+                      {
+                        category: 'แถบด้านบน (Headbar)',
+                        items: [
+                          { key: 'custom-bg-header', label: 'สีพื้น Headbar', type: 'color' },
+                          { key: 'custom-font-size-header', label: 'ขนาดอักษร Header', type: 'select', options: ['11px', '12px', '13px', '14px', '15px', '16px', '18px', '20px'] }
+                        ]
+                      },
+                      {
+                        category: 'แถบด้านข้าง (Sidebar)',
+                        items: [
+                          { key: 'custom-bg-sidebar', label: 'สีพื้น Sidebar', type: 'color' },
+                          { key: 'custom-font-size-sidebar', label: 'ขนาดอักษร Sidebar', type: 'select', options: ['11px', '12px', '13px', '14px', '15px', '16px', '18px', '20px'] }
+                        ]
+                      },
+                      {
+                        category: 'พื้นที่เนื้อหา (Content Area)',
+                        items: [
+                          { key: 'custom-bg-content', label: 'สีพื้น Content', type: 'color' },
+                          { key: 'custom-font-size-content', label: 'ขนาดอักษร Content', type: 'select', options: ['11px', '12px', '13px', '14px', '15px', '16px', '18px', '20px'] }
+                        ]
+                      }
+                    ].map((group, idx) => (
+                      <div key={idx}>
+                        <h4 style={{ fontSize: 13, color: 'var(--accent-primary)', marginBottom: 'var(--space-md)', paddingBottom: 8, borderBottom: '1px solid var(--border-primary)' }}>
+                          {group.category}
+                        </h4>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 'var(--space-lg)' }}>
+                          {group.items.map((item) => (
+                            <div key={item.key}>
+                              <label className="form-label" style={{ fontSize: 12 }}>{item.label}</label>
+                              <div style={{ display: 'flex', gap: 8 }}>
+                                {item.type === 'select' ? (
+                                  <select
+                                    className="form-input"
+                                    value={(settings.custom_colors && settings.custom_colors[item.key]) || ''}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      handleLocalUpdate('custom_colors', { ...(settings.custom_colors || {}), [item.key]: val });
+                                      if (val) {
+                                        document.documentElement.style.setProperty(`--${item.key}`, val);
+                                      } else {
+                                        document.documentElement.style.removeProperty(`--${item.key}`);
+                                      }
+                                    }}
+                                  >
+                                    <option value="">-- ค่าเริ่มต้น (Default) --</option>
+                                    {item.options.map(opt => (
+                                      <option key={opt} value={opt}>{opt}</option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  <input
+                                    type={item.type}
+                                    className="form-input"
+                                    style={item.type === 'color' ? { padding: 4, height: 38, cursor: 'pointer' } : {}}
+                                    placeholder={item.placeholder || ''}
+                                    value={(settings.custom_colors && settings.custom_colors[item.key]) || ''}
+                                    onChange={(e) => {
+                                       const val = e.target.value;
+                                       handleLocalUpdate('custom_colors', { ...(settings.custom_colors || {}), [item.key]: val });
+                                       if (val) {
+                                         document.documentElement.style.setProperty(`--${item.key}`, val);
+                                       } else {
+                                         document.documentElement.style.removeProperty(`--${item.key}`);
+                                       }
+                                    }}
+                                  />
+                                )}
+                                {settings.custom_colors && settings.custom_colors[item.key] && (
+                                  <button 
+                                    className="btn btn-secondary btn-icon" 
+                                    title="ล้างค่า"
+                                    onClick={() => {
+                                      const newCustom = { ...settings.custom_colors };
+                                      delete newCustom[item.key];
+                                      handleLocalUpdate('custom_colors', newCustom);
+                                      document.documentElement.style.removeProperty(`--${item.key}`);
+                                    }}>
+                                    <Trash2 size={16} />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     ))}
