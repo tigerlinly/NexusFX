@@ -266,7 +266,7 @@ router.get('/symbols', async (req, res) => {
  */
 router.post('/', auditLog('PLACE_TRADE', 'ORDER'), async (req, res) => {
   try {
-    const { account_id, symbol, side, lot_size, order_type = 'MARKET', entry_price = null, sl = null, tp = null } = req.body;
+    const { account_id, symbol, side, lot_size, order_type = 'MARKET', entry_price = null, sl = null, tp = null, slPip = null, tpPip = null } = req.body;
     
     if (!account_id || !symbol || !side || !lot_size) {
       return res.status(400).json({ error: 'Missing required fields' });
@@ -298,10 +298,12 @@ router.post('/', auditLog('PLACE_TRADE', 'ORDER'), async (req, res) => {
 
     // Insert into orders table (simulating OMS)
     const orderResult = await pool.query(
-      `INSERT INTO orders (account_id, symbol, side, order_type, quantity, price, status)
-       VALUES ($1, $2, $3, $4, $5, $6, 'PENDING') RETURNING *`,
-      [account_id, symbol.toUpperCase(), side.toUpperCase(), order_type.toUpperCase(), lot_size, entry_price]
+      `INSERT INTO orders (account_id, symbol, side, order_type, quantity, price, stop_loss, take_profit, sl_pips, tp_pips, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'PENDING') RETURNING *`,
+      [account_id, symbol.toUpperCase(), side.toUpperCase(), order_type.toUpperCase(), lot_size, entry_price, sl, tp, slPip, tpPip]
     );
+    
+    const masterOrderId = orderResult.rows[0].id;
 
     // COPY TRADING: Check if master and clone orders for slaves
     if (account.rows[0].is_master) {
@@ -312,9 +314,9 @@ router.post('/', auditLog('PLACE_TRADE', 'ORDER'), async (req, res) => {
       for (const slave of slaves.rows) {
         // Skip risk check for slaves for now, or just let execution engine fail it later
         await pool.query(
-          `INSERT INTO orders (account_id, symbol, side, order_type, quantity, price, status)
-           VALUES ($1, $2, $3, $4, $5, $6, 'PENDING')`,
-          [slave.id, symbol.toUpperCase(), side.toUpperCase(), order_type.toUpperCase(), lot_size, entry_price]
+          `INSERT INTO orders (account_id, symbol, side, order_type, quantity, price, stop_loss, take_profit, sl_pips, tp_pips, copy_source_id, status)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'PENDING')`,
+          [slave.id, symbol.toUpperCase(), side.toUpperCase(), order_type.toUpperCase(), lot_size, entry_price, sl, tp, slPip, tpPip, masterOrderId]
         );
       }
     }
