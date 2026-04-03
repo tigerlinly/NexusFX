@@ -237,7 +237,11 @@ export default function AdminConfigPage() {
                 </div>
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
-                  {configs.map(cfg => {
+                  {[...configs].sort((a, b) => {
+                    if (a.key === 'IP_WHITELIST') return 1;
+                    if (b.key === 'IP_WHITELIST') return -1;
+                    return 0; // Preserve original order for the rest
+                  }).map(cfg => {
                     const currentValue = editedValues[cfg.key] !== undefined ? editedValues[cfg.key] : cfg.value;
                     const isEdited = editedValues[cfg.key] !== undefined;
                     const isSecret = cfg.is_secret;
@@ -247,8 +251,8 @@ export default function AdminConfigPage() {
                     const isBooleanish = ['true', 'false'].includes(cfg.value);
                     const isNumeric = !isNaN(cfg.value) && cfg.value !== '' && !isBooleanish;
 
-                    // All fields span 1 column unless they are specifically marked as long text (future proofing)
-                    const isLongText = cfg.value && String(cfg.value).length > 50;
+                    // All fields span 1 column unless they are specifically marked as long text or are explicitly IP_WHITELIST
+                    const isLongText = (cfg.value && String(cfg.value).length > 50) || cfg.key === 'IP_WHITELIST';
 
                     return (
                       <div key={cfg.key} style={{
