@@ -7,15 +7,35 @@ on:
 
 jobs:
   deploy:
+    name: 🚀 Deploy to Production
     runs-on: ubuntu-latest
+
     steps:
-      - name: Execute SSH Commands
+      - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           password: ${{ secrets.PASSWORD }}
           script: |
-            cd /root/NexusFX
+            echo "🔄 Starting NexusFX deployment..."
+            cd /var/www/nexusfx
+            
+            # Pull latest code
             git pull origin main
-            docker-compose up -d --build
+            
+            # Rebuild & restart containers
+            docker-compose up -d --build api web
+            
+            # Wait for health check
+            sleep 5
+            
+            # Verify containers
+            echo "📦 Container Status:"
+            docker ps --format 'table {{.Names}}\t{{.Status}}'
+            
+            # Health check
+            echo "🏥 API Health Check:"
+            curl -sf http://localhost:4000/api/health || echo "⚠️ Health check failed"
+            
+            echo "✅ NexusFX deployment complete!"
