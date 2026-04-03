@@ -18,9 +18,20 @@ export function ThemeProvider({ children }) {
   useEffect(() => {
     // Load from user settings or localStorage
     const saved = localStorage.getItem('nexusfx_theme');
+    const savedCustomStyles = localStorage.getItem('nexusfx_custom_colors');
+
     if (saved) {
       setCurrentTheme(saved);
       document.documentElement.setAttribute('data-theme', saved);
+    }
+    
+    if (savedCustomStyles) {
+       try {
+         const colors = JSON.parse(savedCustomStyles);
+         Object.keys(colors).forEach(k => {
+           if (colors[k]) document.documentElement.style.setProperty(`--${k}`, colors[k]);
+         });
+       } catch(e) {}
     }
   }, []);
 
@@ -32,6 +43,14 @@ export function ThemeProvider({ children }) {
             setCurrentTheme(s.theme_id);
             document.documentElement.setAttribute('data-theme', s.theme_id);
             localStorage.setItem('nexusfx_theme', s.theme_id);
+          }
+          if (s.custom_colors) {
+            localStorage.setItem('nexusfx_custom_colors', JSON.stringify(s.custom_colors));
+            Object.keys(s.custom_colors).forEach(k => {
+               if(s.custom_colors[k]) {
+                  document.documentElement.style.setProperty(`--${k}`, s.custom_colors[k]);
+               }
+            });
           }
         })
         .catch(() => {});

@@ -45,7 +45,8 @@ export default function SettingsPage() {
     line_notify_token: '',
     telegram_bot_token: '',
     telegram_chat_id: '',
-    sync_schedules: ['07:00']
+    sync_schedules: ['07:00'],
+    custom_colors: {}
   });
 
   useEffect(() => {
@@ -82,6 +83,7 @@ export default function SettingsPage() {
         telegram_bot_token: data.telegram_bot_token_actual || '',
         telegram_chat_id: data.telegram_chat_id || '',
         sync_schedules: data.sync_schedules || ['07:00'],
+        custom_colors: data.custom_colors || {}
       });
       if (data.theme_id && data.theme_id !== currentTheme) {
         changeTheme(data.theme_id);
@@ -132,6 +134,7 @@ export default function SettingsPage() {
         timezone: settings.timezone,
         telegram_chat_id: settings.telegram_chat_id,
         sync_schedules: settings.sync_schedules,
+        custom_colors: settings.custom_colors,
       };
 
       // Always include API keys so they re-encrypt correctly
@@ -292,9 +295,64 @@ export default function SettingsPage() {
                           <div key={i} className="theme-preview-stripe" style={{ background: color }} />
                         ))}
                       </div>
-                      <div className="theme-name">{theme.name}</div>
                     </div>
                   ))}
+                </div>
+
+                <div className="card" style={{ marginTop: 'var(--space-2xl)', background: 'var(--bg-tertiary)' }}>
+                  <h3 style={{ fontSize: 16, marginBottom: 'var(--space-md)' }}>การปรับแต่งธีมขั้นสูง (Advanced Customization)</h3>
+                  <p style={{ color: 'var(--text-tertiary)', fontSize: 13, marginBottom: 'var(--space-lg)' }}>
+                    ตัวเลือกเหล่านี้จะถูกนำไปแทนที่สีและขนาดของธีมหลัก คุณสามารถปรับจูนได้ตามต้องการ
+                  </p>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 'var(--space-lg)' }}>
+                    {[
+                      { key: 'custom-text-color', label: 'สีตัวอักษร (Text Color)', type: 'color' },
+                      { key: 'custom-font-size', label: 'ขนาดตัวอักษรหลัก (px/rem)', type: 'text', placeholder: 'ex. 14px' },
+                      { key: 'custom-bg-app', label: 'สีพื้นหลังหลัก (App)', type: 'color' },
+                      { key: 'custom-bg-sidebar', label: 'สีพื้น Sidebar', type: 'color' },
+                      { key: 'custom-bg-header', label: 'สีพื้น Headbar', type: 'color' },
+                      { key: 'custom-bg-content', label: 'สีพื้น Content', type: 'color' },
+                      { key: 'custom-font-size-sidebar', label: 'ขนาดอักษร Sidebar (px)', type: 'text', placeholder: 'ex. 13px' },
+                      { key: 'custom-font-size-header', label: 'ขนาดอักษร Header (px)', type: 'text', placeholder: 'ex. 14px' },
+                      { key: 'custom-font-size-content', label: 'ขนาดอักษร Content (px)', type: 'text', placeholder: 'ex. 14px' }
+                    ].map((item) => (
+                      <div key={item.key}>
+                        <label className="form-label" style={{ fontSize: 13 }}>{item.label}</label>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <input
+                            type={item.type}
+                            className="form-input"
+                            style={item.type === 'color' ? { padding: 4, height: 38, cursor: 'pointer' } : {}}
+                            placeholder={item.placeholder || ''}
+                            value={(settings.custom_colors && settings.custom_colors[item.key]) || ''}
+                            onChange={(e) => {
+                               const val = e.target.value;
+                               handleLocalUpdate('custom_colors', { ...(settings.custom_colors || {}), [item.key]: val });
+                               if (val) {
+                                 document.documentElement.style.setProperty(`--${item.key}`, val);
+                               } else {
+                                 document.documentElement.style.removeProperty(`--${item.key}`);
+                               }
+                            }}
+                          />
+                          {settings.custom_colors && settings.custom_colors[item.key] && (
+                            <button 
+                              className="btn btn-secondary btn-icon" 
+                              title="ล้างค่า"
+                              onClick={() => {
+                                const newCustom = { ...settings.custom_colors };
+                                delete newCustom[item.key];
+                                handleLocalUpdate('custom_colors', newCustom);
+                                document.documentElement.style.removeProperty(`--${item.key}`);
+                              }}>
+                              <Trash2 size={16} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
