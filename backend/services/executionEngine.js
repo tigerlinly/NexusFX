@@ -169,8 +169,7 @@ class ExecutionEngine {
 
   async executeBinance(order, apiKey, apiSecret) {
     if (!apiKey || !apiSecret || apiKey.includes('mock') || apiKey.includes('your_binance')) {
-      console.log('🤖 [ExecutionEngine] Simulation Mode: Mocking Binance Trade for', order.symbol);
-      return { status: 'FILLED', executedQty: order.quantity, price: order.price || 0 };
+      throw new Error('Invalid or missing Binance API credentials. Please update your API keys in the dashboard.');
     }
 
     try {
