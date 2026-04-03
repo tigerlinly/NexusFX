@@ -1,39 +1,43 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { api } from '../utils/api';
 import { useAuth } from './AuthContext';
 
 const ThemeContext = createContext(null);
 
-export const THEMES = [
-  { id: 'dark-trading', name: 'Dark Trading', colors: ['#0a0e17', '#111827', '#00c896', '#0ea5e9'] },
-  { id: 'midnight-blue', name: 'Midnight Blue', colors: ['#0b1628', '#0f1f3d', '#4da6ff', '#6366f1'] },
-  { id: 'pastel-dream', name: 'Pastel Dream', colors: ['#fdfaf6', '#f5f0ec', '#ffbba6', '#a8d5e5'] },
-  { id: 'pastel-night', name: 'Pastel Night', colors: ['#2a2731', '#332f3c', '#ffb8d8', '#abcaff'] }
-];
+import { THEMES } from '../constants/themes';
 
 export function ThemeProvider({ children }) {
   const { user } = useAuth();
-  const [currentTheme, setCurrentTheme] = useState('dark-trading');
+  const [currentTheme, setCurrentTheme] = useState(() => {
+    return localStorage.getItem('nexusfx_theme') || 'dark-trading';
+  });
+
+  const applyCustomColors = useCallback((colors) => {
+    Object.keys(colors).forEach(k => {
+      const val = colors[k];
+      if (!val) return;
+      if (k.includes('font-size') && /^\d+(px|rem|em|%)$/.test(val)) {
+        document.documentElement.style.setProperty(`--${k}`, val);
+      } else if (/^#([0-9a-fA-F]{3}){1,2}$/.test(val) || val.startsWith('rgba') || val.startsWith('hsl')) {
+        document.documentElement.style.setProperty(`--${k}`, val);
+      }
+    });
+  }, []);
 
   useEffect(() => {
-    // Load from user settings or localStorage
-    const saved = localStorage.getItem('nexusfx_theme');
-    const savedCustomStyles = localStorage.getItem('nexusfx_custom_colors');
+    document.documentElement.setAttribute('data-theme', currentTheme);
 
-    if (saved) {
-      setCurrentTheme(saved);
-      document.documentElement.setAttribute('data-theme', saved);
-    }
-    
+    const savedCustomStyles = localStorage.getItem('nexusfx_custom_colors');
     if (savedCustomStyles) {
        try {
          const colors = JSON.parse(savedCustomStyles);
-         Object.keys(colors).forEach(k => {
-           if (colors[k]) document.documentElement.style.setProperty(`--${k}`, colors[k]);
-         });
-       } catch(e) {}
+         applyCustomColors(colors);
+       } catch (e) { 
+         /* ignore */ 
+       }
     }
-  }, []);
+  }, [currentTheme, applyCustomColors]);
 
   useEffect(() => {
     if (user) {
@@ -46,16 +50,12 @@ export function ThemeProvider({ children }) {
           }
           if (s.custom_colors) {
             localStorage.setItem('nexusfx_custom_colors', JSON.stringify(s.custom_colors));
-            Object.keys(s.custom_colors).forEach(k => {
-               if(s.custom_colors[k]) {
-                  document.documentElement.style.setProperty(`--${k}`, s.custom_colors[k]);
-               }
-            });
+            applyCustomColors(s.custom_colors);
           }
         })
         .catch(() => {});
     }
-  }, [user]);
+  }, [user, applyCustomColors]);
 
   const changeTheme = useCallback(async (themeId) => {
     setCurrentTheme(themeId);

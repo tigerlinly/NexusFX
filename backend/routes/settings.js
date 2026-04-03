@@ -82,6 +82,20 @@ router.put('/', auditLog('UPDATE_SETTINGS', 'SETTING'), async (req, res) => {
       telegram_bot_token, telegram_chat_id, sync_schedules
     } = req.body;
 
+    let validatedCustomColors = null;
+    if (custom_colors && typeof custom_colors === 'object') {
+      validatedCustomColors = {};
+      Object.keys(custom_colors).forEach(k => {
+        const val = custom_colors[k];
+        if (!val || typeof val !== 'string') return;
+        if (k.includes('font-size') && /^\d+(px|rem|em|%)$/.test(val)) {
+          validatedCustomColors[k] = val;
+        } else if (/^#([0-9a-fA-F]{3}){1,2}$/.test(val) || val.startsWith('rgba') || val.startsWith('hsl')) {
+          validatedCustomColors[k] = val;
+        }
+      });
+    }
+
     // Encrypt sensitive fields before storing
     const valMetaapi = metaapi_token !== undefined ? encrypt((metaapi_token || '').trim()) : null;
     const valBinanceKey = binance_api_key !== undefined ? encrypt((binance_api_key || '').trim()) : null;
@@ -115,7 +129,7 @@ router.put('/', auditLog('UPDATE_SETTINGS', 'SETTING'), async (req, res) => {
       [
         req.user.id,
         theme_id || null,
-        custom_colors ? JSON.stringify(custom_colors) : null,
+        validatedCustomColors ? JSON.stringify(validatedCustomColors) : null,
         dashboard_layout ? JSON.stringify(dashboard_layout) : null,
         notifications_enabled !== undefined ? notifications_enabled : null,
         sound_enabled !== undefined ? sound_enabled : null,
