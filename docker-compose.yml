@@ -40,7 +40,7 @@ services:
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
       PORT: 4000
       NODE_ENV: production
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:3000,https://nexusfx.biz,http://nexusfx.biz,https://www.nexusfx.biz}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:3000,https://nexusfx.biz,http://nexusfx.biz,https://www.nexusfx.biz,http://139.59.96.10}
     ports:
       - "4000:4000"
     healthcheck:

@@ -91,7 +91,8 @@ class OrderSyncEngine {
       try {
         const endTime = new Date(Date.now() + 3600000).toISOString();
         const startTime = new Date(Date.now() - 3 * 24 * 3600000).toISOString(); // 3 days ago
-        historyDeals = await connection.getDealsByTimeRange(startTime, endTime);
+        const rawHistory = await connection.getDealsByTimeRange(startTime, endTime);
+        historyDeals = Array.isArray(rawHistory) ? rawHistory : (rawHistory?.deals || rawHistory?.history || []);
       } catch (err) {
         console.warn(`[OrderSyncEngine] Could not fetch history deals for ${account_id}:`, err.message);
       }
@@ -100,7 +101,10 @@ class OrderSyncEngine {
       try {
         const info = await connection.getAccountInformation();
         const accountName = mt5account.name || '';
-        const accountType = mt5account.accountType || info.type || info.tradeMode || '';
+        let accountType = mt5account.accountType || info.type || info.tradeMode || '';
+        if (typeof accountType === 'string' && accountType.length > 20) {
+          accountType = accountType.substring(0, 20);
+        }
         
         await pool.query(
           `UPDATE accounts SET 
