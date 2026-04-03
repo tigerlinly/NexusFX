@@ -58,28 +58,33 @@ router.post('/', auditLog('ADD_ACCOUNT', 'ACCOUNT'), async (req, res) => {
 // PUT /api/accounts/:id
 router.put('/:id', auditLog('UPDATE_ACCOUNT', 'ACCOUNT'), async (req, res) => {
   try {
-    const { account_name, account_number, account_type, currency, is_active, metaapi_account_id, server, broker_id, connection_type, api_credentials, is_master, copy_target_id } = req.body;
+    const currentRes = await pool.query('SELECT * FROM accounts WHERE id = $1 AND user_id = $2', [req.params.id, req.user.id]);
+    if (currentRes.rows.length === 0) return res.status(404).json({ error: 'Account not found' });
+    const current = currentRes.rows[0];
+
+    // Merge updates, allowing explicit null
+    const account_name = req.body.account_name !== undefined ? req.body.account_name : current.account_name;
+    const account_type = req.body.account_type !== undefined ? req.body.account_type : current.account_type;
+    const currency = req.body.currency !== undefined ? req.body.currency : current.currency;
+    const is_active = req.body.is_active !== undefined ? req.body.is_active : current.is_active;
+    const metaapi_account_id = req.body.metaapi_account_id !== undefined ? req.body.metaapi_account_id : current.metaapi_account_id;
+    const server = req.body.server !== undefined ? req.body.server : current.server;
+    const account_number = req.body.account_number !== undefined ? req.body.account_number : current.account_number;
+    const broker_id = req.body.broker_id !== undefined ? req.body.broker_id : current.broker_id;
+    const connection_type = req.body.connection_type !== undefined ? req.body.connection_type : current.connection_type;
+    const api_credentials = req.body.api_credentials !== undefined ? req.body.api_credentials : current.api_credentials;
+    const is_master = req.body.is_master !== undefined ? req.body.is_master : current.is_master;
+    const copy_target_id = req.body.copy_target_id !== undefined ? req.body.copy_target_id : current.copy_target_id;
+
     const result = await pool.query(
       `UPDATE accounts SET 
-        account_name = COALESCE($1, account_name),
-        account_type = COALESCE($2, account_type),
-        currency = COALESCE($3, currency),
-        is_active = COALESCE($4, is_active),
-        metaapi_account_id = COALESCE($5, metaapi_account_id),
-        server = COALESCE($6, server),
-        account_number = COALESCE($7, account_number),
-        broker_id = COALESCE($8, broker_id),
-        connection_type = COALESCE($9, connection_type),
-        api_credentials = COALESCE($10, api_credentials),
-        is_master = COALESCE($11, is_master),
-        copy_target_id = COALESCE($12, copy_target_id),
+        account_name = $1, account_type = $2, currency = $3, is_active = $4,
+        metaapi_account_id = $5, server = $6, account_number = $7, broker_id = $8,
+        connection_type = $9, api_credentials = $10, is_master = $11, copy_target_id = $12,
         updated_at = NOW()
        WHERE id = $13 AND user_id = $14 RETURNING *`,
       [account_name, account_type, currency, is_active, metaapi_account_id, server, account_number, broker_id, connection_type, api_credentials, is_master, copy_target_id, req.params.id, req.user.id]
     );
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Account not found' });
-    }
     res.json(result.rows[0]);
   } catch (err) {
     console.error('Update account error:', err);
