@@ -20,8 +20,11 @@ export default function TerminalPage({ embedded = false }) {
     orderType: 'MARKET',
     price: '',
     lot_size: 0.1,
+    orderCount: 1,
     sl: '',
     tp: '',
+    slPip: '',
+    tpPip: '',
   });
   const [processing, setProcessing] = useState(false);
   const [recentOrders, setRecentOrders] = useState([]);
@@ -192,6 +195,9 @@ export default function TerminalPage({ embedded = false }) {
         entry_price: formData.orderType === 'MARKET' ? null : parseFloat(formData.price),
         sl: formData.sl ? parseFloat(formData.sl) : null,
         tp: formData.tp ? parseFloat(formData.tp) : null,
+        slPip: formData.slPip ? parseFloat(formData.slPip) : null,
+        tpPip: formData.tpPip ? parseFloat(formData.tpPip) : null,
+        orderCount: parseInt(formData.orderCount, 10) || 1,
       };
 
       const res = await api.placeManualTrade(payload);
@@ -367,121 +373,157 @@ export default function TerminalPage({ embedded = false }) {
               </div>
             </div>
 
-            <div style={{ display: 'flex', flexWrap: 'nowrap', gap: 12, alignItems: 'flex-end' }}>
-              <div className="form-group" style={{ flex: '1 1 140px', minWidth: 100 }}>
-                <label className="form-label" style={{ marginBottom: 6 }}>บัญชีเทรด</label>
-                <select 
-                  className="form-input" 
-                  value={formData.account_id}
-                  onChange={e => {
-                    setFormData({ ...formData, account_id: e.target.value });
-                    setViewMode('single');
-                  }}
-                >
-                  {accounts.length === 0 ? <option value="">ไม่มีบัญชี - โปรดสร้างใหม่</option> : null}
-                  {accounts.map(acc => (
-                    <option key={acc.id} value={acc.id}>
-                      {acc.account_name} ({acc.account_number})
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'flex', flexWrap: 'nowrap', gap: 12, alignItems: 'flex-end' }}>
+                <div className="form-group" style={{ flex: '1 1 140px', minWidth: 100 }}>
+                  <label className="form-label" style={{ marginBottom: 6 }}>บัญชีเทรด</label>
+                  <select 
+                    className="form-input" 
+                    value={formData.account_id}
+                    onChange={e => {
+                      setFormData({ ...formData, account_id: e.target.value });
+                      setViewMode('single');
+                    }}
+                  >
+                    {accounts.length === 0 ? <option value="">ไม่มีบัญชี - โปรดสร้างใหม่</option> : null}
+                    {accounts.map(acc => (
+                      <option key={acc.id} value={acc.id}>
+                        {acc.account_name} ({acc.account_number})
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              <div className="form-group" style={{ flex: '1 1 90px', minWidth: 80 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                  <label className="form-label" style={{ marginBottom: 0 }}>คู่ (Symbol)</label>
-                  {livePrice && (
-                    <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <span className="live-dot" style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--accent-primary)', display: 'inline-block' }}></span>
-                      {livePrice.toFixed(2)}
-                    </span>
+                <div className="form-group" style={{ flex: '1 1 90px', minWidth: 80 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <label className="form-label" style={{ marginBottom: 0 }}>คู่ (Symbol)</label>
+                    {livePrice && (
+                      <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <span className="live-dot" style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--accent-primary)', display: 'inline-block' }}></span>
+                        {livePrice.toFixed(2)}
+                      </span>
+                    )}
+                  </div>
+                  <select 
+                    className="form-input" 
+                    value={formData.symbol}
+                    onChange={e => setFormData({ ...formData, symbol: e.target.value })}
+                    required
+                  >
+                    {(() => {
+                      const selectedAccount = accounts.find(a => a.id.toString() === formData.account_id?.toString());
+                      let matchedSymbols = [];
+                      
+                      if (selectedAccount?.supported_symbols && Array.isArray(selectedAccount.supported_symbols) && selectedAccount.supported_symbols.length > 0) {
+                        matchedSymbols = selectedAccount.supported_symbols;
+                      } else {
+                        const bName = selectedAccount?.broker_name?.toLowerCase()?.replace(/\s/g, '') || '';
+                        if (bName.includes('exness')) matchedSymbols = BROKER_SYMBOLS.exness;
+                        else if (bName.includes('xm')) matchedSymbols = BROKER_SYMBOLS.xm;
+                        else if (bName.includes('hfm') || bName.includes('hot')) matchedSymbols = BROKER_SYMBOLS.hfm;
+                        else if (bName.includes('icmarket')) matchedSymbols = BROKER_SYMBOLS.icmarkets;
+                        else if (bName.includes('binance')) matchedSymbols = BROKER_SYMBOLS.binance;
+                        else if (bName.includes('fbs')) matchedSymbols = BROKER_SYMBOLS.fbs;
+                        else matchedSymbols = ['BTCUSDT', 'XAUUSD', 'EURUSD'];
+                      }
+                      return matchedSymbols.map(sym => (
+                        <option key={sym} value={sym}>{sym}</option>
+                      ));
+                    })()}
+                  </select>
+                </div>
+
+                <div className="form-group" style={{ flex: '1 1 50px', minWidth: 50 }}>
+                  <label className="form-label" style={{ marginBottom: 6 }}>Lot Size</label>
+                  <input 
+                    type="number" step="0.01" min="0.01"
+                    className="form-input" value={formData.lot_size}
+                    onChange={e => setFormData({ ...formData, lot_size: parseFloat(e.target.value) || 0 })}
+                    required
+                  />
+                </div>
+
+                <div className="form-group" style={{ flex: '1 1 50px', minWidth: 50 }}>
+                  <label className="form-label" style={{ marginBottom: 6 }}>โควตา (ไม้)</label>
+                  <input 
+                    type="number" step="1" min="1"
+                    className="form-input" value={formData.orderCount}
+                    onChange={e => setFormData({ ...formData, orderCount: parseInt(e.target.value, 10) || 1 })}
+                    required
+                  />
+                </div>
+
+                <div className="form-group" style={{ flex: '1 1 70px', minWidth: 70 }}>
+                  <label className="form-label" style={{ marginBottom: 6 }}>ประเภท</label>
+                  <select 
+                    className="form-input" 
+                    value={formData.orderType}
+                    onChange={e => setFormData({ ...formData, orderType: e.target.value })}
+                  >
+                    <option value="MARKET">Market</option>
+                    <option value="LIMIT">Limit</option>
+                    <option value="STOP">Stop-Limit</option>
+                  </select>
+                </div>
+
+                <div className="form-group" style={{ flex: '1 1 70px', minWidth: 70 }}>
+                  <label className="form-label" style={{ marginBottom: 6 }}>ราคา</label>
+                  {formData.orderType !== 'MARKET' ? (
+                    <input 
+                      type="number" step="0.00001"
+                      className="form-input" placeholder="ราคา Entry"
+                      value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value })}
+                    />
+                  ) : (
+                    <input className="form-input" value="Auto Match" disabled style={{ background: 'var(--bg-secondary)', color: 'var(--text-tertiary)' }} />
                   )}
                 </div>
-                <select 
-                  className="form-input" 
-                  value={formData.symbol}
-                  onChange={e => setFormData({ ...formData, symbol: e.target.value })}
-                  required
-                >
-                  {(() => {
-                    const selectedAccount = accounts.find(a => a.id.toString() === formData.account_id?.toString());
-                    let matchedSymbols = [];
-                    
-                    if (selectedAccount?.supported_symbols && Array.isArray(selectedAccount.supported_symbols) && selectedAccount.supported_symbols.length > 0) {
-                      matchedSymbols = selectedAccount.supported_symbols;
-                    } else {
-                      const bName = selectedAccount?.broker_name?.toLowerCase()?.replace(/\s/g, '') || '';
-                      if (bName.includes('exness')) matchedSymbols = BROKER_SYMBOLS.exness;
-                      else if (bName.includes('xm')) matchedSymbols = BROKER_SYMBOLS.xm;
-                      else if (bName.includes('hfm') || bName.includes('hot')) matchedSymbols = BROKER_SYMBOLS.hfm;
-                      else if (bName.includes('icmarket')) matchedSymbols = BROKER_SYMBOLS.icmarkets;
-                      else if (bName.includes('binance')) matchedSymbols = BROKER_SYMBOLS.binance;
-                      else if (bName.includes('fbs')) matchedSymbols = BROKER_SYMBOLS.fbs;
-                      else matchedSymbols = ['BTCUSDT', 'XAUUSD', 'EURUSD'];
-                    }
-                    return matchedSymbols.map(sym => (
-                      <option key={sym} value={sym}>{sym}</option>
-                    ));
-                  })()}
-                </select>
               </div>
 
-              <div className="form-group" style={{ flex: '1 1 50px', minWidth: 50 }}>
-                <label className="form-label" style={{ marginBottom: 6 }}>Lot Size</label>
-                <input 
-                  type="number" step="0.01" min="0.01"
-                  className="form-input" value={formData.lot_size}
-                  onChange={e => setFormData({ ...formData, lot_size: parseFloat(e.target.value) || 0 })}
-                  required
-                />
-              </div>
-
-              <div className="form-group" style={{ flex: '1 1 70px', minWidth: 70 }}>
-                <label className="form-label" style={{ marginBottom: 6 }}>ประเภท</label>
-                <select 
-                  className="form-input" 
-                  value={formData.orderType}
-                  onChange={e => setFormData({ ...formData, orderType: e.target.value })}
-                >
-                  <option value="MARKET">Market</option>
-                  <option value="LIMIT">Limit</option>
-                  <option value="STOP">Stop-Limit</option>
-                </select>
-              </div>
-
-              <div className="form-group" style={{ flex: '1 1 70px', minWidth: 70 }}>
-                <label className="form-label" style={{ marginBottom: 6 }}>ราคา</label>
-                {formData.orderType !== 'MARKET' ? (
+              <div style={{ display: 'flex', flexWrap: 'nowrap', gap: 12, alignItems: 'flex-end' }}>
+                <div className="form-group" style={{ flex: '1 1 50px', minWidth: 50 }}>
+                  <label className="form-label" style={{ marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <ShieldAlert size={12} style={{ color: 'var(--loss)' }} /> SL
+                  </label>
                   <input 
                     type="number" step="0.00001"
-                    className="form-input" placeholder="ราคา Entry"
-                    value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value })}
+                    className="form-input" placeholder="ราคา SL"
+                    value={formData.sl} onChange={e => setFormData({ ...formData, sl: e.target.value })}
                   />
-                ) : (
-                  <input className="form-input" value="Auto Match" disabled style={{ background: 'var(--bg-secondary)', color: 'var(--text-tertiary)' }} />
-                )}
-              </div>
+                </div>
 
-              <div className="form-group" style={{ flex: '1 1 50px', minWidth: 50 }}>
-                <label className="form-label" style={{ marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <ShieldAlert size={12} style={{ color: 'var(--loss)' }} /> SL
-                </label>
-                <input 
-                  type="number" step="0.00001"
-                  className="form-input" placeholder="ราคา SL"
-                  value={formData.sl} onChange={e => setFormData({ ...formData, sl: e.target.value })}
-                />
-              </div>
+                <div className="form-group" style={{ flex: '1 1 50px', minWidth: 50 }}>
+                  <label className="form-label" style={{ marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <Target size={12} style={{ color: 'var(--profit)' }} /> TP
+                  </label>
+                  <input 
+                    type="number" step="0.00001"
+                    className="form-input" placeholder="ราคา TP"
+                    value={formData.tp} onChange={e => setFormData({ ...formData, tp: e.target.value })}
+                  />
+                </div>
 
-              <div className="form-group" style={{ flex: '1 1 50px', minWidth: 50 }}>
-                <label className="form-label" style={{ marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <Target size={12} style={{ color: 'var(--profit)' }} /> TP
-                </label>
-                <input 
-                  type="number" step="0.00001"
-                  className="form-input" placeholder="ราคา TP"
-                  value={formData.tp} onChange={e => setFormData({ ...formData, tp: e.target.value })}
-                />
+                <div className="form-group" style={{ flex: '1 1 50px', minWidth: 50 }}>
+                  <label className="form-label" style={{ marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <ShieldAlert size={12} style={{ color: 'var(--loss)' }} /> SL Pip
+                  </label>
+                  <input 
+                    type="number" step="0.1"
+                    className="form-input" placeholder="SL Pip"
+                    value={formData.slPip} onChange={e => setFormData({ ...formData, slPip: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-group" style={{ flex: '1 1 50px', minWidth: 50 }}>
+                  <label className="form-label" style={{ marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <Target size={12} style={{ color: 'var(--profit)' }} /> TP Pip
+                  </label>
+                  <input 
+                    type="number" step="0.1"
+                    className="form-input" placeholder="TP Pip"
+                    value={formData.tpPip} onChange={e => setFormData({ ...formData, tpPip: e.target.value })}
+                  />
+                </div>
               </div>
             </div>
             {processing && <div style={{ textAlign: 'center', marginTop: 12, fontSize: 12, color: 'var(--text-tertiary)' }}>กำลังส่งคำสั่งเข้าสู่ตลาด...</div>}

@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard, History, Target, Settings, LogOut,
-  Building2, Menu, Wallet, Users, BarChart3, Shield, Cpu, TerminalSquare, CreditCard, Store, Flame, Copy, MessageSquare, Globe, DollarSign, X, Handshake
+  Building2, Menu, Wallet, Users, BarChart3, Shield, Cpu, TerminalSquare, CreditCard, Store, Flame, Copy, MessageSquare, Globe, DollarSign, X, Handshake, Cog
 } from 'lucide-react';
 import NotificationBell from './NotificationBell';
 
@@ -102,6 +102,11 @@ export default function Layout() {
             {showLabels && <span>รายงาน/วิเคราะห์</span>}
           </NavLink>
 
+          <NavLink to="/heatmap" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="Heatmap Exposure">
+            <Flame size={18} className="nav-icon" />
+            {showLabels && <span>Heatmap</span>}
+          </NavLink>
+
           <NavLink to="/store" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="Marketplace">
             <Store size={18} className="nav-icon" />
             {showLabels && <span>Marketplace</span>}
@@ -163,6 +168,10 @@ export default function Layout() {
               <NavLink to="/admin/billing" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="ตั้งค่าบัญชีรับเงิน">
                 <DollarSign size={18} className="nav-icon" />
                 {showLabels && <span>ตั้งค่าบัญชีรับเงิน</span>}
+              </NavLink>
+              <NavLink to="/admin/config" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="ตั้งค่าระบบ">
+                <Cog size={18} className="nav-icon" />
+                {showLabels && <span>ตั้งค่าระบบ (Config)</span>}
               </NavLink>
             </>
           )}

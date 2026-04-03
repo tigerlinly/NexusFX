@@ -701,7 +701,7 @@ async function initDatabase() {
     `);
 
     // =============================================
-    // SYSTEM CONFIGURATION
+    // SYSTEM CONFIGURATION (Expanded with categories)
     // =============================================
     await client.query(`
       CREATE TABLE IF NOT EXISTS system_config (
@@ -709,17 +709,96 @@ async function initDatabase() {
         key VARCHAR(255) UNIQUE NOT NULL,
         value TEXT NOT NULL,
         description TEXT,
+        category VARCHAR(50) DEFAULT 'general',
+        is_secret BOOLEAN DEFAULT false,
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
+
+    // Add category + is_secret columns if missing
+    try {
+      await client.query(`ALTER TABLE system_config ADD COLUMN IF NOT EXISTS category VARCHAR(50) DEFAULT 'general';`);
+      await client.query(`ALTER TABLE system_config ADD COLUMN IF NOT EXISTS is_secret BOOLEAN DEFAULT false;`);
+      await client.query(`CREATE INDEX IF NOT EXISTS idx_system_config_category ON system_config(category);`);
+    } catch (e) { /* ignore */ }
     
-    // Insert defaults if not exists
+    // Seed comprehensive config defaults
     await client.query(`
-      INSERT INTO system_config (key, value, description)
-      VALUES 
-        ('STRIPE_SECRET_KEY', '', 'Stripe API Secret Key (สำหรับการรับชำระเงิน)'),
-        ('CRYPTO_WALLET_ADDRESS', '', 'ที่อยู่กระเป๋าเงินคริปโต (TRC20 USD หรือ USDT)'),
-        ('BANK_ACCOUNT_INFO', '', 'ข้อมูลบัญชีธนาคาร (เช่น ธ.กสิกรไทย 123-4-56789-0)')
+      INSERT INTO system_config (key, value, description, category, is_secret) VALUES
+        -- Payment Gateway
+        ('STRIPE_SECRET_KEY', '', 'Stripe API Secret Key', 'payment', true),
+        ('STRIPE_PUBLISHABLE_KEY', '', 'Stripe Publishable Key', 'payment', false),
+        ('STRIPE_WEBHOOK_SECRET', '', 'Stripe Webhook Signing Secret', 'payment', true),
+        ('CRYPTO_WALLET_ADDRESS', '', 'ที่อยู่กระเป๋า USDT (TRC20)', 'payment', false),
+        ('CRYPTO_NETWORK', 'TRC20', 'เครือข่ายคริปโต', 'payment', false),
+        ('BANK_ACCOUNT_INFO', '', 'ข้อมูลบัญชีธนาคาร', 'payment', false),
+        ('PROMPTPAY_ID', '', 'เบอร์โทร/เลขบัตรสำหรับ PromptPay', 'payment', false),
+        ('PAYMENT_ENABLED', 'false', 'เปิด/ปิดระบบชำระเงิน', 'payment', false),
+        ('MIN_DEPOSIT', '100', 'จำนวนฝากขั้นต่ำ (USD)', 'payment', false),
+        ('MIN_WITHDRAWAL', '50', 'จำนวนถอนขั้นต่ำ (USD)', 'payment', false),
+
+        -- Infrastructure (SSL/CDN/Deploy)
+        ('SSL_DOMAIN', '', 'โดเมนหลักสำหรับ SSL', 'infrastructure', false),
+        ('SSL_PROVIDER', 'letsencrypt', 'ผู้ให้บริการ SSL (letsencrypt/cloudflare/custom)', 'infrastructure', false),
+        ('SSL_ENABLED', 'false', 'สถานะ HTTPS', 'infrastructure', false),
+        ('CLOUDFLARE_API_KEY', '', 'Cloudflare API Key', 'infrastructure', true),
+        ('CLOUDFLARE_ZONE_ID', '', 'Cloudflare Zone ID', 'infrastructure', false),
+        ('CDN_ENABLED', 'false', 'เปิด/ปิด CDN', 'infrastructure', false),
+        ('NGINX_CONFIG', 'reverse_proxy', 'โหมด Nginx (reverse_proxy/load_balancer)', 'infrastructure', false),
+        ('BACKUP_SCHEDULE', '0 2 * * *', 'ตารางสำรองข้อมูล (Cron expression)', 'infrastructure', false),
+        ('BACKUP_RETENTION_DAYS', '30', 'จำนวนวันเก็บ backup', 'infrastructure', false),
+
+        -- CI/CD
+        ('CICD_PROVIDER', 'github_actions', 'ระบบ CI/CD (github_actions/gitlab_ci/manual)', 'cicd', false),
+        ('CICD_REPO_URL', '', 'URL ของ Repository', 'cicd', false),
+        ('CICD_AUTO_DEPLOY', 'false', 'Deploy อัตโนมัติ', 'cicd', false),
+        ('DOCKER_REGISTRY', '', 'Docker Registry URL', 'cicd', false),
+
+        -- Monitoring
+        ('PROMETHEUS_ENABLED', 'true', 'เปิด/ปิด Prometheus metrics', 'monitoring', false),
+        ('GRAFANA_URL', '', 'URL สำหรับ Grafana Dashboard', 'monitoring', false),
+        ('GRAFANA_API_KEY', '', 'Grafana API Key', 'monitoring', true),
+        ('ALERT_EMAIL', '', 'อีเมลสำหรับแจ้งเตือนระบบ', 'monitoring', false),
+        ('HEALTH_CHECK_INTERVAL', '60', 'ช่วงเวลาตรวจสุขภาพระบบ (วินาที)', 'monitoring', false),
+        ('LOG_LEVEL', 'info', 'ระดับ Log (debug/info/warn/error)', 'monitoring', false),
+        ('ERROR_TRACKING_DSN', '', 'Sentry DSN สำหรับ Error Tracking', 'monitoring', true),
+
+        -- Trading Engine
+        ('EXECUTION_MODE', 'live', 'โหมดเทรด (live/simulation/paper)', 'trading', false),
+        ('MAX_LOT_SIZE', '100', 'ล็อตสูงสุดต่อออเดอร์', 'trading', false),
+        ('MAX_OPEN_POSITIONS', '50', 'จำนวนไม้เปิดสูงสุดต่อบัญชี', 'trading', false),
+        ('MAX_TOTAL_EXPOSURE', '500', 'Exposure รวมสูงสุด (lots)', 'trading', false),
+        ('DUPLICATE_ORDER_WINDOW', '5', 'ช่วงเวลาตรวจ Duplicate Order (วินาที)', 'trading', false),
+        ('TRAILING_STOP_INTERVAL', '5000', 'ช่วงเวลาตรวจ Trailing Stop (มิลลิวินาที)', 'trading', false),
+        ('ORDER_SYNC_INTERVAL', '60000', 'ช่วงเวลา Sync Live Orders (มิลลิวินาที)', 'trading', false),
+        ('RISK_ENGINE_INTERVAL', '15000', 'ช่วงเวลาตรวจ Risk (มิลลิวินาที)', 'trading', false),
+        ('BINANCE_TESTNET', 'true', 'ใช้ Binance Testnet', 'trading', false),
+
+        -- Notification
+        ('SMTP_HOST', '', 'SMTP Server', 'notification', false),
+        ('SMTP_PORT', '587', 'SMTP Port', 'notification', false),
+        ('SMTP_USER', '', 'SMTP Username', 'notification', false),
+        ('SMTP_PASS', '', 'SMTP Password', 'notification', true),
+        ('SMTP_FROM', 'noreply@nexusfx.biz', 'Email ผู้ส่ง', 'notification', false),
+        ('LINE_NOTIFY_DEFAULT_TOKEN', '', 'Default Line Notify Token', 'notification', true),
+        ('TELEGRAM_BOT_TOKEN', '', 'Default Telegram Bot Token', 'notification', true),
+
+        -- B2B / White-label
+        ('B2B_ENABLED', 'true', 'เปิด/ปิดระบบ B2B Agent', 'b2b', false),
+        ('DEFAULT_COMMISSION_RATE', '10', 'อัตราค่าคอมมิชชั่นเริ่มต้น (%)', 'b2b', false),
+        ('COMMISSION_CALC_INTERVAL', '14400000', 'ช่วงเวลาคำนวณคอมมิชชั่น (มิลลิวินาที, default 4 ชม.)', 'b2b', false),
+        ('AGENT_MAX_TEAM_SIZE', '100', 'จำนวนสมาชิกสูงสุดต่อ Agent', 'b2b', false),
+        ('WHITE_LABEL_CUSTOM_DOMAIN', 'false', 'อนุญาตให้ Agent ใช้ Custom Domain', 'b2b', false),
+
+        -- Security
+        ('MFA_ENFORCE', 'false', 'บังคับใช้ MFA สำหรับทุกผู้ใช้', 'security', false),
+        ('SESSION_TIMEOUT', '3600', 'Timeout ของ Session (วินาที)', 'security', false),
+        ('JWT_EXPIRY', '24h', 'อายุ JWT Token', 'security', false),
+        ('PASSWORD_MIN_LENGTH', '8', 'ความยาว Password ขั้นต่ำ', 'security', false),
+        ('IP_WHITELIST', '', 'IP ที่อนุญาต (คั่นด้วย comma, ว่าง = อนุญาตทั้งหมด)', 'security', false),
+        ('BRUTE_FORCE_LOCKOUT', '5', 'ล็อคหลังเข้าสู่ระบบล้มเหลว N ครั้ง', 'security', false),
+        ('AUDIT_RETENTION_DAYS', '365', 'จำนวนวันเก็บ Audit Log', 'security', false)
+
       ON CONFLICT (key) DO NOTHING;
     `);
 

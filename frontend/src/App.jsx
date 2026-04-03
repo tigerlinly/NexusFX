@@ -16,6 +16,7 @@ import BillingPage from './components/Billing/BillingPage';
 import StorePage from './components/Store/StorePage';
 import AdminPage from './components/Admin/AdminPage';
 import AdminBillingPage from './components/Admin/AdminBillingPage';
+import AdminConfigPage from './components/Admin/AdminConfigPage';
 import BotsPage from './components/Bots/BotsPage';
 import TerminalPage from './components/Terminal/TerminalPage';
 import TradingPage from './components/Trading/TradingPage';
@@ -72,9 +73,10 @@ function AppRoutes() {
         <Route path="strategies" element={<Navigate to="/store" replace />} />
         <Route path="groups" element={<GroupsPage />} />
         <Route path="reports" element={<ReportsPage />} />
-        <Route path="heatmap" element={<Navigate to="/reports" replace />} />
+        <Route path="heatmap" element={<HeatmapPage />} />
         <Route path="admin" element={<AdminPage />} />
         <Route path="admin/billing" element={<AdminBillingPage />} />
+        <Route path="admin/config" element={<AdminConfigPage />} />
         <Route path="forums" element={<ForumsPage />} />
         <Route path="brokers" element={<BrokersPage />} />
         <Route path="agent" element={<AgentDashboard />} />

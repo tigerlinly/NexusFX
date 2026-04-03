@@ -164,8 +164,10 @@ export const api = {
   getAuditLogs: (params = {}) => request(`/admin/audit-logs?${new URLSearchParams(params)}`),
   getAdminRevenue: (params = {}) => request(`/admin/revenue?${new URLSearchParams(params)}`),
   getAdminRoles: () => request('/admin/roles'),
-  getSystemConfig: () => request('/admin/system-config'),
+  getSystemConfig: (category = '') => request(`/admin/system-config${category ? '?category=' + category : ''}`),
+  getSystemConfigCategories: () => request('/admin/system-config/categories'),
   updateSystemConfig: (body) => request('/admin/system-config', { method: 'PUT', body: JSON.stringify(body) }),
+  updateSystemConfigBulk: (configs) => request('/admin/system-config/bulk', { method: 'PUT', body: JSON.stringify({ configs }) }),
   activateKillSwitch: (body) => request('/admin/kill-switch', { method: 'POST', body: JSON.stringify(body) }),
 
   // =============================================

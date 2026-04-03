@@ -464,12 +464,29 @@ router.post('/kill-switch', async (req, res) => {
 });
 
 // =============================================
-// SYSTEM CONFIGURATION
+// SYSTEM CONFIGURATION (Category-based with secret masking)
 // =============================================
 router.get('/system-config', async (req, res) => {
   try {
-    const result = await pool.query('SELECT key, value, description FROM system_config ORDER BY key');
-    res.json(result.rows);
+    const { category } = req.query;
+    let query = 'SELECT key, value, description, category, is_secret FROM system_config';
+    const params = [];
+    if (category) {
+      query += ' WHERE category = $1';
+      params.push(category);
+    }
+    query += ' ORDER BY category, key';
+    const result = await pool.query(query, params);
+    
+    // Mask secret values — only show last 4 chars
+    const masked = result.rows.map(row => ({
+      ...row,
+      value: row.is_secret && row.value 
+        ? (row.value.length > 4 ? '••••••••' + row.value.slice(-4) : '••••') 
+        : row.value
+    }));
+    
+    res.json(masked);
   } catch (err) {
     if (err.code === '42P01') {
       res.json([]); // Table doesn't exist yet
@@ -480,9 +497,27 @@ router.get('/system-config', async (req, res) => {
   }
 });
 
+// GET /api/admin/system-config/categories — list all categories
+router.get('/system-config/categories', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT category, COUNT(*) as count FROM system_config GROUP BY category ORDER BY category`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('System config categories error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 router.put('/system-config', async (req, res) => {
   try {
     const { key, value } = req.body;
+    
+    // If the value is masked (starts with ••), don't update — user didn't change the secret
+    if (value && value.startsWith('••')) {
+      return res.json({ success: true, message: 'No changes (masked value)' });
+    }
     
     await pool.query(
       `INSERT INTO system_config (key, value) 
@@ -501,6 +536,42 @@ router.put('/system-config', async (req, res) => {
   } catch (err) {
     console.error('System config update error:', err);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PUT /api/admin/system-config/bulk — update multiple configs at once
+router.put('/system-config/bulk', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { configs } = req.body; // [{ key, value }]
+    if (!Array.isArray(configs)) return res.status(400).json({ error: 'configs must be an array' });
+    
+    await client.query('BEGIN');
+    let updated = 0;
+    for (const { key, value } of configs) {
+      if (value && value.startsWith('••')) continue; // Skip masked secrets
+      await client.query(
+        `INSERT INTO system_config (key, value) 
+         VALUES ($1, $2) 
+         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
+        [key, value]
+      );
+      updated++;
+    }
+    
+    await client.query(
+      `INSERT INTO audit_logs (user_id, action, entity_type, details, ip_address)
+       VALUES ($1, 'admin.bulk_update_system_config', 'system', $2, $3)`,
+      [req.user.id, JSON.stringify({ updated_count: updated }), req.ip]
+    );
+    await client.query('COMMIT');
+    res.json({ success: true, updated });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('System config bulk update error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    client.release();
   }
 });
 
