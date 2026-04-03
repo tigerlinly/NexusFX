@@ -236,12 +236,13 @@ export default function AdminConfigPage() {
                   ไม่มีค่ากำหนดในหมวดนี้
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
                   {configs.map(cfg => {
                     const currentValue = editedValues[cfg.key] !== undefined ? editedValues[cfg.key] : cfg.value;
                     const isEdited = editedValues[cfg.key] !== undefined;
                     const isSecret = cfg.is_secret;
                     const isRevealed = showSecrets[cfg.key];
+                    const isBackup = cfg.key.startsWith('BACKUP_');
                     
                     // Determine input type based on value patterns
                     const isBooleanish = ['true', 'false'].includes(cfg.value);
@@ -249,6 +250,7 @@ export default function AdminConfigPage() {
 
                     return (
                       <div key={cfg.key} style={{
+                        gridColumn: isBackup ? 'span 1' : 'span 2',
                         padding: '14px 16px', borderRadius: 'var(--radius-md)',
                         border: isEdited ? '1px solid var(--accent-primary)' : '1px solid var(--border-primary)',
                         background: isEdited ? 'rgba(99,179,237,0.03)' : 'var(--bg-tertiary)',
