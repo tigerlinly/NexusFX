@@ -117,7 +117,6 @@ const storeRoutes = require('./routes/store');
 const brokersRoutes = require('./routes/brokers');
 const billingRoutes = require('./routes/billing');
 const strategiesRoutes = require('./routes/strategies');
-const forumsRoutes = require('./routes/forums');
 const notificationsRoutes = require('./routes/notifications');
 const agentsRoutes = require('./routes/agents');
 const bridgeRoutes = require('./routes/bridge');
@@ -140,11 +139,9 @@ app.use('/api/reports', reportsRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/store', storeRoutes);
 app.use('/api/strategies', strategiesRoutes);
-app.use('/api/forums', forumsRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/agents', agentsRoutes);
 app.use('/api/bridge', bridgeRoutes); // Gateway for EA direct connections
-app.use('/api/dockernodes', require('./routes/dockernodes'));
 
 // =============================================
 // Swagger API Docs (Level 3)

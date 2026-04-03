@@ -22,7 +22,7 @@ import ForgotPasswordPage from './components/Auth/ForgotPasswordPage';
 import ResetPasswordPage from './components/Auth/ResetPasswordPage';
 import HeatmapPage from './components/Heatmap/HeatmapPage';
 // StrategiesPage removed — its features are fully covered by StorePage (Copy Trading tab)
-import ForumsPage from './components/Forums/ForumsPage';
+// ForumsPage removed — out of scope for MVP
 import BrokersPage from './components/Brokers/BrokersPage';
 import AgentDashboard from './components/Agent/AgentDashboard';
 
@@ -75,7 +75,6 @@ function AppRoutes() {
         <Route path="admin" element={<AdminPage />} />
         <Route path="admin/billing" element={<AdminBillingPage />} />
         <Route path="admin/config" element={<AdminConfigPage />} />
-        <Route path="forums" element={<ForumsPage />} />
         <Route path="brokers" element={<BrokersPage />} />
         <Route path="agent" element={<AgentDashboard />} />
         <Route path="settings" element={<SettingsPage />} />
