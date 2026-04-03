@@ -8,13 +8,6 @@ import {
 } from 'lucide-react';
 
 const CATEGORY_META = {
-  payment: {
-    label: 'ช่องทางชำระเงิน',
-    sublabel: 'Payment Gateway',
-    icon: CreditCard,
-    color: '#00c896',
-    desc: 'ตั้งค่า Stripe, Crypto, PromptPay, บัญชีธนาคาร'
-  },
   infrastructure: {
     label: 'โครงสร้างพื้นฐาน',
     sublabel: 'Infrastructure',
@@ -68,7 +61,7 @@ const CATEGORY_META = {
 
 export default function AdminConfigPage() {
   const { user } = useAuth();
-  const [activeCategory, setActiveCategory] = useState('payment');
+  const [activeCategory, setActiveCategory] = useState('infrastructure');
   const [configs, setConfigs] = useState([]);
   const [editedValues, setEditedValues] = useState({});
   const [saving, setSaving] = useState(false);

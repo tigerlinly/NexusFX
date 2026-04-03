@@ -9,19 +9,27 @@ export default function AdminBillingPage() {
   const [saving, setSaving] = useState(false);
 
   const [formData, setFormData] = useState({
+    STRIPE_PUBLISHABLE_KEY: '',
     STRIPE_SECRET_KEY: '',
+    STRIPE_WEBHOOK_SECRET: '',
     CRYPTO_WALLET_ADDRESS: '',
-    BANK_ACCOUNT_INFO: ''
+    BANK_ACCOUNT_INFO: '',
+    PROMPTPAY_ID: '',
+    PAYMENT_ENABLED: 'false'
   });
 
   const fetchConfig = async () => {
     try {
       const data = await api.getSystemConfig();
-      const newForm = { ...formData };
-      data.forEach(item => {
-        newForm[item.key] = item.value;
+      setFormData(prev => {
+        const newForm = { ...prev };
+        data.forEach(item => {
+          if (item.key in newForm) {
+            newForm[item.key] = item.value;
+          }
+        });
+        return newForm;
       });
-      setFormData(newForm);
     } catch (err) {
       console.error(err);
     } finally {
@@ -89,25 +97,102 @@ export default function AdminBillingPage() {
           </div>
 
           <form onSubmit={handleSave}>
+            {/* 1. Payment System Switch */}
             <div className="form-group" style={{ marginBottom: 24, padding: 16, background: 'var(--bg-tertiary)', borderRadius: 8, border: '1px solid var(--border-primary)' }}>
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 15 }}>
-                <Wallet size={16} style={{ color: '#6366f1' }}/>
-                Stripe Secret Key (บัตรเครดิต)
+                เปิด/ปิด ระบบชำระเงิน (Payment Gateway)
               </label>
-              <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 8 }}>ใช้สำหรับการรับชำระผ่านบัตรเครดิต โดยจะต้องใช้ Secret Key จากแผงควบคุมของ Stripe</p>
-              <input 
-                type="password" 
-                className="form-input" 
-                name="STRIPE_SECRET_KEY"
-                value={formData.STRIPE_SECRET_KEY}
-                onChange={handleChange}
-                placeholder="sk_live_... หรือ sk_test_..."
-              />
-              <div style={{ marginTop: 8, fontSize: 12, color: 'var(--warning)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                <AlertTriangle size={12}/> หมายเหตุ: การสร้างและแก้ไขต้องทำการ Restart Backend ให้ระบบอ่านค่าใหม่ (ในเวอร์ชันปัจจุบัน)
+              <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                {['true', 'false'].map(val => (
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => setFormData(p => ({ ...p, PAYMENT_ENABLED: val }))}
+                    style={{
+                      padding: '8px 24px', borderRadius: 'var(--radius-sm)',
+                      border: formData.PAYMENT_ENABLED === val ? `2px solid ${val === 'true' ? 'var(--profit)' : 'var(--loss)'}` : '1px solid var(--border-primary)',
+                      background: formData.PAYMENT_ENABLED === val ? (val === 'true' ? 'rgba(0,200,150,0.1)' : 'rgba(255,71,87,0.1)') : 'transparent',
+                      color: formData.PAYMENT_ENABLED === val ? (val === 'true' ? 'var(--profit)' : 'var(--loss)') : 'var(--text-secondary)',
+                      cursor: 'pointer', fontWeight: formData.PAYMENT_ENABLED === val ? 600 : 400, fontSize: 14
+                    }}
+                  >
+                    {val === 'true' ? 'เปิด (ON)' : 'ปิด (OFF)'}
+                  </button>
+                ))}
               </div>
             </div>
 
+            {/* 2. Stripe Config */}
+            <div className="form-group" style={{ marginBottom: 24, padding: 16, background: 'var(--bg-tertiary)', borderRadius: 8, border: '1px solid var(--border-primary)' }}>
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 15, marginBottom: 16 }}>
+                <Wallet size={16} style={{ color: '#6366f1' }}/>
+                ระบบชำระเงินด้วยบัตรเครดิต (Stripe API)
+              </label>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div>
+                  <label className="form-label" style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Stripe Publishable Key</label>
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>โชว์ในฝั่งหน้าเว็บ (Frontend) ขึ้นต้นด้วย pk_live_ หรือ pk_test_</p>
+                  <input 
+                    type="text" 
+                    className="form-input" 
+                    name="STRIPE_PUBLISHABLE_KEY"
+                    value={formData.STRIPE_PUBLISHABLE_KEY}
+                    onChange={handleChange}
+                    placeholder="pk_live_... หรือ pk_test_..."
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label" style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Stripe Secret Key</label>
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>ใช้ยืนยันการทำธุรกรรมหลังบ้าน ขึ้นต้นด้วย sk_live_ หรือ sk_test_</p>
+                  <input 
+                    type="password" 
+                    className="form-input" 
+                    name="STRIPE_SECRET_KEY"
+                    value={formData.STRIPE_SECRET_KEY}
+                    onChange={handleChange}
+                    placeholder="sk_live_... หรือ sk_test_..."
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label" style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Stripe Webhook Signing Secret</label>
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>ใช้ตรวจสอบข้อมูล Webhook จาก Stripe ขึ้นต้นด้วย whsec_...</p>
+                  <input 
+                    type="password" 
+                    className="form-input" 
+                    name="STRIPE_WEBHOOK_SECRET"
+                    value={formData.STRIPE_WEBHOOK_SECRET}
+                    onChange={handleChange}
+                    placeholder="whsec_..."
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginTop: 16, fontSize: 12, color: 'var(--warning)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <AlertTriangle size={12}/> หมายเหตุ: การสร้างและแก้ไข Secret/Webhook ต้องทำการ Restart Backend ให้ระบบอ่านค่าใหม่
+              </div>
+            </div>
+
+            {/* 3. PromptPay */}
+            <div className="form-group" style={{ marginBottom: 24, padding: 16, background: 'var(--bg-tertiary)', borderRadius: 8, border: '1px solid var(--border-primary)' }}>
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 15 }}>
+                <DollarSign size={16} style={{ color: '#115293' }}/>
+                ระบบรับชำระเงินโอนพร้อมเพย์ (PromptPay)
+              </label>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 8 }}>ลูกค้าจะสแกน QR Code แล้วโอนเงินเข้ามา</p>
+              <input 
+                type="text" 
+                className="form-input" 
+                name="PROMPTPAY_ID"
+                value={formData.PROMPTPAY_ID}
+                onChange={handleChange}
+                placeholder="เบอร์โทรศัพท์ หรือ เลขบัตรประชาชน เช่น 0812345678"
+              />
+            </div>
+
+            {/* 4. Crypto */}
             <div className="form-group" style={{ marginBottom: 24, padding: 16, background: 'var(--bg-tertiary)', borderRadius: 8, border: '1px solid var(--border-primary)' }}>
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 15 }}>
                 <DollarSign size={16} style={{ color: 'var(--accent-secondary)' }}/>
@@ -124,6 +209,7 @@ export default function AdminBillingPage() {
               />
             </div>
 
+            {/* 5. Bank Account */}
             <div className="form-group" style={{ marginBottom: 24, padding: 16, background: 'var(--bg-tertiary)', borderRadius: 8, border: '1px solid var(--border-primary)' }}>
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 15 }}>
                 <Building size={16} style={{ color: 'var(--text-secondary)' }}/>

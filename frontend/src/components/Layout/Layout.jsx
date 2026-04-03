@@ -23,9 +23,13 @@ export default function Layout() {
   }, []);
 
   // Close mobile sidebar when route changes
-  useEffect(() => {
-    setIsMobileOpen(false);
-  }, [location.pathname]);
+  const [prevLocation, setPrevLocation] = useState(location.pathname);
+  if (location.pathname !== prevLocation) {
+    setPrevLocation(location.pathname);
+    if (isMobileOpen) {
+      setIsMobileOpen(false);
+    }
+  }
 
   const handleToggleSidebar = () => {
     if (isMobile) {
@@ -168,9 +172,9 @@ export default function Layout() {
           )}
 
           {showLabels && <div className="sidebar-section-title">ตั้งค่า</div>}
-          <NavLink to="/settings" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="ตั้งค่าโปรไฟล์">
+          <NavLink to="/settings" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="ตั้งค่าส่วนตัว">
             <Settings size={18} className="nav-icon" />
-            {showLabels && <span>ตั้งค่าโปรไฟล์</span>}
+            {showLabels && <span>ตั้งค่าส่วนตัว</span>}
           </NavLink>
         </nav>
 
