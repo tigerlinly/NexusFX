@@ -240,7 +240,11 @@ export default function AdminConfigPage() {
                   {[...configs].sort((a, b) => {
                     if (a.key === 'IP_WHITELIST') return 1;
                     if (b.key === 'IP_WHITELIST') return -1;
-                    return 0; // Preserve original order for the rest
+                    
+                    const aKey = a.key === 'TELEGRAM_BOT_TOKEN' ? 'LINE_NOTIFY_DEFAULT_TOKEN_Z' : a.key;
+                    const bKey = b.key === 'TELEGRAM_BOT_TOKEN' ? 'LINE_NOTIFY_DEFAULT_TOKEN_Z' : b.key;
+                    
+                    return aKey.localeCompare(bKey);
                   }).map(cfg => {
                     const currentValue = editedValues[cfg.key] !== undefined ? editedValues[cfg.key] : cfg.value;
                     const isEdited = editedValues[cfg.key] !== undefined;
