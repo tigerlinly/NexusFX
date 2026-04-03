@@ -53,7 +53,7 @@ export default function NotificationBell() {
   useEffect(() => {
     if (!user?.id) return;
 
-    const wsUrl = import.meta.env.VITE_WS_URL;
+    const wsUrl = import.meta.env.VITE_WS_URL || (import.meta.env.PROD ? undefined : 'http://localhost:4000');
     const socket = io(wsUrl ? wsUrl : undefined);
     socketRef.current = socket;
 

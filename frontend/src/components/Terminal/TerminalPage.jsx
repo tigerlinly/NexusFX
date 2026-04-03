@@ -102,7 +102,8 @@ export default function TerminalPage({ embedded = false }) {
     fetchAccounts();
 
     // Setup Socket
-    const socket = io(import.meta.env.VITE_WS_URL || 'http://localhost:4000');
+    const wsUrl = import.meta.env.VITE_WS_URL || (import.meta.env.PROD ? undefined : 'http://localhost:4000');
+    const socket = io(wsUrl ? wsUrl : undefined);
     socket.on('market_prices', (prices) => {
       setMarketPrices(prices);
     });

@@ -231,6 +231,8 @@ Push to main → GitHub Actions
 | Docker containers | ✅ 3/3 running and healthy |
 | Git commits | ✅ Latest `e2061e3` pushed to `main` |
 | GitHub Actions | ✅ Workflows configured, secrets set |
+| CORS & Security Policy | ✅ Proper origins mapped (IP/Domain) and HTTP 500 auth blocks resolved |
+| MetaAPI Live Sync Engine | ✅ Handling structural anomalies and preventing DB overflow natively |
 | Metrics endpoint | ✅ `/metrics` (Prometheus format) |
 | API docs | ✅ `/api-docs` (Swagger UI) |
 
