@@ -2,13 +2,13 @@ const express = require('express');
 const router = express.Router();
 const Docker = require('dockerode');
 const { pool } = require('../config/database');
-const { authenticateToken, requireAdmin } = require('../middleware/auth');
+const { authMiddleware, requireRole } = require('../middleware/auth');
 
 // Initialize Docker (Connects to local unix socket, or configurable via env)
 const docker = new Docker({ socketPath: '/var/run/docker.sock' });
 
 // Get all MT5 Node containers
-router.get('/', authenticateToken, requireAdmin, async (req, res) => {
+router.get('/', authMiddleware, requireRole('admin'), async (req, res) => {
   try {
     const containers = await docker.listContainers({ all: true });
     
@@ -32,7 +32,7 @@ router.get('/', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 // Start a container
-router.post('/:id/start', authenticateToken, requireAdmin, async (req, res) => {
+router.post('/:id/start', authMiddleware, requireRole('admin'), async (req, res) => {
   try {
     const container = docker.getContainer(req.params.id);
     await container.start();
@@ -43,7 +43,7 @@ router.post('/:id/start', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 // Stop a container
-router.post('/:id/stop', authenticateToken, requireAdmin, async (req, res) => {
+router.post('/:id/stop', authMiddleware, requireRole('admin'), async (req, res) => {
   try {
     const container = docker.getContainer(req.params.id);
     await container.stop();
