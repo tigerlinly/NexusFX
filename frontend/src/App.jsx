@@ -20,7 +20,7 @@ import AdminConfigPage from './components/Admin/AdminConfigPage';
 import TradingPage from './components/Trading/TradingPage';
 import ForgotPasswordPage from './components/Auth/ForgotPasswordPage';
 import ResetPasswordPage from './components/Auth/ResetPasswordPage';
-import HeatmapPage from './components/Heatmap/HeatmapPage';
+// HeatmapPage is imported and rendered directly inside ReportsPage
 // StrategiesPage removed — its features are fully covered by StorePage (Copy Trading tab)
 // ForumsPage removed — out of scope for MVP
 import BrokersPage from './components/Brokers/BrokersPage';
@@ -71,7 +71,6 @@ function AppRoutes() {
         <Route path="strategies" element={<Navigate to="/store" replace />} />
         <Route path="groups" element={<GroupsPage />} />
         <Route path="reports" element={<ReportsPage />} />
-        <Route path="heatmap" element={<HeatmapPage />} />
         <Route path="admin" element={<AdminPage />} />
         <Route path="admin/billing" element={<AdminBillingPage />} />
         <Route path="admin/config" element={<AdminConfigPage />} />

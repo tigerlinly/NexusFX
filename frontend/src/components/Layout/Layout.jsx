@@ -102,21 +102,12 @@ export default function Layout() {
             {showLabels && <span>รายงาน/วิเคราะห์</span>}
           </NavLink>
 
-          <NavLink to="/heatmap" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="Heatmap Exposure">
-            <Flame size={18} className="nav-icon" />
-            {showLabels && <span>Heatmap</span>}
-          </NavLink>
 
           <NavLink to="/store" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="Marketplace">
             <Store size={18} className="nav-icon" />
             {showLabels && <span>Marketplace</span>}
           </NavLink>
 
-          {showLabels && <div className="sidebar-section-title">สังคมการเทรด (Community)</div>}
-          <NavLink to="/forums" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="เว็บบอร์ด (Forums)">
-            <MessageSquare size={18} className="nav-icon" />
-            {showLabels && <span>เว็บบอร์ดโซเชียล</span>}
-          </NavLink>
 
           {showLabels && <div className="sidebar-section-title">การเงิน & สมาชิก</div>}
           <NavLink to="/wallet" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="กระเป๋าเงิน">
