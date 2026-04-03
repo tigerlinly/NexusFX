@@ -242,15 +242,17 @@ export default function AdminConfigPage() {
                     const isEdited = editedValues[cfg.key] !== undefined;
                     const isSecret = cfg.is_secret;
                     const isRevealed = showSecrets[cfg.key];
-                    const isBackup = cfg.key.startsWith('BACKUP_');
                     
                     // Determine input type based on value patterns
                     const isBooleanish = ['true', 'false'].includes(cfg.value);
                     const isNumeric = !isNaN(cfg.value) && cfg.value !== '' && !isBooleanish;
 
+                    // All fields span 1 column unless they are specifically marked as long text (future proofing)
+                    const isLongText = cfg.value && cfg.value.length > 50;
+
                     return (
                       <div key={cfg.key} style={{
-                        gridColumn: isBackup ? 'span 1' : 'span 2',
+                        gridColumn: isLongText ? 'span 2' : 'span 1',
                         padding: '14px 16px', borderRadius: 'var(--radius-md)',
                         border: isEdited ? '1px solid var(--accent-primary)' : '1px solid var(--border-primary)',
                         background: isEdited ? 'rgba(99,179,237,0.03)' : 'var(--bg-tertiary)',
