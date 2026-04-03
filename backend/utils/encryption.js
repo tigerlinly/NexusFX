@@ -95,4 +95,14 @@ function mask(value) {
   return value.substring(0, 4) + '••••••••' + value.substring(value.length - 4);
 }
 
-module.exports = { encrypt, decrypt, mask };
+/**
+ * Generate a cryptographically secure random token for EA/Bridge authentication
+ * @returns {string} Example: 'NXFX-e4b2d9a3-f8c14d9b...'
+ */
+function generateBridgeToken() {
+  const prefix = 'NXFX-';
+  const randomHex = crypto.randomBytes(32).toString('hex');
+  return `${prefix}${randomHex}`;
+}
+
+module.exports = { encrypt, decrypt, mask, generateBridgeToken };

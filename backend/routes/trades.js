@@ -303,6 +303,22 @@ router.post('/', auditLog('PLACE_TRADE', 'ORDER'), async (req, res) => {
       [account_id, symbol.toUpperCase(), side.toUpperCase(), order_type.toUpperCase(), lot_size, entry_price]
     );
 
+    // COPY TRADING: Check if master and clone orders for slaves
+    if (account.rows[0].is_master) {
+      const slaves = await pool.query(
+        `SELECT id FROM accounts WHERE copy_target_id = $1 AND is_active = true`,
+        [account_id]
+      );
+      for (const slave of slaves.rows) {
+        // Skip risk check for slaves for now, or just let execution engine fail it later
+        await pool.query(
+          `INSERT INTO orders (account_id, symbol, side, order_type, quantity, price, status)
+           VALUES ($1, $2, $3, $4, $5, $6, 'PENDING')`,
+          [slave.id, symbol.toUpperCase(), side.toUpperCase(), order_type.toUpperCase(), lot_size, entry_price]
+        );
+      }
+    }
+
     // 🔔 Auto-trigger Line + Telegram Notify
     const tradeInfo = {
       broker_name: account.rows[0].broker_name || 'Unknown',

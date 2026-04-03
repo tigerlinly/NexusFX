@@ -169,14 +169,28 @@ async function initDatabase() {
         leverage INTEGER DEFAULT 100,
         server VARCHAR(100),
         metaapi_account_id VARCHAR(100),
+        connection_type VARCHAR(50) DEFAULT 'TYPE_3_METAAPI',
+        bridge_token VARCHAR(255),
         is_connected BOOLEAN DEFAULT false,
         is_active BOOLEAN DEFAULT true,
+        is_master BOOLEAN DEFAULT false,
+        copy_target_id INTEGER REFERENCES accounts(id) ON DELETE SET NULL,
+        api_credentials JSONB DEFAULT '{}',
         last_sync_at TIMESTAMPTZ,
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW(),
         UNIQUE(user_id, broker_id, account_number)
       );
     `);
+
+    // Add missing columns for existing accounts table
+    try {
+      await client.query(`ALTER TABLE accounts ADD COLUMN IF NOT EXISTS connection_type VARCHAR(50) DEFAULT 'TYPE_3_METAAPI';`);
+      await client.query(`ALTER TABLE accounts ADD COLUMN IF NOT EXISTS bridge_token VARCHAR(255);`);
+      await client.query(`ALTER TABLE accounts ADD COLUMN IF NOT EXISTS is_master BOOLEAN DEFAULT false;`);
+      await client.query(`ALTER TABLE accounts ADD COLUMN IF NOT EXISTS copy_target_id INTEGER REFERENCES accounts(id) ON DELETE SET NULL;`);
+      await client.query(`ALTER TABLE accounts ADD COLUMN IF NOT EXISTS api_credentials JSONB DEFAULT '{}';`);
+    } catch (e) { console.error('Migration error accounts:', e); }
 
     // =============================================
     // GROUPS & TEAM MANAGEMENT

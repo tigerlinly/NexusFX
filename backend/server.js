@@ -120,7 +120,7 @@ const strategiesRoutes = require('./routes/strategies');
 const forumsRoutes = require('./routes/forums');
 const notificationsRoutes = require('./routes/notifications');
 const agentsRoutes = require('./routes/agents');
-
+const bridgeRoutes = require('./routes/bridge');
 // Apply stricter rate limits to sensitive routes
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/mfa', authLimiter, mfaRoutes);
@@ -143,6 +143,8 @@ app.use('/api/strategies', strategiesRoutes);
 app.use('/api/forums', forumsRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/agents', agentsRoutes);
+app.use('/api/bridge', bridgeRoutes); // Gateway for EA direct connections
+app.use('/api/dockernodes', require('./routes/dockernodes'));
 
 // =============================================
 // Swagger API Docs (Level 3)

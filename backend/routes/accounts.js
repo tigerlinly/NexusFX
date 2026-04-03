@@ -1,7 +1,7 @@
 const express = require('express');
 const { pool } = require('../config/database');
 const { authMiddleware, auditLog } = require('../middleware/auth');
-const { decrypt } = require('../utils/encryption');
+const { decrypt, generateBridgeToken } = require('../utils/encryption');
 const router = express.Router();
 
 router.use(authMiddleware);
@@ -27,16 +27,23 @@ router.get('/', async (req, res) => {
 // POST /api/accounts — add account
 router.post('/', auditLog('ADD_ACCOUNT', 'ACCOUNT'), async (req, res) => {
   try {
-    const { broker_id, account_number, account_name, account_type, currency, server, metaapi_account_id } = req.body;
+    const { broker_id, account_number, account_name, account_type, currency, server, metaapi_account_id, connection_type, api_credentials, is_master, copy_target_id } = req.body;
     if (!broker_id || !account_number) {
       return res.status(400).json({ error: 'broker_id and account_number required' });
     }
 
+    const cType = connection_type || 'TYPE_3_METAAPI';
+    let bridgeToken = null;
+    if (cType === 'TYPE_1_EA' || cType === 'TYPE_2_API') {
+      bridgeToken = generateBridgeToken(); // Only generate token for non-cloud connections
+    }
+
     const result = await pool.query(
-      `INSERT INTO accounts (user_id, broker_id, account_number, account_name, account_type, currency, server, metaapi_account_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      `INSERT INTO accounts (user_id, broker_id, account_number, account_name, account_type, currency, server, metaapi_account_id, connection_type, bridge_token, api_credentials, is_master, copy_target_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
       [req.user.id, broker_id, account_number, account_name || `Account ${account_number}`,
-       account_type || 'Real', currency || 'USD', server, metaapi_account_id]
+       account_type || 'Real', currency || 'USD', server, metaapi_account_id, cType, bridgeToken,
+       api_credentials || '{}', is_master || false, copy_target_id || null]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -51,7 +58,7 @@ router.post('/', auditLog('ADD_ACCOUNT', 'ACCOUNT'), async (req, res) => {
 // PUT /api/accounts/:id
 router.put('/:id', auditLog('UPDATE_ACCOUNT', 'ACCOUNT'), async (req, res) => {
   try {
-    const { account_name, account_number, account_type, currency, is_active, metaapi_account_id, server, broker_id } = req.body;
+    const { account_name, account_number, account_type, currency, is_active, metaapi_account_id, server, broker_id, connection_type, api_credentials, is_master, copy_target_id } = req.body;
     const result = await pool.query(
       `UPDATE accounts SET 
         account_name = COALESCE($1, account_name),
@@ -62,9 +69,13 @@ router.put('/:id', auditLog('UPDATE_ACCOUNT', 'ACCOUNT'), async (req, res) => {
         server = COALESCE($6, server),
         account_number = COALESCE($7, account_number),
         broker_id = COALESCE($8, broker_id),
+        connection_type = COALESCE($9, connection_type),
+        api_credentials = COALESCE($10, api_credentials),
+        is_master = COALESCE($11, is_master),
+        copy_target_id = COALESCE($12, copy_target_id),
         updated_at = NOW()
-       WHERE id = $9 AND user_id = $10 RETURNING *`,
-      [account_name, account_type, currency, is_active, metaapi_account_id, server, account_number, broker_id, req.params.id, req.user.id]
+       WHERE id = $13 AND user_id = $14 RETURNING *`,
+      [account_name, account_type, currency, is_active, metaapi_account_id, server, account_number, broker_id, connection_type, api_credentials, is_master, copy_target_id, req.params.id, req.user.id]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Account not found' });

@@ -60,6 +60,14 @@
 - ระบบส่งข้อมูลและสลับสถานะต่างๆ สู่หน้าจอ User แบบไม่ต้อง Refresh หน้าจอ (Notification Bell)
 - มีระบบ WebSockets และระบบสำรอง HTTP Long-Polling ทำให้แอปเสถียร ไม่เกิดปัญหาค้างหรือขาดหาย
 
+### 🔄 6. Hybrid Trading Architecture & Terminal Management (Phase 2/ใหม่!)
+- **Terminal VPS Control:** ระบบจัดการและมอนิเตอร์โปรแกรม MT5 (Docker Nodes) จากหน้า Admin โดยตรง ให้บริการ Server ได้ตลอด 24/7 พร้อมปุ่มเข้าถึง NoVNC เพื่อดูกราฟจากแพลตฟอร์ม
+- **Copy Trading Ecosystem:** รองรับการจัดเตรียมบัญชีต้นทาง (Master Account) สำหรับส่งข้อมูลซื้อขายไปยังบัญชีปลายทาง (Slave Accounts) ทั้งหมดอัตโนมัติ 
+- **รองรับสถาปัตยกรรม 3 แบบ (Hybrid Connector):**
+  1. EA Bridge (TYPE_1): รันผ่านแอสพล็อตของ MT5
+  2. Native API (TYPE_2): เพิ่มช่องกรอก API Credentials (JSON) ในหน้าเพิ่มบัญชีรองรับการรันสคริปต์แบบ Native ที่ทำงานเร็วและเสถียรกว่า
+  3. MetaAPI (TYPE_3): เชื่อมผ่านคลาวด์แบบเดิมที่ลื่นไหล
+
 ---
 
 ## 4. บันทึกการแก้ไขทางเทคนิคและสถาปัตยกรรม (Release Notes / Bug Fixes)

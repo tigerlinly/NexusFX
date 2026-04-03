@@ -38,9 +38,10 @@ class ExecutionEngine {
          JOIN accounts a ON a.id = o.account_id
          JOIN brokers b ON b.id = a.broker_id
          LEFT JOIN user_settings us ON us.user_id = a.user_id
-         WHERE o.status = 'PENDING'
-         ORDER BY o.created_at ASC
-         LIMIT 50`
+          WHERE o.status = 'PENDING' 
+            AND (a.connection_type IS NULL OR a.connection_type = 'TYPE_3_METAAPI')
+          ORDER BY o.created_at ASC
+          LIMIT 50`
       );
 
       const orders = ordersResult.rows;

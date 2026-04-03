@@ -12,7 +12,8 @@ export default function AccountsPage() {
   const [syncingId, setSyncingId] = useState(null);
   const [formData, setFormData] = useState({
     broker_id: '', account_number: '', account_name: '', account_type: 'Real',
-    currency: 'USD', server: '', metaapi_account_id: ''
+    currency: 'USD', server: '', metaapi_account_id: '', connection_type: 'TYPE_3_METAAPI',
+    is_master: false, copy_target_id: '', api_credentials: '{}'
   });
 
   const formatCurrency = (val) => {
@@ -26,9 +27,20 @@ export default function AccountsPage() {
 
   const handleSave = async () => {
     try {
+      let parsedCredentials = {};
+      try {
+        if (formData.connection_type === 'TYPE_2_API' && formData.api_credentials.trim()) {
+          parsedCredentials = JSON.parse(formData.api_credentials);
+        }
+      } catch {
+        return alert('API Credentials ต้องเป็นรูปแบบ JSON ที่ถูกต้อง');
+      }
+
       const payload = {
         ...formData,
         broker_id: parseInt(formData.broker_id),
+        api_credentials: parsedCredentials,
+        copy_target_id: formData.copy_target_id || null
       };
       
       if (editId) {
@@ -39,7 +51,7 @@ export default function AccountsPage() {
       
       setShowForm(false);
       setEditId(null);
-      setFormData({ broker_id: '', account_number: '', account_name: '', account_type: 'Real', currency: 'USD', server: '', metaapi_account_id: '' });
+      setFormData({ broker_id: '', account_number: '', account_name: '', account_type: 'Real', currency: 'USD', server: '', metaapi_account_id: '', connection_type: 'TYPE_3_METAAPI', is_master: false, copy_target_id: '', api_credentials: '{}' });
       fetchAccounts();
     } catch (err) {
       alert(err.message);
@@ -54,7 +66,11 @@ export default function AccountsPage() {
       account_type: acc.account_type || 'Real',
       currency: acc.currency || 'USD',
       server: acc.server || '',
-      metaapi_account_id: acc.metaapi_account_id || ''
+      metaapi_account_id: acc.metaapi_account_id || '',
+      connection_type: acc.connection_type || 'TYPE_3_METAAPI',
+      is_master: acc.is_master || false,
+      copy_target_id: acc.copy_target_id || '',
+      api_credentials: JSON.stringify(acc.api_credentials || {}, null, 2)
     });
     setEditId(acc.id);
     setShowForm(true);
@@ -176,7 +192,7 @@ export default function AccountsPage() {
             setShowForm(!showForm);
             setEditId(null);
             if (!showForm) {
-              setFormData({ broker_id: '', account_number: '', account_name: '', account_type: 'Real', currency: 'USD', server: '', metaapi_account_id: '' });
+              setFormData({ broker_id: '', account_number: '', account_name: '', account_type: 'Real', currency: 'USD', server: '', metaapi_account_id: '', connection_type: 'TYPE_3_METAAPI', is_master: false, copy_target_id: '', api_credentials: '{}' });
             }
           }}>
             <Plus size={14} /> เพิ่มบัญชี
@@ -231,15 +247,74 @@ export default function AccountsPage() {
                   onChange={e => setFormData(p => ({ ...p, server: e.target.value }))} />
               </div>
               <div className="form-group" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
-                <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', width: '100%', marginBottom: '6px' }}>
-                  <span>MetaApi Account ID</span>
-                  <a href="https://app.metaapi.cloud/" target="_blank" rel="noreferrer" style={{ fontSize: '11px', color: 'var(--accent-primary)', textDecoration: 'none', fontWeight: 500 }}>
-                    สมัครและรับ Token
-                  </a>
-                </label>
-                <input className="form-input" placeholder="สำหรับเชื่อมต่อ MT5 อัตโนมัติ" value={formData.metaapi_account_id}
-                  onChange={e => setFormData(p => ({ ...p, metaapi_account_id: e.target.value }))} />
+                <label className="form-label">ประเภทการเชื่อมต่อ (Connection Type)</label>
+                <select className="filter-select" value={formData.connection_type}
+                  onChange={e => setFormData(p => ({ ...p, connection_type: e.target.value }))}
+                  style={{ width: '100%', padding: '10px 14px' }}>
+                  <option value="TYPE_3_METAAPI">Cloud Protocol (MetaAPI)</option>
+                  <option value="TYPE_1_EA">MQL Bridge EA (รัน EA บน MT4/MT5 เอง)</option>
+                  <option value="TYPE_2_API">Native Open API (เช่น cTrader/Binance)</option>
+                </select>
               </div>
+
+              {formData.connection_type === 'TYPE_3_METAAPI' && (
+                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+                  <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', width: '100%', marginBottom: '6px' }}>
+                    <span>MetaApi Account ID</span>
+                    <a href="https://app.metaapi.cloud/" target="_blank" rel="noreferrer" style={{ fontSize: '11px', color: 'var(--accent-primary)', textDecoration: 'none', fontWeight: 500 }}>
+                      สมัครและรับ Token
+                    </a>
+                  </label>
+                  <input className="form-input" placeholder="สำหรับเชื่อมต่อ MT5 อัตโนมัติ" value={formData.metaapi_account_id}
+                    onChange={e => setFormData(p => ({ ...p, metaapi_account_id: e.target.value }))} />
+                </div>
+              )}
+              
+              {formData.connection_type !== 'TYPE_3_METAAPI' && (
+                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gridColumn: 'span 1' }}>
+                  <div style={{ padding: '12px', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px dashed var(--border-color)', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                    <p style={{ margin: '0 0 6px 0', color: 'var(--text-primary)', fontWeight: '500' }}>ℹ️ System Note</p>
+                    {formData.connection_type === 'TYPE_1_EA' 
+                      ? 'ระบบจะสร้าง Bridge Token ให้อัตโนมัติหลังจากท่านบันทึก กรุณานำ Token ไปใส่ใน EA Bridge ของคุณเพื่อเริ่มการเชื่อมต่อ 24/7'
+                      : 'กรุณากรอก API Credentials ในช่องด้านล่าง (รูปแบบ JSON)'
+                    }
+                  </div>
+                </div>
+              )}
+
+              {formData.connection_type === 'TYPE_2_API' && (
+                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gridColumn: 'span 4' }}>
+                  <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', width: '100%', marginBottom: '6px' }}>
+                    <span>API Credentials (JSON format)</span>
+                  </label>
+                  <textarea className="form-input font-mono" placeholder={'{\n  "apiKey": "xxxx",\n  "apiSecret": "xxxx"\n}'} value={formData.api_credentials}
+                    onChange={e => setFormData(p => ({ ...p, api_credentials: e.target.value }))} rows={4} />
+                </div>
+              )}
+
+              <div className="form-group" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gridColumn: 'span 2' }}>
+                <label className="form-label text-emerald-400">Master Account (สัญญาณเทรดต้นทาง)</label>
+                <div style={{ display: 'flex', gap: '12px', marginTop: '6px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px' }}>
+                    <input type="checkbox" checked={formData.is_master} onChange={e => setFormData(p => ({ ...p, is_master: e.target.checked, copy_target_id: '' }))} />
+                     ตั้งเป็น Master
+                  </label>
+                </div>
+              </div>
+
+              {!formData.is_master && (
+                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gridColumn: 'span 2' }}>
+                  <label className="form-label text-blue-400">Copy Trade Target (ก๊อปปี้เทรดจาก)</label>
+                  <select className="filter-select" value={formData.copy_target_id}
+                    onChange={e => setFormData(p => ({ ...p, copy_target_id: e.target.value }))}
+                    style={{ width: '100%', padding: '10px 14px' }}>
+                    <option value="">-- ไม่ก๊อปปี้ใคร --</option>
+                    {accounts.filter(a => a.is_master && a.id !== editId).map(a => (
+                      <option key={a.id} value={a.id}>{a.account_name} (#{a.account_number})</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
             </div>
           </div>
@@ -259,14 +334,17 @@ export default function AccountsPage() {
             </h3>
 
             {accs.map(acc => (
-              <div key={acc.id} className="settings-row" style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'minmax(120px, 1.5fr) minmax(40px, 0.4fr) minmax(80px, 0.8fr) minmax(80px, 0.8fr) minmax(90px, 0.8fr) auto', 
-                gap: '12px', 
-                alignItems: 'center',
-                padding: '12px 16px',
-                minHeight: '48px'
-              }}>
+              <div key={acc.id} style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px 16px', background: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)' }}>
+                <div className="settings-row" style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: 'minmax(120px, 1.5fr) minmax(40px, 0.4fr) minmax(80px, 0.8fr) minmax(80px, 0.8fr) minmax(90px, 0.8fr) auto', 
+                  gap: '12px', 
+                  alignItems: 'center',
+                  minHeight: '48px',
+                  padding: 0,
+                  border: 'none',
+                  background: 'none'
+                }}>
                 <div style={{ overflow: 'hidden', display: 'flex', alignItems: 'center', gap: 8 }}>
                   <BrokerLogo brokerName={group.broker_name || brokerName} size={22} />
                   <div>
@@ -319,6 +397,16 @@ export default function AccountsPage() {
                   </button>
                 </div>
               </div>
+              
+              {acc.bridge_token && (
+                  <div style={{ marginTop: '0px', padding: '8px 12px', background: 'var(--bg-secondary)', borderRadius: '6px', fontSize: '11px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', color: 'var(--text-secondary)' }}>
+                       <span style={{ fontWeight: '500', color: 'var(--text-primary)' }}>EA Bridge Token:</span>
+                       <code style={{ background: 'var(--bg-primary)', padding: '2px 6px', borderRadius: '4px', userSelect: 'all' }}>{acc.bridge_token}</code>
+                    </div>
+                  </div>
+              )}
+            </div>
             ))}
           </div>
           );
