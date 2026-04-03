@@ -21,6 +21,8 @@ export default function SettingsPage() {
     ];
     setSettings(prev => ({ ...prev, custom_colors: {} }));
     keys.forEach(k => document.documentElement.style.removeProperty(`--${k}`));
+    localStorage.removeItem('nexusfx_custom_colors');
+    api.updateSettings({ custom_colors: {} }).catch(console.error);
   };
 
   const handleCopy = async (field) => {
@@ -64,6 +66,7 @@ export default function SettingsPage() {
   useEffect(() => {
     fetchSettings();
     checkMfaStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const checkMfaStatus = async () => {
@@ -136,6 +139,21 @@ export default function SettingsPage() {
   const handleSaveAll = async () => {
     setIsSaving(true);
     try {
+      // Validation for custom colors
+      const sanitizedColors = {};
+      if (settings.custom_colors) {
+        for (const [key, val] of Object.entries(settings.custom_colors)) {
+          if (!val) continue;
+          if (key.includes('font-size')) {
+             if (/^\d+(px|rem|em|%)$/.test(val)) sanitizedColors[key] = val;
+          } else {
+             if (/^#([0-9a-fA-F]{3}){1,2}$/.test(val) || val.startsWith('rgba') || val.startsWith('hsl')) {
+               sanitizedColors[key] = val;
+             }
+          }
+        }
+      }
+
       const payload = {
         theme_id: settings.theme_id || currentTheme,
         notifications_enabled: settings.notifications_enabled,
@@ -146,7 +164,7 @@ export default function SettingsPage() {
         timezone: settings.timezone,
         telegram_chat_id: settings.telegram_chat_id,
         sync_schedules: settings.sync_schedules,
-        custom_colors: settings.custom_colors,
+        custom_colors: sanitizedColors,
       };
 
       // Always include API keys so they re-encrypt correctly
@@ -237,7 +255,7 @@ export default function SettingsPage() {
     <>
       <div className="header">
         <div className="header-left">
-          <h1 className="page-title">ตั้งค่าระบบ</h1>
+          <h1 className="page-title">ตั้งค่าส่วนตัว (Personal Settings)</h1>
         </div>
       </div>
 
