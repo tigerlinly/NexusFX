@@ -5,8 +5,7 @@ export default function AccountFilter() {
   const {
     accounts, accountsByBroker, viewMode,
     selectedBrokerId, selectedAccountId,
-    selectAll, selectBroker, selectAccount,
-    setViewMode,
+    selectAll, selectBroker, selectAccount
   } = useAccounts();
 
   const brokerGroups = Object.values(accountsByBroker);

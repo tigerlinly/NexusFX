@@ -15,7 +15,7 @@ const ExecutionEngine = require('./services/executionEngine');
 const RiskEngine = require('./services/riskEngine');
 const metrics = require('./services/metrics');
 const FeeTracker = require('./services/feeTracker');
-// const mockBotEngine = require('./services/mockBotEngine'); // Disabled for production
+
 const orderSyncEngine = require('./services/orderSyncEngine');
 const trailingStopEngine = require('./services/trailingStopEngine');
 const scheduleSyncEngine = require('./services/scheduleSyncEngine');
@@ -263,9 +263,6 @@ async function start() {
     binanceFeed.start();
     executionEngine.start();
     riskEngine.start();
-    // ⚠️ ข้อ 2: ปิดระบบเทรดจำลอง (Mock Bot Engine) สำหรับ Production เพื่อไม่ให้กราฟวิ่งสุ่มแบบหลอกๆ
-    // mockBotEngine.setIo(io);
-    // mockBotEngine.start();
     trailingStopEngine.setIo(io);
     trailingStopEngine.start();
     commissionEngine.start();

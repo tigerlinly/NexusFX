@@ -5,7 +5,6 @@ import { useAuth } from '../../context/AuthContext';
 
 export default function AdminBillingPage() {
   const { user } = useAuth();
-  const [config, setConfig] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -18,7 +17,6 @@ export default function AdminBillingPage() {
   const fetchConfig = async () => {
     try {
       const data = await api.getSystemConfig();
-      setConfig(data);
       const newForm = { ...formData };
       data.forEach(item => {
         newForm[item.key] = item.value;

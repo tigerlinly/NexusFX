@@ -54,7 +54,7 @@ export default function TerminalPage({ embedded = false, isActive = false }) {
         if (Array.isArray(parsed) && parsed.length > 0) {
           setLayout(parsed);
         }
-      } catch (err) {
+      } catch {
         console.error('Failed to load layout');
       }
     }

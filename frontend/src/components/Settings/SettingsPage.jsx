@@ -202,7 +202,7 @@ export default function SettingsPage() {
     try {
       await api.testLineNotify();
       alert('ส่งแจ้งเตือนทดสอบสำเร็จ กรุณาตรวจสอบ LINE ของคุณ');
-    } catch (err) {
+    } catch {
       alert('ส่งแจ้งเตือนล้มเหลว ตรวจสอบว่าใส่ Token ถูกต้องและกดบันทึกแล้วหรือยัง');
     }
   };
@@ -211,7 +211,7 @@ export default function SettingsPage() {
     try {
       await api.testTelegram();
       alert('ส่งแจ้งเตือนทดสอบสำเร็จ กรุณาตรวจสอบ Telegram ของคุณ');
-    } catch (err) {
+    } catch {
       alert('ส่งแจ้งเตือนล้มเหลว ตรวจสอบว่าใส่ Token/Chat ID ถูกต้องและกดบันทึกแล้วหรือยัง');
     }
   };

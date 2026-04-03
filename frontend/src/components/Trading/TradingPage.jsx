@@ -35,7 +35,7 @@ export default function TradingPage() {
             setActiveTab(parsed[0]);
           }
         }
-      } catch (e) {
+      } catch {
         console.error('Failed to load layout');
       }
     }

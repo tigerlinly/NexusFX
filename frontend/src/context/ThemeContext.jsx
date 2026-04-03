@@ -48,7 +48,7 @@ export function ThemeProvider({ children }) {
     localStorage.setItem('nexusfx_theme', themeId);
     try {
       await api.updateSettings({ theme_id: themeId });
-    } catch (e) {
+    } catch {
       // ignore if not logged in
     }
   }, []);
