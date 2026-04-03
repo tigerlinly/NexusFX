@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../../utils/api';
 import { io } from 'socket.io-client';
-import { Send, TrendingUp, TrendingDown, Crosshair, Target, ShieldAlert, Activity, RefreshCw } from 'lucide-react';
+import { Send, TrendingUp, TrendingDown, Crosshair, Target, ShieldAlert, Activity, RefreshCw, Settings2, Edit3, Eye, EyeOff, RotateCcw, X, Check, GripVertical } from 'lucide-react';
 
 const BROKER_SYMBOLS = {
   exness: ['XAUUSDm', 'EURUSDm', 'GBPUSDm', 'BTCUSDm', 'XAUUSD', 'EURUSD', 'BTCUSD'],
@@ -12,7 +12,7 @@ const BROKER_SYMBOLS = {
   fbs: ['XAUUSD', 'EURUSD', 'GBPUSD']
 };
 
-export default function TerminalPage({ embedded = false }) {
+export default function TerminalPage({ embedded = false, isActive = false }) {
   const [accounts, setAccounts] = useState([]);
   const [formData, setFormData] = useState({
     account_id: '',
@@ -33,7 +33,88 @@ export default function TerminalPage({ embedded = false }) {
   const [fetchingAll, setFetchingAll] = useState(false);
   const [selectedOrders, setSelectedOrders] = useState([]);
   const [viewMode, setViewMode] = useState('single');
-  const [activeTab, setActiveTab] = useState('trade');
+  const [layout, setLayout] = useState(['trade', 'orders']);
+  const [editMode, setEditMode] = useState(false);
+  const [editLayout, setEditLayout] = useState([]);
+  
+  const [draggedItem, setDraggedItem] = useState(null);
+  const [dragOverItem, setDragOverItem] = useState(null);
+  const dragStartIdx = useRef(null);
+
+  const WIDGETS = [
+    { id: 'trade', label: 'ส่งคำสั่งซื้อขาย', icon: Activity },
+    { id: 'orders', label: 'ออเดอร์ล่าสุด', icon: Crosshair },
+  ];
+
+  useEffect(() => {
+    const saved = localStorage.getItem('nexusfx_terminal_layout');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setLayout(parsed);
+        }
+      } catch (err) {
+        console.error('Failed to load layout');
+      }
+    }
+  }, []);
+
+  const handleDragStart = (e, idx) => {
+    dragStartIdx.current = idx;
+    setDraggedItem(idx);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e, idx) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverItem(idx);
+  };
+
+  const handleDragLeave = () => setDragOverItem(null);
+
+  const handleDrop = (e, dropIdx) => {
+    e.preventDefault();
+    const startIdx = dragStartIdx.current;
+    if (startIdx === null || startIdx === dropIdx) {
+      setDraggedItem(null);
+      setDragOverItem(null);
+      return;
+    }
+    const newLayout = [...editLayout];
+    const [removed] = newLayout.splice(startIdx, 1);
+    newLayout.splice(dropIdx, 0, removed);
+    
+    setEditLayout(newLayout);
+    setDraggedItem(null);
+    setDragOverItem(null);
+    dragStartIdx.current = null;
+  };
+
+  const handleDragEnd = () => {
+    setDraggedItem(null);
+    setDragOverItem(null);
+    dragStartIdx.current = null;
+  };
+
+  const toggleWidget = (id) => {
+    setEditLayout(prev => prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]);
+  };
+
+  const enterEditMode = () => {
+    setEditLayout([...layout]);
+    setEditMode(true);
+  };
+
+  const saveLayout = () => {
+    setLayout(editLayout);
+    localStorage.setItem('nexusfx_terminal_layout', JSON.stringify(editLayout));
+    setEditMode(false);
+  };
+
+  const resetLayout = () => setEditLayout(['trade', 'orders']);
+  const cancelEdit = () => { setEditMode(false); setEditLayout([]); };
 
   // Refs to avoid useEffect dependency restarts (prevents flickering)
   const viewModeRef = useRef(viewMode);
@@ -81,7 +162,6 @@ export default function TerminalPage({ embedded = false }) {
       }
     } catch (err) {
       console.error(err);
-      alert('Error fetching all trades');
     } finally {
       setFetchingAll(false);
     }
@@ -154,6 +234,22 @@ export default function TerminalPage({ embedded = false }) {
       setLivePrice(null);
     }
   }, [formData.symbol, marketPrices]);
+
+  // Auto-fetch all open trades when coming to this tab
+  const hasAutoFetchedRef = useRef(false);
+  useEffect(() => {
+    if (isActive && layout.includes('orders') && accounts.length > 0 && !hasAutoFetchedRef.current) {
+      hasAutoFetchedRef.current = true;
+      refreshAllAccountsTrades();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isActive, layout, accounts.length]);
+
+  useEffect(() => {
+    if (!isActive) {
+      hasAutoFetchedRef.current = false;
+    }
+  }, [isActive]);
 
   // Sync default symbol when account changes
   useEffect(() => {
@@ -319,38 +415,114 @@ export default function TerminalPage({ embedded = false }) {
       )}
 
       <div className={embedded ? '' : 'content-area'}>
-        <div style={{ display: 'flex', gap: 24, borderBottom: '1px solid var(--border-color)', marginBottom: 24, paddingBottom: 0 }}>
-          <button 
-            onClick={() => setActiveTab('trade')}
-            style={{ 
-              padding: '12px 4px', background: 'transparent', border: 'none', 
-              borderBottom: activeTab === 'trade' ? '2px solid var(--accent-primary)' : '2px solid transparent', 
-              color: activeTab === 'trade' ? 'var(--accent-primary)' : 'var(--text-secondary)', 
-              fontWeight: 600, cursor: 'pointer', fontSize: 15, display: 'flex', alignItems: 'center', gap: 8,
-              transition: 'all 0.2s ease'
-            }}
-          >
-            <Activity size={18} />
-            ส่งคำสั่งซื้อขาย
-          </button>
-          <button 
-            onClick={() => setActiveTab('orders')}
-            style={{ 
-              padding: '12px 4px', background: 'transparent', border: 'none', 
-              borderBottom: activeTab === 'orders' ? '2px solid var(--accent-secondary)' : '2px solid transparent', 
-              color: activeTab === 'orders' ? 'var(--accent-secondary)' : 'var(--text-secondary)', 
-              fontWeight: 600, cursor: 'pointer', fontSize: 15, display: 'flex', alignItems: 'center', gap: 8,
-              transition: 'all 0.2s ease'
-            }}
-          >
-            <Crosshair size={18} />
-            ออเดอร์ล่าสุด (Session Orders)
-          </button>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+          {!editMode ? (
+            <button 
+              className="btn-icon" 
+              title="ปรับแต่ง Layout"
+              onClick={enterEditMode}
+              style={{
+                color: 'var(--text-secondary)',
+                background: 'transparent',
+              }}
+            >
+              <Settings2 size={18} />
+            </button>
+          ) : (
+            <div className="edit-toolbar" style={{
+              background: 'var(--bg-secondary)', border: '1px solid var(--accent-primary)',
+              borderRadius: 'var(--radius-lg)', padding: 'var(--space-md) var(--space-lg)',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              gap: 'var(--space-md)', animation: 'slideDown 0.3s ease', boxShadow: '0 4px 20px rgba(0, 200, 150, 0.1)', flexWrap: 'wrap', width: '100%'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--accent-primary)', fontWeight: 600, fontSize: 13 }}>
+                  <Edit3 size={16} /> โหมดแก้ไขส่วนประกอบ
+                </div>
+                <div style={{ height: 20, width: 1, background: 'var(--border-secondary)' }} />
+                {WIDGETS.map(tab => {
+                  const isActive = editLayout.includes(tab.id);
+                  const Icon = tab.icon;
+                  return (
+                    <button
+                      key={tab.id} onClick={() => toggleWidget(tab.id)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 'var(--radius-sm)',
+                        border: `1px solid ${isActive ? 'var(--accent-primary)' : 'var(--border-primary)'}`,
+                        background: isActive ? 'rgba(0, 200, 150, 0.1)' : 'var(--bg-tertiary)',
+                        color: isActive ? 'var(--accent-primary)' : 'var(--text-muted)',
+                        cursor: 'pointer', fontSize: 12, fontWeight: 500, transition: 'all 0.2s ease',
+                      }}
+                    >
+                      {isActive ? <Eye size={13} /> : <EyeOff size={13} />}
+                      <Icon size={14} />{tab.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <button onClick={resetLayout} className="btn-icon" style={{ fontSize: 12, border: '1px solid var(--border-primary)' }}><RotateCcw size={13} /> รีเซ็ต</button>
+                <button onClick={cancelEdit} className="btn-icon" style={{ fontSize: 12, border: '1px solid var(--border-primary)' }}><X size={13} /> ยกเลิก</button>
+                <button onClick={saveLayout} className="btn" style={{ fontSize: 12, background: 'var(--gradient-primary)', color: '#000', fontWeight: 600 }}><Check size={13} /> บันทึก</button>
+              </div>
+            </div>
+          )}
         </div>
 
+        {editMode && (
+          <div style={{ 
+            color: 'var(--text-tertiary)', fontSize: 12, marginBottom: 'var(--space-md)',
+            display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px',
+            background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)',
+            border: '1px dashed var(--border-secondary)',
+          }}>
+            <GripVertical size={14} /> 
+            ลากและวางส่วนประกอบเพื่อเรียงลำดับใหม่
+          </div>
+        )}
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xl)' }}>
-          {/* Action Panel */}
-          {activeTab === 'trade' && (
+          {(() => {
+            const displayLayout = editMode ? editLayout : layout;
+            if (displayLayout.length === 0) {
+              return (
+                <div style={{ textAlign: 'center', padding: 'var(--space-2xl)', color: 'var(--text-tertiary)', fontSize: 14, border: '2px dashed var(--border-secondary)', borderRadius: 'var(--radius-lg)' }}>
+                  ไม่มีส่วนประกอบที่แสดงอยู่ — เข้าโหมดแก้ไขเพื่อเพิ่ม
+                </div>
+              );
+            }
+            return displayLayout.map((type, idx) => {
+              const isDragging = draggedItem === idx;
+              const isDragOver = dragOverItem === idx;
+              const widgetDef = WIDGETS.find(w => w.id === type);
+
+              const wrapperStyle = {
+                position: 'relative', transition: 'all 0.25s',
+                opacity: isDragging ? 0.4 : 1, transform: isDragOver ? 'scale(1.01)' : 'scale(1)',
+              };
+              const editOverlayStyle = editMode ? {
+                outline: isDragOver ? '2px dashed var(--accent-primary)' : '2px dashed var(--border-secondary)',
+                outlineOffset: '4px', borderRadius: 'var(--radius-lg)', cursor: 'grab',
+              } : {};
+
+              const dragHandle = editMode ? (
+                <div style={{
+                  position: 'absolute', top: 8, right: 8, zIndex: 10, display: 'flex', alignItems: 'center', gap: 4,
+                  padding: '4px 10px', background: 'var(--bg-secondary)', border: '1px solid var(--border-secondary)',
+                  borderRadius: 'var(--radius-sm)', fontSize: 11, color: 'var(--text-tertiary)', pointerEvents: 'none',
+                }}>
+                  <GripVertical size={14} />
+                  <span>{widgetDef?.label}</span>
+                </div>
+              ) : null;
+
+              if (type === 'trade') {
+                return (
+                  <div key="trade" style={{ ...wrapperStyle, ...editOverlayStyle }} draggable={editMode}
+                    onDragStart={editMode ? (e) => handleDragStart(e, idx) : undefined} onDragOver={editMode ? (e) => handleDragOver(e, idx) : undefined}
+                    onDragLeave={editMode ? handleDragLeave : undefined} onDrop={editMode ? (e) => handleDrop(e, idx) : undefined}
+                    onDragEnd={editMode ? handleDragEnd : undefined}>
+                    {dragHandle}
           <div className="chart-card">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <h3 className="chart-title" style={{ display: 'flex', alignItems: 'center', gap: 8, margin: 0 }}>
@@ -529,10 +701,17 @@ export default function TerminalPage({ embedded = false }) {
             </div>
             {processing && <div style={{ textAlign: 'center', marginTop: 12, fontSize: 12, color: 'var(--text-tertiary)' }}>กำลังส่งคำสั่งเข้าสู่ตลาด...</div>}
           </div>
-          )}
+                  </div>
+                );
+              }
 
-          {/* Activity / Visualization Panel */}
-          {activeTab === 'orders' && (
+              if (type === 'orders') {
+                return (
+                  <div key="orders" style={{ ...wrapperStyle, ...editOverlayStyle }} draggable={editMode}
+                    onDragStart={editMode ? (e) => handleDragStart(e, idx) : undefined} onDragOver={editMode ? (e) => handleDragOver(e, idx) : undefined}
+                    onDragLeave={editMode ? handleDragLeave : undefined} onDrop={editMode ? (e) => handleDrop(e, idx) : undefined}
+                    onDragEnd={editMode ? handleDragEnd : undefined}>
+                    {dragHandle}
           <div>
             <div className="chart-card" style={{ height: '100%' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -637,7 +816,12 @@ export default function TerminalPage({ embedded = false }) {
               )}
             </div>
           </div>
-          )}
+                  </div>
+                );
+              }
+              return null;
+            });
+          })()}
         </div>
       </div>
     </>
