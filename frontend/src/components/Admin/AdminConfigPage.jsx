@@ -248,7 +248,7 @@ export default function AdminConfigPage() {
                     const isNumeric = !isNaN(cfg.value) && cfg.value !== '' && !isBooleanish;
 
                     // All fields span 1 column unless they are specifically marked as long text (future proofing)
-                    const isLongText = cfg.value && cfg.value.length > 50;
+                    const isLongText = cfg.value && String(cfg.value).length > 50;
 
                     return (
                       <div key={cfg.key} style={{

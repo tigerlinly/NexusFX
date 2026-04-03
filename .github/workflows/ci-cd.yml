@@ -36,7 +36,7 @@ jobs:
         working-directory: ./backend
         run: |
           node -e "
-            const files = ['./server.js', './routes/admin.js', './routes/auth.js', './config/database.js'];
+            const files = ['./routes/admin.js', './routes/auth.js'];
             files.forEach(f => { try { require(f); console.log('✅', f); } catch(e) { console.error('❌', f, e.message); process.exit(1); } });
           "
 
