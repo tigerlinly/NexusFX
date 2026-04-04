@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { api } from '../../utils/api';
 import { useAccounts } from '../../context/AccountContext';
 import {
-  Target, Plus, Trash2, Check, Play, Pause, Clock, Trophy, History
+  Target, Plus, Trash2, Check, Play, Pause, Clock, Trophy, History, Edit2
 } from 'lucide-react';
 
 export default function DailyTargetPage({ embedded = false, isActive = true }) {
@@ -12,6 +12,7 @@ export default function DailyTargetPage({ embedded = false, isActive = true }) {
   const [targetStatus, setTargetStatus] = useState([]);
   const [history, setHistory] = useState([]);
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({ account_id: '', target_amount: '', action_on_reach: 'NOTIFY' });
   const [showModal, setShowModal] = useState(null); // target that reached
 
@@ -49,18 +50,26 @@ export default function DailyTargetPage({ embedded = false, isActive = true }) {
     }
   }, [targetStatus, showModal]);
 
-  const handleCreate = async () => {
+  const handleSave = async () => {
     try {
-      await api.createTarget({
-        account_id: formData.account_id || null,
-        target_amount: parseFloat(formData.target_amount),
-        action_on_reach: formData.action_on_reach,
-      });
+      if (editingId) {
+        await api.updateTarget(editingId, {
+          target_amount: parseFloat(formData.target_amount),
+          action_on_reach: formData.action_on_reach,
+        });
+      } else {
+        await api.createTarget({
+          account_id: formData.account_id || null,
+          target_amount: parseFloat(formData.target_amount),
+          action_on_reach: formData.action_on_reach,
+        });
+      }
       setShowForm(false);
+      setEditingId(null);
       setFormData({ account_id: '', target_amount: '', action_on_reach: 'NOTIFY' });
       fetchData();
     } catch (err) {
-      console.error('Create target error:', err);
+      console.error('Save target error:', err);
     }
   };
 
@@ -98,7 +107,11 @@ export default function DailyTargetPage({ embedded = false, isActive = true }) {
           <h1 className="page-title">เป้ากำไรรายวัน</h1>
         </div>
         <div className="header-right">
-          <button className="btn btn-primary btn-sm" onClick={() => setShowForm(!showForm)}>
+          <button className="btn btn-primary btn-sm" onClick={() => {
+            setEditingId(null);
+            setFormData({ account_id: '', target_amount: '', action_on_reach: 'NOTIFY' });
+            setShowForm(!showForm);
+          }}>
             <Plus size={14} /> ตั้งเป้าใหม่
           </button>
         </div>
@@ -106,7 +119,11 @@ export default function DailyTargetPage({ embedded = false, isActive = true }) {
       )}
 
       {embedded && isActive && portalTarget && createPortal(
-        <button className="btn btn-primary btn-sm" onClick={() => setShowForm(!showForm)}>
+        <button className="btn btn-primary btn-sm" onClick={() => {
+          setEditingId(null);
+          setFormData({ account_id: '', target_amount: '', action_on_reach: 'NOTIFY' });
+          setShowForm(!showForm);
+        }}>
           <Plus size={14} /> ตั้งเป้าใหม่
         </button>,
         portalTarget
@@ -116,7 +133,7 @@ export default function DailyTargetPage({ embedded = false, isActive = true }) {
         {/* Create Form */}
         {showForm && (
           <div className="settings-section" style={{ marginBottom: 'var(--space-lg)' }}>
-            <h3 className="settings-section-title"><Target size={18} /> ตั้งเป้ากำไรใหม่</h3>
+            <h3 className="settings-section-title"><Target size={18} /> {editingId ? 'แก้ไขเป้าหมาย' : 'ตั้งเป้ากำไรใหม่'}</h3>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-md)' }}>
               <div className="form-group">
                 <label className="form-label">บัญชี</label>
@@ -125,6 +142,7 @@ export default function DailyTargetPage({ embedded = false, isActive = true }) {
                   value={formData.account_id}
                   onChange={e => setFormData(p => ({ ...p, account_id: e.target.value }))}
                   style={{ width: '100%', padding: '10px 14px' }}
+                  disabled={!!editingId}
                 >
                   <option value="">รวมทุกบัญชี</option>
                   {accounts.map(a => (
@@ -154,9 +172,17 @@ export default function DailyTargetPage({ embedded = false, isActive = true }) {
                   <option value="AUTO_STOP">หยุดอัตโนมัติ</option>
                 </select>
               </div>
-              <div className="form-group" style={{ justifyContent: 'flex-end' }}>
-                <button className="btn btn-primary" onClick={handleCreate} disabled={!formData.target_amount}>
-                  <Check size={14} /> สร้างเป้าหมาย
+              <div className="form-group" style={{ justifyContent: 'flex-end', gap: '8px', flexDirection: 'row', alignItems: 'flex-end' }}>
+                {editingId && (
+                  <button className="btn btn-ghost" onClick={() => {
+                    setShowForm(false);
+                    setEditingId(null);
+                  }}>
+                    ยกเลิก
+                  </button>
+                )}
+                <button className="btn btn-primary" onClick={handleSave} disabled={!formData.target_amount}>
+                  <Check size={14} /> {editingId ? 'บันทึก' : 'สร้างเป้าหมาย'}
                 </button>
               </div>
             </div>
@@ -191,6 +217,22 @@ export default function DailyTargetPage({ embedded = false, isActive = true }) {
                     <span style={{ color: 'var(--text-tertiary)', fontWeight: 'normal', marginLeft: 12, fontSize: 14 }}>{progress.toFixed(1)}%</span>
                   </div>
                   <div className="flex gap-xs">
+                    <button
+                      className="btn btn-ghost btn-icon btn-sm"
+                      onClick={() => {
+                        setEditingId(t.id);
+                        setFormData({
+                          account_id: t.account_id || '',
+                          target_amount: t.target_amount,
+                          action_on_reach: t.action_on_reach || 'NOTIFY'
+                        });
+                        setShowForm(true);
+                      }}
+                      style={{ width: 28, height: 28, padding: 0 }}
+                      title="แก้ไข"
+                    >
+                      <Edit2 size={12} />
+                    </button>
                     <button
                       className="btn btn-ghost btn-icon btn-sm"
                       onClick={() => handleToggle(t.id, t.is_active)}

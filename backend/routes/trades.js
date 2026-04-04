@@ -53,10 +53,10 @@ router.get('/', async (req, res) => {
     if (from) {
       const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(from);
       if (isDateOnly) {
-        conditions.push(`DATE(t.closed_at AT TIME ZONE 'Asia/Bangkok') >= $${paramIdx}`);
+        conditions.push(`DATE(COALESCE(t.closed_at, t.opened_at) AT TIME ZONE 'Asia/Bangkok') >= $${paramIdx}`);
         params.push(from);
       } else {
-        conditions.push(`t.closed_at >= $${paramIdx}`);
+        conditions.push(`COALESCE(t.closed_at, t.opened_at) >= $${paramIdx}`);
         params.push(from);
       }
       paramIdx++;
@@ -64,10 +64,10 @@ router.get('/', async (req, res) => {
     if (to) {
       const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(to);
       if (isDateOnly) {
-        conditions.push(`DATE(t.closed_at AT TIME ZONE 'Asia/Bangkok') <= $${paramIdx}`);
+        conditions.push(`DATE(COALESCE(t.closed_at, t.opened_at) AT TIME ZONE 'Asia/Bangkok') <= $${paramIdx}`);
         params.push(to);
       } else {
-        conditions.push(`t.closed_at <= $${paramIdx}`);
+        conditions.push(`COALESCE(t.closed_at, t.opened_at) <= $${paramIdx}`);
         params.push(to);
       }
       paramIdx++;
@@ -536,26 +536,40 @@ router.get('/live/:accountId', auditLog('VIEW_LIVE_TRADES', 'ACCOUNT'), async (r
     
     const { metaapi_account_id, metaapi_token: rawToken } = accQuery.rows[0];
     const token = decrypt(rawToken) || process.env.METAAPI_TOKEN;
-    if (!metaapi_account_id || !token) return res.status(400).json({ error: 'Missing MetaAPI configuration' });
-
-    const metaApiService = require('../services/metaApiService');
-    const positions = await metaApiService.getLivePositions(metaapi_account_id, token);
     
-    const mapped = positions.map(pos => ({
-      ticket: pos.id,
-      symbol: pos.symbol,
-      side: pos.type === 'POSITION_TYPE_BUY' ? 'BUY' : 'SELL',
-      lot_size: pos.volume,
-      entry_price: pos.openPrice,
-      current_price: pos.currentPrice,
-      pnl: pos.profit,
-      status: 'OPEN',
-      opened_at: pos.time,
-      stop_loss: pos.stopLoss || null,
-      take_profit: pos.takeProfit || null
-    }));
+    if (metaapi_account_id && token) {
+      try {
+        const metaApiService = require('../services/metaApiService');
+        const positions = await metaApiService.getLivePositions(metaapi_account_id, token);
+        
+        const mapped = positions.map(pos => ({
+          ticket: pos.id,
+          symbol: pos.symbol,
+          side: pos.type === 'POSITION_TYPE_BUY' ? 'BUY' : 'SELL',
+          lot_size: pos.volume,
+          entry_price: pos.openPrice,
+          current_price: pos.currentPrice,
+          pnl: pos.profit,
+          status: 'OPEN',
+          opened_at: pos.time,
+          stop_loss: pos.stopLoss || null,
+          take_profit: pos.takeProfit || null
+        }));
 
-    res.json(mapped);
+        return res.json(mapped);
+      } catch (metaErr) {
+        console.warn(`MetaAPI fetch failed for account ${accountId}, falling back to DB:`, metaErr.message);
+      }
+    }
+
+    // Fallback: Fetch open trades from local database
+    const dbPositions = await pool.query(`
+      SELECT ticket, symbol, side, lot_size, entry_price, current_price, pnl, status, opened_at, stop_loss, take_profit
+      FROM trades
+      WHERE account_id = $1 AND status = 'OPEN'
+    `, [accountId]);
+
+    res.json(dbPositions.rows);
   } catch (err) {
     console.error('Live trades error:', err);
     res.status(500).json({ error: err.message });

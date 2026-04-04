@@ -9,11 +9,33 @@
 
 #include <Trade\Trade.mqh>
 
+enum ENUM_TRADE_MODE
+{
+   MODE_CONFIDENCE_SCORE = 0, // สกอร์รวม (Confidence Score)
+   MODE_EMA_ONLY = 1,         // ตัดกันของ EMA เท่านั้น
+   MODE_RSI_ONLY = 2,         // RSI เท่านั้น
+   MODE_MACD_ONLY = 3,        // ตัดกันของ MACD เท่านั้น
+   MODE_PATTERN_ONLY = 4,     // แท่งเทียนกลับตัว (Pattern) อย่างเดียว
+   MODE_BREAKOUT_ONLY = 5,    // Breakout H1 อย่างเดียว
+   MODE_BREAKOUT_PATTERN = 6, // Breakout H1 + แท่งเทียนกลับตัว
+   MODE_AUTO_DYNAMIC = 7      // AUTO: AI เลือกกลยุทธ์ตามสภาพตลาดอัตโนมัติ
+};
+
 //--- Input parameters
+input group    "=== Strategy Mode ==="
+input ENUM_TRADE_MODE TradeMode = MODE_CONFIDENCE_SCORE; // กลยุทธ์การเทรด
+
 input group    "=== Risk Management ==="
 input double   RiskPercent      = 1.0;        // ความเสี่ยงต่อออเดอร์ (% ของทุน)
 input double   FixedLotSize     = 0.0;        // Lot คงที่ (0 = ใช้ Risk%)
-input int      MaxPositions     = 3;          // จำนวนไม้สูงสุดที่เปิดพร้อมกัน
+input int      MaxPositions     = 100;        // จำนวนไม้สูงสุดที่เปิดค้างได้
+
+input group    "=== Sniper Burst Mode ==="
+input bool     EnableBurstMode   = true;      // สาดกระสุนรัวไม้ (แทนที่การออก 1 ไม้ใหญ่)
+input double   BurstLotSize      = 0.01;      // ขนาด Lot ต่อไม้ที่ใช้ยิงรัว
+input int      BurstNormalCount  = 5;         // ยิงกี่ไม้ ถ้ายืนยันสัญญาณปกติ (Score < 70)
+input int      BurstStrongCount  = 5;         // ยิงกี่ไม้ ถ้าเข้าจุดสวยได้เปรียบ (Score 70-89)
+input int      BurstExtremeCount = 5;         // ยิงกี่ไม้ ถ้าโคตรได้เปรียบ (Score >= 90)
 
 input group    "=== Entry & Exit ==="
 input int      StopLossPoints   = 300;        // Stop Loss (Points)
@@ -125,6 +147,9 @@ string         g_brkText        = "-";
 bool           g_inSession      = true;
 bool           g_breakevenDone[];
 
+int            g_PanelX;
+int            g_PanelY;
+
 // Indicator values
 double g_emaFast=0, g_emaSlow=0, g_ema200=0, g_rsi=0;
 double g_macdMain=0, g_macdSignal=0, g_macdHist=0;
@@ -136,6 +161,8 @@ double g_highestH1=0, g_lowestH1=0;
 //+------------------------------------------------------------------+
 int OnInit()
 {
+   g_PanelX = PanelX;
+   g_PanelY = PanelY;
    trade.SetExpertMagicNumber(MagicNumber);
    g_signalColor = NeutralColor;
    
@@ -243,10 +270,10 @@ void OnChartEvent(const int id,
       {
          int newX = (int)ObjectGetInteger(0, sparam, OBJPROP_XDISTANCE);
          int newY = (int)ObjectGetInteger(0, sparam, OBJPROP_YDISTANCE);
-         if(newX != PanelX || newY != PanelY)
+         if(newX != g_PanelX || newY != g_PanelY)
          {
-            PanelX = newX;
-            PanelY = newY;
+            g_PanelX = newX;
+            g_PanelY = newY;
             DeletePanel();
             CreatePanel();
          }
@@ -641,47 +668,194 @@ bool CheckEntrySignal()
    double bid   = SymbolInfoDouble(_Symbol, SYMBOL_BID);
    double point = SymbolInfoDouble(_Symbol, SYMBOL_POINT);
    
-   // BUY
-   if(g_buyScore >= MinConfidence && g_buyScore > g_sellScore)
+   bool isBuySignal = false;
+   bool isSellSignal = false;
+   string signalReason = "";
+   int buyScoreToUse = g_buyScore;
+   int sellScoreToUse = g_sellScore;
+   
+   if(TradeMode == MODE_CONFIDENCE_SCORE)
    {
-      double lot = CalculateLotSize();
-      double sl  = ask - (StopLossPoints * point);
-      double tp  = ask + (TakeProfitPoints * point);
+      isBuySignal = (g_buyScore >= MinConfidence && g_buyScore > g_sellScore);
+      isSellSignal = (g_sellScore >= MinConfidence && g_sellScore > g_buyScore);
+      signalReason = StringFormat("B:%d/S:%d", g_buyScore, g_sellScore);
+   }
+   else if(TradeMode == MODE_EMA_ONLY)
+   {
+      isBuySignal = (StringFind(g_scoreDetails, "EMA↑") >= 0);
+      isSellSignal = (StringFind(g_scoreDetails, "EMA↓") >= 0);
+      signalReason = "EMA Cross";
+      buyScoreToUse = isBuySignal ? 100 : 0; sellScoreToUse = isSellSignal ? 100 : 0;
+   }
+   else if(TradeMode == MODE_RSI_ONLY)
+   {
+      isBuySignal = (StringFind(g_scoreDetails, "RSI") >= 0 && StringFind(g_scoreDetails, "↑") >= 0);
+      isSellSignal = (StringFind(g_scoreDetails, "RSI") >= 0 && StringFind(g_scoreDetails, "↓") >= 0);
+      signalReason = "RSI Reversal";
+      buyScoreToUse = isBuySignal ? 100 : 0; sellScoreToUse = isSellSignal ? 100 : 0;
+   }
+   else if(TradeMode == MODE_MACD_ONLY)
+   {
+      isBuySignal = (StringFind(g_scoreDetails, "MACD↑") >= 0);
+      isSellSignal = (StringFind(g_scoreDetails, "MACD↓") >= 0);
+      signalReason = "MACD Cross";
+      buyScoreToUse = isBuySignal ? 100 : 0; sellScoreToUse = isSellSignal ? 100 : 0;
+   }
+   else if(TradeMode == MODE_PATTERN_ONLY)
+   {
+      isBuySignal = (StringFind(g_scoreDetails, "Hammer") >= 0 || StringFind(g_scoreDetails, "Bullish Engulfing") >= 0 || StringFind(g_scoreDetails, "MorningStar") >= 0);
+      isSellSignal = (StringFind(g_scoreDetails, "ShootingStar") >= 0 || StringFind(g_scoreDetails, "Bearish Engulfing") >= 0 || StringFind(g_scoreDetails, "EveningStar") >= 0);
+      signalReason = "Pattern " + g_patternText;
+      buyScoreToUse = isBuySignal ? 100 : 0; sellScoreToUse = isSellSignal ? 100 : 0;
+   }
+   else if(TradeMode == MODE_BREAKOUT_ONLY)
+   {
+      isBuySignal = (StringFind(g_scoreDetails, "BrkUP") >= 0);
+      isSellSignal = (StringFind(g_scoreDetails, "BrkDN") >= 0);
+      signalReason = "Breakout H1";
+      buyScoreToUse = isBuySignal ? 100 : 0; sellScoreToUse = isSellSignal ? 100 : 0;
+   }
+   else if(TradeMode == MODE_BREAKOUT_PATTERN)
+   {
+      bool patBuy = (StringFind(g_scoreDetails, "Hammer") >= 0 || StringFind(g_scoreDetails, "Bullish Engulfing") >= 0 || StringFind(g_scoreDetails, "MorningStar") >= 0);
+      bool patSell = (StringFind(g_scoreDetails, "ShootingStar") >= 0 || StringFind(g_scoreDetails, "Bearish Engulfing") >= 0 || StringFind(g_scoreDetails, "EveningStar") >= 0);
       
-      g_signalText  = StringFormat("◉ BUY (%d%%)", g_buyScore);
+      isBuySignal = (StringFind(g_scoreDetails, "BrkUP") >= 0 && patBuy);
+      isSellSignal = (StringFind(g_scoreDetails, "BrkDN") >= 0 && patSell);
+      signalReason = "Brk+Pat";
+      buyScoreToUse = isBuySignal ? 100 : 0; sellScoreToUse = isSellSignal ? 100 : 0;
+   }
+   else if(TradeMode == MODE_AUTO_DYNAMIC)
+   {
+      bool isSqueeze = (StringFind(g_bbText, "SQUEEZE") >= 0);
+      bool isTrendEMA = (UseEMA200Filter && g_ema200 > 0) ? (MathAbs(bid - g_ema200) > 50 * point) : (MathAbs(g_emaFast - g_emaSlow) > 20 * point);
+      
+      if(isSqueeze)
+      {
+         // ตลาดไซด์เวย์แคบ (รอระเบิดเบรกเอาท์ หรือ เล่นชนขอบ RSI)
+         if(StringFind(g_scoreDetails, "BrkUP") >= 0 || StringFind(g_scoreDetails, "BrkDN") >= 0) {
+            isBuySignal = (StringFind(g_scoreDetails, "BrkUP") >= 0);
+            isSellSignal = (StringFind(g_scoreDetails, "BrkDN") >= 0);
+            signalReason = "Auto: Breakout from Squeeze";
+         }
+         else {
+            isBuySignal = (StringFind(g_scoreDetails, "RSI") >= 0 && StringFind(g_scoreDetails, "↑") >= 0);
+            isSellSignal = (StringFind(g_scoreDetails, "RSI") >= 0 && StringFind(g_scoreDetails, "↓") >= 0);
+            signalReason = "Auto: RSI Reversal (Range)";
+         }
+      }
+      else if(isTrendEMA)
+      {
+         // ตลาดมีเทรนด์ (ใช้เส้น EMA/MACD เป็นจุดเข้า)
+         isBuySignal = (StringFind(g_scoreDetails, "EMA↑") >= 0 || StringFind(g_scoreDetails, "MACD↑") >= 0);
+         isSellSignal = (StringFind(g_scoreDetails, "EMA↓") >= 0 || StringFind(g_scoreDetails, "MACD↓") >= 0);
+         
+         // กรองตามเทรนด์ EMA200
+         if(UseEMA200Filter && g_ema200 > 0) {
+            if(isBuySignal && ask < g_ema200) isBuySignal = false;
+            if(isSellSignal && bid > g_ema200) isSellSignal = false;
+         }
+         signalReason = "Auto: Trend Follow";
+      }
+      else 
+      {
+         // ตลาดแกว่งกว้าง (พึ่งพาแท่งเทียนกลับตัว)
+         isBuySignal = (StringFind(g_scoreDetails, "Hammer") >= 0 || StringFind(g_scoreDetails, "Bullish Engulfing") >= 0 || StringFind(g_scoreDetails, "MorningStar") >= 0);
+         isSellSignal = (StringFind(g_scoreDetails, "ShootingStar") >= 0 || StringFind(g_scoreDetails, "Bearish Engulfing") >= 0 || StringFind(g_scoreDetails, "EveningStar") >= 0);
+         signalReason = "Auto: Pattern Action";
+      }
+      
+      buyScoreToUse = isBuySignal ? 100 : 0; sellScoreToUse = isSellSignal ? 100 : 0;
+   }
+   
+   // BUY
+   if(isBuySignal && !isSellSignal)
+   {
+      double sl = (StopLossPoints > 0) ? ask - (StopLossPoints * point) : 0.0;
+      double tp = (TakeProfitPoints > 0) ? ask + (TakeProfitPoints * point) : 0.0;
+      
+      int execCount = 1;
+      double execLot = CalculateLotSize();
+      
+      if(EnableBurstMode)
+      {
+         execLot = BurstLotSize;
+         int scoreToCheck = (TradeMode == MODE_CONFIDENCE_SCORE || TradeMode == MODE_AUTO_DYNAMIC) ? g_buyScore : 50;
+         
+         if(scoreToCheck >= 90) execCount = BurstExtremeCount;
+         else if(scoreToCheck >= 70) execCount = BurstStrongCount;
+         else execCount = BurstNormalCount;
+      }
+      
+      int success = 0;
+      for(int i = 0; i < execCount; i++)
+      {
+         bool res = trade.Buy(execLot, _Symbol, ask, sl, tp, StringFormat("NXBot Buy %d [B%d]", buyScoreToUse, i+1));
+         if(res) success++;
+         else {
+            Print("❌ Burst Buy failed at order ", i+1, ": ", trade.ResultRetcode());
+            break; // Stop burst if error to prevent broker block
+         }
+         if(EnableBurstMode) Sleep(50); // กัน Broker บล็อคตอนยิงรัว
+      }
+      
+      g_signalText  = StringFormat("◉ BUY (%s) x%d", signalReason, execCount);
       g_signalColor = BuyColor;
-      g_lastAction  = StringFormat("BUY %.2f @ %.5f", lot, ask);
+      g_lastAction  = StringFormat("BUY %.2f x%d", execLot, success);
       g_lastSignalTime = TimeCurrent();
       
-      Print("✅ BUY Signal | Score: ", g_buyScore, "% | Lot: ", lot, " (", g_lotMethod, ") | ", g_scoreDetails);
-      
-      if(trade.Buy(lot, _Symbol, ask, sl, tp, StringFormat("NXBot Buy %d%%", g_buyScore)))
-         return true;
-      else
-         Print("❌ Buy failed: ", trade.ResultRetcode());
+      Print("✅ BUY Signal | Mode: ", EnumToString(TradeMode), " | Burst: ", success, "/", execCount, " | ", g_scoreDetails);
+      return true;
    }
    // SELL
-   else if(g_sellScore >= MinConfidence && g_sellScore > g_buyScore)
+   else if(isSellSignal && !isBuySignal)
    {
-      double lot = CalculateLotSize();
-      double sl  = bid + (StopLossPoints * point);
-      double tp  = bid - (TakeProfitPoints * point);
+      double sl = (StopLossPoints > 0) ? bid + (StopLossPoints * point) : 0.0;
+      double tp = (TakeProfitPoints > 0) ? bid - (TakeProfitPoints * point) : 0.0;
       
-      g_signalText  = StringFormat("◉ SELL (%d%%)", g_sellScore);
+      int execCount = 1;
+      double execLot = CalculateLotSize();
+      
+      if(EnableBurstMode)
+      {
+         execLot = BurstLotSize;
+         int scoreToCheck = (TradeMode == MODE_CONFIDENCE_SCORE || TradeMode == MODE_AUTO_DYNAMIC) ? g_sellScore : 50;
+         
+         if(scoreToCheck >= 90) execCount = BurstExtremeCount;
+         else if(scoreToCheck >= 70) execCount = BurstStrongCount;
+         else execCount = BurstNormalCount;
+      }
+      
+      int success = 0;
+      for(int i = 0; i < execCount; i++)
+      {
+         bool res = trade.Sell(execLot, _Symbol, bid, sl, tp, StringFormat("NXBot Sell %d [B%d]", sellScoreToUse, i+1));
+         if(res) success++;
+         else {
+            Print("❌ Burst Sell failed at order ", i+1, ": ", trade.ResultRetcode());
+            break;
+         }
+         if(EnableBurstMode) Sleep(50);
+      }
+      
+      g_signalText  = StringFormat("◉ SELL (%s) x%d", signalReason, execCount);
       g_signalColor = SellColor;
-      g_lastAction  = StringFormat("SELL %.2f @ %.5f", lot, bid);
+      g_lastAction  = StringFormat("SELL %.2f x%d", execLot, success);
       g_lastSignalTime = TimeCurrent();
       
-      Print("✅ SELL Signal | Score: ", g_sellScore, "% | Lot: ", lot, " (", g_lotMethod, ") | ", g_scoreDetails);
-      
-      if(trade.Sell(lot, _Symbol, bid, sl, tp, StringFormat("NXBot Sell %d%%", g_sellScore)))
-         return true;
-      else
-         Print("❌ Sell failed: ", trade.ResultRetcode());
+      Print("✅ SELL Signal | Mode: ", EnumToString(TradeMode), " | Burst: ", success, "/", execCount, " | ", g_scoreDetails);
+      return true;
    }
    else
    {
-      g_signalText  = StringFormat("SCANNING (B:%d S:%d)", g_buyScore, g_sellScore);
+      if(TradeMode == MODE_CONFIDENCE_SCORE)
+         g_signalText  = StringFormat("SCANNING (B:%d S:%d)", g_buyScore, g_sellScore);
+      else
+      {
+         string smode = EnumToString(TradeMode);
+         StringReplace(smode, "MODE_", "");
+         g_signalText  = StringFormat("SCANNING (%s)", smode);
+      }
       g_signalColor = NeutralColor;
    }
    
@@ -787,23 +961,23 @@ void CreatePanel()
    int pw = 530;
    int ph = 310;
    
-   CreateRect(PREFIX+"BG", PanelX, PanelY, pw, ph, PanelBgColor, PanelBorderColor);
+   CreateRect(PREFIX+"BG", g_PanelX, g_PanelY, pw, ph, PanelBgColor, PanelBorderColor);
    ObjectSetInteger(0, PREFIX+"BG", OBJPROP_SELECTABLE, true);
    ObjectSetInteger(0, PREFIX+"BG", OBJPROP_HIDDEN, true);
    
-   CreateRect(PREFIX+"TBG", PanelX, PanelY, pw, 26, C'25,32,48', PanelBorderColor);
+   CreateRect(PREFIX+"TBG", g_PanelX, g_PanelY, pw, 26, C'25,32,48', PanelBorderColor);
    ObjectSetInteger(0, PREFIX+"TBG", OBJPROP_SELECTABLE, true);
    ObjectSetInteger(0, PREFIX+"TBG", OBJPROP_HIDDEN, true);
    
-   CreateLbl(PREFIX+"Title", PanelX+10, PanelY+5, "⚡ NexusFX AutoBot v3.0", TextColor, 10, true);
-   CreateLbl(PREFIX+"Magic", PanelX+pw-100, PanelY+7, "Magic: "+IntegerToString(MagicNumber), NeutralColor, 7, false);
+   CreateLbl(PREFIX+"Title", g_PanelX+10, g_PanelY+5, "⚡ NexusFX AutoBot v3.0", TextColor, 10, true);
+   CreateLbl(PREFIX+"Magic", g_PanelX+pw-100, g_PanelY+7, "Magic: "+IntegerToString(MagicNumber), NeutralColor, 7, false);
    
    int h = 16;
-   int topY = PanelY + 34;
+   int topY = g_PanelY + 34;
    
    // --- Column 1 (Left) ---
-   int c1_lx = PanelX + 12;
-   int c1_vx = PanelX + 90;
+   int c1_lx = g_PanelX + 12;
+   int c1_vx = g_PanelX + 90;
    int y1 = topY;
    
    CreateLbl(PREFIX+"S1", c1_lx, y1, "── ACCOUNT ──────────────", C'60,70,100', 7, true); y1+=h+2;
@@ -825,8 +999,8 @@ void CreatePanel()
    CreateLbl(PREFIX+"VSess",  c1_vx, y1, "-", TextColor, 8, false); y1+=h+4;
 
    // --- Column 2 (Right) ---
-   int c2_lx = PanelX + 270;
-   int c2_vx = PanelX + 360;
+   int c2_lx = g_PanelX + 270;
+   int c2_vx = g_PanelX + 360;
    int y2 = topY;
    
    CreateLbl(PREFIX+"S4", c2_lx, y2, "── CONFIDENCE SCORE ────────", C'60,70,100', 7, true); y2+=h+2;
