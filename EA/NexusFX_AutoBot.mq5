@@ -837,6 +837,9 @@ void CreatePanel()
    CreateLbl(PREFIX+"LPnl",  c2_lx, y2, "Float PnL:", NeutralColor, 8, false);
    CreateLbl(PREFIX+"VPnl",  c2_vx, y2, "-", TextColor, 8, true); y2+=h+4;
 
+   // LAST ACTION
+   CreateLbl(PREFIX+"LAct", c2_lx, y2, " ", NeutralColor, 7, false);
+   
    // --- Bottom Row (Indicators) ---
    int y3 = MathMax(y1, y2) + 6;
    CreateLbl(PREFIX+"S3", c1_lx, y3, "── INDICATORS ───────────────────────────────────────────────────", C'60,70,100', 7, true); y3+=h+4;
@@ -866,11 +869,6 @@ void CreatePanel()
       CreateLbl(PREFIX+"LBrk", c2_lx, ind_y, "Breakout:", NeutralColor, 8, false);
       CreateLbl(PREFIX+"VBrk", c2_vx, ind_y, "-", TextColor, 8, false); ind_y+=h;
    }
-   
-   y3 += 86; // move below indicators
-   
-   // LAST ACTION
-   CreateLbl(PREFIX+"LAct", c1_lx, y3, "", NeutralColor, 7, false);
    
    ChartRedraw();
 }
