@@ -227,6 +227,31 @@ void OnTick()
 }
 
 //+------------------------------------------------------------------+
+//| CHARTEVENT FOR DRAGGING PANEL                                    |
+//+------------------------------------------------------------------+
+void OnChartEvent(const int id,
+                  const long &lparam,
+                  const double &dparam,
+                  const string &sparam)
+{
+   if(id == CHARTEVENT_OBJECT_DRAG)
+   {
+      if(sparam == PREFIX+"BG" || sparam == PREFIX+"TBG")
+      {
+         int newX = (int)ObjectGetInteger(0, sparam, OBJPROP_XDISTANCE);
+         int newY = (int)ObjectGetInteger(0, sparam, OBJPROP_YDISTANCE);
+         if(newX != PanelX || newY != PanelY)
+         {
+            PanelX = newX;
+            PanelY = newY;
+            DeletePanel();
+            CreatePanel();
+         }
+      }
+   }
+}
+
+//+------------------------------------------------------------------+
 //| UPDATE INDICATORS                                                |
 //+------------------------------------------------------------------+
 void UpdateIndicators()
@@ -749,83 +774,103 @@ void ManageTrailingStop()
 //+------------------------------------------------------------------+
 void CreatePanel()
 {
-   int pw = 340;
-   int ph = 540;
+   int pw = 530;
+   int ph = 310;
    
    CreateRect(PREFIX+"BG", PanelX, PanelY, pw, ph, PanelBgColor, PanelBorderColor);
+   ObjectSetInteger(0, PREFIX+"BG", OBJPROP_SELECTABLE, true);
+   ObjectSetInteger(0, PREFIX+"BG", OBJPROP_HIDDEN, true);
+   
    CreateRect(PREFIX+"TBG", PanelX, PanelY, pw, 26, C'25,32,48', PanelBorderColor);
+   ObjectSetInteger(0, PREFIX+"TBG", OBJPROP_SELECTABLE, true);
+   ObjectSetInteger(0, PREFIX+"TBG", OBJPROP_HIDDEN, true);
+   
    CreateLbl(PREFIX+"Title", PanelX+10, PanelY+5, "⚡ NexusFX AutoBot v3.0", TextColor, 10, true);
-   CreateLbl(PREFIX+"Magic", PanelX+pw-85, PanelY+7, "Magic: "+IntegerToString(MagicNumber), NeutralColor, 7, false);
+   CreateLbl(PREFIX+"Magic", PanelX+pw-100, PanelY+7, "Magic: "+IntegerToString(MagicNumber), NeutralColor, 7, false);
    
-   int y = PanelY + 34;
-   int lx = PanelX + 12;
-   int vx = PanelX + 140;
-   int h  = 16;
+   int h = 16;
+   int topY = PanelY + 34;
    
-   // ACCOUNT
-   CreateLbl(PREFIX+"S1", lx, y, "── ACCOUNT ──────────────", C'60,70,100', 7, true); y+=h+2;
-   CreateLbl(PREFIX+"LBal",  lx, y, "Balance:", NeutralColor, 8, false);
-   CreateLbl(PREFIX+"VBal",  vx, y, "-", TextColor, 8, true); y+=h;
-   CreateLbl(PREFIX+"LEq",   lx, y, "Equity:", NeutralColor, 8, false);
-   CreateLbl(PREFIX+"VEq",   vx, y, "-", TextColor, 8, true); y+=h;
-   CreateLbl(PREFIX+"LMgn",  lx, y, "Free Margin:", NeutralColor, 8, false);
-   CreateLbl(PREFIX+"VMgn",  vx, y, "-", TextColor, 8, true); y+=h+4;
+   // --- Column 1 (Left) ---
+   int c1_lx = PanelX + 12;
+   int c1_vx = PanelX + 90;
+   int y1 = topY;
    
-   // SIGNAL
-   CreateLbl(PREFIX+"S2", lx, y, "── SIGNAL ───────────────", C'60,70,100', 7, true); y+=h+2;
-   CreateLbl(PREFIX+"LSig",   lx, y, "Signal:", NeutralColor, 8, false);
-   CreateLbl(PREFIX+"VSig",   vx, y, "-", NeutralColor, 9, true); y+=h;
-   CreateLbl(PREFIX+"LTrend", lx, y, "Trend:", NeutralColor, 8, false);
-   CreateLbl(PREFIX+"VTrend", vx, y, "-", TextColor, 8, true); y+=h;
-   CreateLbl(PREFIX+"LPat",   lx, y, "Pattern:", NeutralColor, 8, false);
-   CreateLbl(PREFIX+"VPat",   vx, y, "-", TextColor, 8, false); y+=h;
-   CreateLbl(PREFIX+"LSess",  lx, y, "Session:", NeutralColor, 8, false);
-   CreateLbl(PREFIX+"VSess",  vx, y, "-", TextColor, 8, false); y+=h+4;
+   CreateLbl(PREFIX+"S1", c1_lx, y1, "── ACCOUNT ──────────────", C'60,70,100', 7, true); y1+=h+2;
+   CreateLbl(PREFIX+"LBal",  c1_lx, y1, "Balance:", NeutralColor, 8, false);
+   CreateLbl(PREFIX+"VBal",  c1_vx, y1, "-", TextColor, 8, true); y1+=h;
+   CreateLbl(PREFIX+"LEq",   c1_lx, y1, "Equity:", NeutralColor, 8, false);
+   CreateLbl(PREFIX+"VEq",   c1_vx, y1, "-", TextColor, 8, true); y1+=h;
+   CreateLbl(PREFIX+"LMgn",  c1_lx, y1, "Free Margin:", NeutralColor, 8, false);
+   CreateLbl(PREFIX+"VMgn",  c1_vx, y1, "-", TextColor, 8, true); y1+=h+4;
    
-   // INDICATORS
-   CreateLbl(PREFIX+"S3", lx, y, "── INDICATORS ───────────", C'60,70,100', 7, true); y+=h+2;
-   CreateLbl(PREFIX+"LEf", lx, y, StringFormat("EMA(%d):", FastEMA), NeutralColor, 8, false);
-   CreateLbl(PREFIX+"VEf", vx, y, "-", TextColor, 8, true); y+=h;
-   CreateLbl(PREFIX+"LEs", lx, y, StringFormat("EMA(%d):", SlowEMA), NeutralColor, 8, false);
-   CreateLbl(PREFIX+"VEs", vx, y, "-", TextColor, 8, true); y+=h;
-   CreateLbl(PREFIX+"LRsi",  lx, y, StringFormat("RSI(%d):", RSI_Period), NeutralColor, 8, false);
-   CreateLbl(PREFIX+"VRsi",  vx, y, "-", TextColor, 8, true); y+=h;
-   CreateLbl(PREFIX+"LMacd", lx, y, "MACD:", NeutralColor, 8, false);
-   CreateLbl(PREFIX+"VMacd", vx, y, "-", TextColor, 8, false); y+=h;
-   CreateLbl(PREFIX+"LBb",   lx, y, "BB:", NeutralColor, 8, false);
-   CreateLbl(PREFIX+"VBb",   vx, y, "-", TextColor, 8, false); y+=h;
+   CreateLbl(PREFIX+"S2", c1_lx, y1, "── SIGNAL ───────────────", C'60,70,100', 7, true); y1+=h+2;
+   CreateLbl(PREFIX+"LSig",   c1_lx, y1, "Signal:", NeutralColor, 8, false);
+   CreateLbl(PREFIX+"VSig",   c1_vx, y1, "-", NeutralColor, 9, true); y1+=h;
+   CreateLbl(PREFIX+"LTrend", c1_lx, y1, "Trend:", NeutralColor, 8, false);
+   CreateLbl(PREFIX+"VTrend", c1_vx, y1, "-", TextColor, 8, true); y1+=h;
+   CreateLbl(PREFIX+"LPat",   c1_lx, y1, "Pattern:", NeutralColor, 8, false);
+   CreateLbl(PREFIX+"VPat",   c1_vx, y1, "-", TextColor, 8, false); y1+=h;
+   CreateLbl(PREFIX+"LSess",  c1_lx, y1, "Session:", NeutralColor, 8, false);
+   CreateLbl(PREFIX+"VSess",  c1_vx, y1, "-", TextColor, 8, false); y1+=h+4;
+
+   // --- Column 2 (Right) ---
+   int c2_lx = PanelX + 270;
+   int c2_vx = PanelX + 360;
+   int y2 = topY;
+   
+   CreateLbl(PREFIX+"S4", c2_lx, y2, "── CONFIDENCE SCORE ────────", C'60,70,100', 7, true); y2+=h+2;
+   CreateLbl(PREFIX+"LScBuy",  c2_lx, y2, "Buy Score:", NeutralColor, 8, false);
+   CreateLbl(PREFIX+"VScBuy",  c2_vx, y2, "-", BuyColor, 9, true); y2+=h;
+   CreateLbl(PREFIX+"LScSell", c2_lx, y2, "Sell Score:", NeutralColor, 8, false);
+   CreateLbl(PREFIX+"VScSell", c2_vx, y2, "-", SellColor, 9, true); y2+=h;
+   CreateLbl(PREFIX+"LScMin",  c2_lx, y2, "Min Required:", NeutralColor, 8, false);
+   CreateLbl(PREFIX+"VScMin",  c2_vx, y2, IntegerToString(MinConfidence)+"%", WarnColor, 8, true); y2+=h;
+   CreateLbl(PREFIX+"LDet",    c2_lx, y2, "Details:", NeutralColor, 8, false);
+   CreateLbl(PREFIX+"VDet",    c2_vx, y2, "-", NeutralColor, 7, false); y2+=h+4;
+   
+   CreateLbl(PREFIX+"S5", c2_lx, y2, "── LOT & POSITIONS ─────────", C'60,70,100', 7, true); y2+=h+2;
+   CreateLbl(PREFIX+"LLot",  c2_lx, y2, "Lot Size:", NeutralColor, 8, false);
+   CreateLbl(PREFIX+"VLot",  c2_vx, y2, "-", TextColor, 8, true); y2+=h;
+   CreateLbl(PREFIX+"LPos",  c2_lx, y2, "Positions:", NeutralColor, 8, false);
+   CreateLbl(PREFIX+"VPos",  c2_vx, y2, "-", TextColor, 8, true); y2+=h;
+   CreateLbl(PREFIX+"LPnl",  c2_lx, y2, "Float PnL:", NeutralColor, 8, false);
+   CreateLbl(PREFIX+"VPnl",  c2_vx, y2, "-", TextColor, 8, true); y2+=h+4;
+
+   // --- Bottom Row (Indicators) ---
+   int y3 = MathMax(y1, y2) + 6;
+   CreateLbl(PREFIX+"S3", c1_lx, y3, "── INDICATORS ───────────────────────────────────────────────────", C'60,70,100', 7, true); y3+=h+4;
+   
+   CreateRect(PREFIX+"IndBG", c1_lx, y3, pw-24, 70, C'15,20,30', PanelBorderColor);
+   
+   int ind_y = y3 + 6;
+   // Bottom Left
+   CreateLbl(PREFIX+"LEf", c1_lx+5, ind_y, StringFormat("EMA(%d):", FastEMA), NeutralColor, 8, false);
+   CreateLbl(PREFIX+"VEf", c1_vx, ind_y, "-", TextColor, 8, true); ind_y+=h;
+   CreateLbl(PREFIX+"LEs", c1_lx+5, ind_y, StringFormat("EMA(%d):", SlowEMA), NeutralColor, 8, false);
+   CreateLbl(PREFIX+"VEs", c1_vx, ind_y, "-", TextColor, 8, true); ind_y+=h;
+   CreateLbl(PREFIX+"LRsi", c1_lx+5, ind_y, StringFormat("RSI(%d):", RSI_Period), NeutralColor, 8, false);
+   CreateLbl(PREFIX+"VRsi", c1_vx, ind_y, "-", TextColor, 8, true); ind_y+=h;
    if(UseMTF) {
-      CreateLbl(PREFIX+"LHtf",  lx, y, "HTF:", NeutralColor, 8, false);
-      CreateLbl(PREFIX+"VHtf",  vx, y, "-", TextColor, 8, false); y+=h;
+      CreateLbl(PREFIX+"LHtf", c1_lx+5, ind_y, "HTF:", NeutralColor, 8, false);
+      CreateLbl(PREFIX+"VHtf", c1_vx, ind_y, "-", TextColor, 8, false);
    }
+
+   // Bottom Right
+   ind_y = y3 + 6;
+   CreateLbl(PREFIX+"LMacd", c2_lx, ind_y, "MACD:", NeutralColor, 8, false);
+   CreateLbl(PREFIX+"VMacd", c2_vx, ind_y, "-", TextColor, 8, false); ind_y+=h;
+   CreateLbl(PREFIX+"LBb",   c2_lx, ind_y, "BB:", NeutralColor, 8, false);
+   CreateLbl(PREFIX+"VBb",   c2_vx, ind_y, "-", TextColor, 8, false); ind_y+=h;
    if(UseBreakout) {
-      CreateLbl(PREFIX+"LBrk",  lx, y, "Breakout:", NeutralColor, 8, false);
-      CreateLbl(PREFIX+"VBrk",  vx, y, "-", TextColor, 8, false); y+=h;
+      CreateLbl(PREFIX+"LBrk", c2_lx, ind_y, "Breakout:", NeutralColor, 8, false);
+      CreateLbl(PREFIX+"VBrk", c2_vx, ind_y, "-", TextColor, 8, false); ind_y+=h;
    }
-   y+=4;
    
-   // SCORING
-   CreateLbl(PREFIX+"S4", lx, y, "── CONFIDENCE SCORE ─────", C'60,70,100', 7, true); y+=h+2;
-   CreateLbl(PREFIX+"LScBuy",  lx, y, "Buy Score:", NeutralColor, 8, false);
-   CreateLbl(PREFIX+"VScBuy",  vx, y, "-", BuyColor, 9, true); y+=h;
-   CreateLbl(PREFIX+"LScSell", lx, y, "Sell Score:", NeutralColor, 8, false);
-   CreateLbl(PREFIX+"VScSell", vx, y, "-", SellColor, 9, true); y+=h;
-   CreateLbl(PREFIX+"LScMin",  lx, y, "Min Required:", NeutralColor, 8, false);
-   CreateLbl(PREFIX+"VScMin",  vx, y, IntegerToString(MinConfidence)+"%", WarnColor, 8, true); y+=h;
-   CreateLbl(PREFIX+"LDet",    lx, y, "Details:", NeutralColor, 8, false);
-   CreateLbl(PREFIX+"VDet",    vx, y, "-", NeutralColor, 7, false); y+=h+4;
-   
-   // LOT & POSITIONS
-   CreateLbl(PREFIX+"S5", lx, y, "── LOT & POSITIONS ──────", C'60,70,100', 7, true); y+=h+2;
-   CreateLbl(PREFIX+"LLot",  lx, y, "Lot Size:", NeutralColor, 8, false);
-   CreateLbl(PREFIX+"VLot",  vx, y, "-", TextColor, 8, true); y+=h;
-   CreateLbl(PREFIX+"LPos",  lx, y, "Positions:", NeutralColor, 8, false);
-   CreateLbl(PREFIX+"VPos",  vx, y, "-", TextColor, 8, true); y+=h;
-   CreateLbl(PREFIX+"LPnl",  lx, y, "Float PnL:", NeutralColor, 8, false);
-   CreateLbl(PREFIX+"VPnl",  vx, y, "-", TextColor, 8, true); y+=h+4;
+   y3 += 86; // move below indicators
    
    // LAST ACTION
-   CreateLbl(PREFIX+"LAct", lx, y, "", NeutralColor, 7, false);
+   CreateLbl(PREFIX+"LAct", c1_lx, y3, "", NeutralColor, 7, false);
    
    ChartRedraw();
 }
