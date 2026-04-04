@@ -504,20 +504,54 @@ export default function BotsPage({ embedded = false, isActive = true }) {
               {botLogs.length === 0 ? (
                 <div style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: 20 }}>ไม่มีบันทึกเหตุการณ์</div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {botLogs.map(log => (
-                    <div key={log.id} style={{ fontSize: 10 }}>
-                      <div style={{ color: 'var(--text-tertiary)', fontSize: 10, marginBottom: 2, display: 'flex', justifyContent: 'space-between' }}>
-                        <span>{new Date(log.created_at).toLocaleString('th-TH')}</span>
-                        {!selectedBot && log.bot_name && (
-                           <span style={{ color: 'var(--accent-secondary)' }}>{log.bot_name}</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {botLogs.map(log => {
+                    const eventColors = {
+                      'SCAN_START': 'var(--info)',
+                      'SCAN_RESULT': 'var(--text-tertiary)',
+                      'SCAN_COMPLETE': 'var(--accent-secondary)',
+                      'SIGNAL_GENERATED': 'var(--profit)',
+                      'SIGNAL_REJECTED': 'var(--warning, orange)',
+                      'TRAILING_ACTION': '#a78bfa',
+                      'TRADE_CLOSED': '#60a5fa',
+                      'ERROR': 'var(--loss)',
+                    };
+                    const eventColor = eventColors[log.event_type] || 'var(--text-secondary)';
+                    const payload = log.payload && typeof log.payload === 'object' ? log.payload : null;
+                    const hasIndicators = payload?.indicators;
+
+                    return (
+                      <div key={log.id} style={{ fontSize: 10, borderLeft: `2px solid ${eventColor}`, paddingLeft: 8 }}>
+                        <div style={{ color: 'var(--text-tertiary)', fontSize: 9, marginBottom: 2, display: 'flex', justifyContent: 'space-between' }}>
+                          <span>{new Date(log.created_at).toLocaleString('th-TH')}</span>
+                          <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                            {!selectedBot && log.bot_name && (
+                              <span style={{ color: 'var(--accent-secondary)' }}>{log.bot_name}</span>
+                            )}
+                            <span style={{ color: eventColor, fontWeight: 600, fontSize: 9 }}>{log.event_type}</span>
+                          </span>
+                        </div>
+                        <div style={{ color: log.event_type === 'ERROR' ? 'var(--loss)' : 'var(--text-primary)', fontSize: 10, lineHeight: '1.4' }}>
+                          {log.message}
+                        </div>
+                        {hasIndicators && (
+                          <div style={{ marginTop: 4, padding: '4px 6px', background: 'var(--bg-secondary)', borderRadius: 4, fontSize: 9, color: 'var(--text-tertiary)', display: 'flex', flexWrap: 'wrap', gap: '2px 10px' }}>
+                            {payload.indicators.data_source && <span>📡 {payload.indicators.data_source}</span>}
+                            {payload.indicators.rsi != null && <span>RSI: <b style={{ color: payload.indicators.rsi > 70 ? 'var(--loss)' : payload.indicators.rsi < 30 ? 'var(--profit)' : 'var(--text-secondary)' }}>{payload.indicators.rsi}</b></span>}
+                            {payload.indicators.ema9 && <span>EMA9: {payload.indicators.ema9}</span>}
+                            {payload.indicators.macd?.histogram != null && <span>MACD H: <b style={{ color: payload.indicators.macd.histogram > 0 ? 'var(--profit)' : 'var(--loss)' }}>{payload.indicators.macd.histogram}</b></span>}
+                            {payload.indicators.bb?.percentB != null && <span>BB%: {payload.indicators.bb.percentB}</span>}
+                            {payload.current_price && <span>Price: {payload.current_price}</span>}
+                          </div>
+                        )}
+                        {payload?.pnl != null && (
+                          <div style={{ marginTop: 3, fontSize: 9, color: payload.pnl >= 0 ? 'var(--profit)' : 'var(--loss)', fontWeight: 600 }}>
+                            PnL: {payload.pnl >= 0 ? '+' : ''}{payload.pnl}
+                          </div>
                         )}
                       </div>
-                      <div style={{ color: log.event_type === 'ERROR' ? 'var(--loss)' : 'var(--text-primary)', fontSize: 10, lineHeight: '1.4' }}>
-                        <strong style={{ opacity: 0.8 }}>[{log.event_type}]</strong> {log.message}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

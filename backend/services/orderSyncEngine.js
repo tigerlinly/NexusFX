@@ -27,6 +27,9 @@ class OrderSyncEngine {
   async syncAllAccounts() {
     if (this.running) return;
     this.running = true;
+    const syncStart = Date.now();
+    let accountsSynced = 0;
+    let accountErrors = 0;
     
     try {
       // Get all active connected MT5 accounts
@@ -40,9 +43,17 @@ class OrderSyncEngine {
       for (const row of result.rows) {
         try {
           await this.syncAccountPositions(row);
+          accountsSynced++;
         } catch (e) {
+          accountErrors++;
           console.error(`❌ [OrderSyncEngine] Failed to sync account ${row.account_id}:`, e.message);
         }
+      }
+
+      // Log summary
+      const duration = ((Date.now() - syncStart) / 1000).toFixed(1);
+      if (result.rows.length > 0) {
+        console.log(`🔄 [OrderSyncEngine] Sync complete (${duration}s) | Accounts: ${accountsSynced}/${result.rows.length} | Errors: ${accountErrors}`);
       }
 
     } catch (err) {
@@ -165,6 +176,29 @@ class OrderSyncEngine {
         LineNotify.sendAlert(user_id, msg).catch(()=>{});
         if (this.notificationService) {
           this.notificationService.tradeClosed(user_id, { ...dbTrade, pnl: finalPnl, exit_price: exitPrice }).catch(()=>{});
+        }
+
+        // Log to bot_events for UI monitoring
+        if (dbTrade.bot_id) {
+          const pnlEmoji = finalPnl >= 0 ? '💰' : '🔻';
+          await pool.query(
+            `INSERT INTO bot_events (bot_id, event_type, message, payload, created_at) VALUES ($1, $2, $3, $4, NOW())`,
+            [
+              dbTrade.bot_id,
+              'TRADE_CLOSED',
+              `${pnlEmoji} ${dbTrade.symbol} ${dbTrade.side} ปิดแล้ว | PnL: ${finalPnl >= 0 ? '+' : ''}${finalPnl} | Exit: ${exitPrice || '-'}`,
+              JSON.stringify({
+                trade_id: dbTrade.id,
+                ticket: dbTrade.ticket,
+                symbol: dbTrade.symbol,
+                side: dbTrade.side,
+                lot_size: dbTrade.lot_size,
+                entry_price: dbTrade.entry_price,
+                exit_price: exitPrice,
+                pnl: finalPnl,
+              }),
+            ]
+          ).catch(e => console.warn('[OrderSyncEngine] Log event error:', e.message));
         }
         
       } else {

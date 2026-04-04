@@ -75,6 +75,9 @@ class TrailingStopEngine {
 
     console.log(`📈 [TrailingEngine] Checking ${orders.length} open position(s)...`);
 
+    let actionsTriggered = 0;
+    let errorsCount = 0;
+
     for (const order of orders) {
       try {
         let currentPrice = await this.getCurrentPrice(order);
@@ -83,6 +86,7 @@ class TrailingStopEngine {
         const trailingResult = riskCalculator.calculateTrailing(order, currentPrice);
         if (!trailingResult || !trailingResult.action) continue;
 
+        actionsTriggered++;
         console.log(`📈 [TrailingEngine] ${trailingResult.action} triggered! Order ${order.id} | ${order.symbol} | Profit: +${trailingResult.profit_pips} pips | New SL: ${trailingResult.new_sl}`);
 
         // Modify SL/TP บน Exchange
@@ -114,6 +118,31 @@ class TrailingStopEngine {
           order.id,
         ]);
 
+        // Log to bot_events for UI monitoring
+        if (order.bot_id) {
+          const actionEmoji = trailingResult.action.includes('BREAKEVEN') ? '⚖️' : '📈';
+          await pool.query(
+            `INSERT INTO bot_events (bot_id, event_type, message, payload, created_at) VALUES ($1, $2, $3, $4, NOW())`,
+            [
+              order.bot_id,
+              'TRAILING_ACTION',
+              `${actionEmoji} ${trailingResult.action} | ${order.symbol} ${order.side} | +${trailingResult.profit_pips} pips | SL: ${trailingResult.new_sl}`,
+              JSON.stringify({
+                order_id: order.id,
+                symbol: order.symbol,
+                side: order.side,
+                action: trailingResult.action,
+                current_price: currentPrice,
+                profit_pips: trailingResult.profit_pips,
+                new_sl: trailingResult.new_sl,
+                new_tp: trailingResult.new_tp,
+                peak_price: trailingResult.new_peak,
+                breakeven_triggered: trailingResult.breakeven_triggered,
+              }),
+            ]
+          ).catch(e => console.warn('[TrailingEngine] Log event error:', e.message));
+        }
+
         // Emit ไปยัง frontend ผ่าน WebSocket
         if (this.io && order.user_id) {
           this.io.to(`user:${order.user_id}`).emit('trailing_update', {
@@ -139,8 +168,14 @@ class TrailingStopEngine {
         }
 
       } catch (err) {
+        errorsCount++;
         console.error(`❌ [TrailingEngine] Order ${order.id} error:`, err.message);
       }
+    }
+
+    // Log summary if any actions were triggered
+    if (actionsTriggered > 0 || errorsCount > 0) {
+      console.log(`📈 [TrailingEngine] Tick complete: ${actionsTriggered} actions, ${errorsCount} errors out of ${orders.length} positions`);
     }
   }
 

@@ -358,6 +358,7 @@ async function generateSignal(bot) {
 
       // Build indicator summary for logging
       const indicatorSummary = {
+        data_source: analysisData.data_source || 'UNKNOWN',
         rsi: analysisData.indicators.rsi,
         ema9: analysisData.indicators.ema9 ? parseFloat(analysisData.indicators.ema9.toFixed(5)) : null,
         ema21: analysisData.indicators.ema21 ? parseFloat(analysisData.indicators.ema21.toFixed(5)) : null,

@@ -49,7 +49,7 @@ async function fetchCandles(symbol, interval = '5m', limit = 100) {
 
     if (res.rows.length >= Math.min(limit, 35)) { // Need at least 35 for MACD/Indicators
       // Sort ascending (oldest first) for indicator math
-      return res.rows.sort((a, b) => Number(a.time) - Number(b.time)).map(row => ({
+      const candles = res.rows.sort((a, b) => Number(a.time) - Number(b.time)).map(row => ({
         time: Number(row.time),
         open: Number(row.open),
         high: Number(row.high),
@@ -57,18 +57,27 @@ async function fetchCandles(symbol, interval = '5m', limit = 100) {
         close: Number(row.close),
         volume: Number(row.volume)
       }));
+      candles._source = 'LOCAL_DB';
+      candles._count = res.rows.length;
+      return candles;
     }
   } catch (dbErr) {
     console.error('Local DB fetch failed, falling back to APIs', dbErr);
   }
 
   // 2. Fallback to External APIs if Local DB lacks data
-  console.log(`Falling back to External API for ${sym} ${interval}`);
+  console.log(`[PriceAnalyzer] Fallback to External API for ${sym} ${interval}`);
   if (BINANCE_SYMBOLS[sym]) {
-    return fetchFromBinance(BINANCE_SYMBOLS[sym], interval, limit);
+    const candles = await fetchFromBinance(BINANCE_SYMBOLS[sym], interval, limit);
+    candles._source = 'BINANCE_API';
+    candles._count = candles.length;
+    return candles;
   }
   if (YAHOO_SYMBOLS[sym]) {
-    return fetchFromYahoo(YAHOO_SYMBOLS[sym], interval, limit);
+    const candles = await fetchFromYahoo(YAHOO_SYMBOLS[sym], interval, limit);
+    candles._source = 'YAHOO_API';
+    candles._count = candles.length;
+    return candles;
   }
 
   throw new Error(`Unsupported symbol: ${symbol}`);
@@ -391,6 +400,7 @@ async function analyze(symbol, interval = '5m', limit = 100) {
     symbol,
     interval,
     candles_count: candles.length,
+    data_source: candles._source || 'UNKNOWN',
     current_price: currentPrice,
     last_candle:   candles[candles.length - 1],
     indicators: {
