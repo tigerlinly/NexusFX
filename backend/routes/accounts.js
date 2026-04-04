@@ -45,6 +45,14 @@ router.post('/', auditLog('ADD_ACCOUNT', 'ACCOUNT'), async (req, res) => {
        account_type || 'Real', currency || 'USD', server, metaapi_account_id, cType, bridgeToken,
        api_credentials || '{}', is_master || false, copy_target_id || null]
     );
+
+    // Auto-create daily profit target (0 initially, will be set to 5% of balance when synced)
+    await pool.query(
+      `INSERT INTO daily_targets (user_id, account_id, target_amount, action_on_reach, is_active)
+       VALUES ($1, $2, 0, 'STOPPED', true)`,
+      [req.user.id, result.rows[0].id]
+    );
+
     res.status(201).json(result.rows[0]);
   } catch (err) {
     if (err.code === '23505') {
@@ -148,6 +156,16 @@ router.post('/:id/sync', auditLog('SYNC_ACCOUNT', 'ACCOUNT'), async (req, res) =
         WHERE id = $9`,
         [info.balance, info.equity, info.leverage, info.server, info.currency, newName, newType, symbolsJson, acct.id]
       );
+
+      // Set target to 5% of balance if it's currently 0
+      if (info.balance > 0) {
+        await pool.query(
+          `UPDATE daily_targets SET target_amount = $1 
+           WHERE account_id = $2 AND (target_amount = 0 OR target_amount IS NULL)`,
+          [(info.balance * 0.05).toFixed(2), acct.id]
+        );
+      }
+
       res.json({ 
         success: true, balance: info.balance, equity: info.equity,
         account_name: newName, account_type: newType, supported_symbols: info.symbols

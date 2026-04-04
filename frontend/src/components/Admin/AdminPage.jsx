@@ -5,7 +5,7 @@ import ConfirmDialog from '../Layout/ConfirmDialog';
 import {
   Shield, Users, BarChart3, DollarSign, Activity, Search, Server,
   Edit2, UserCheck, UserX, Eye, AlertTriangle, Clock, ChevronDown,
-  Building, UserPlus, Percent, X, Zap, CheckCircle, Calculator, RefreshCw
+  Building, UserPlus, Percent, X, Zap, CheckCircle, Calculator, RefreshCw, Trash2
 } from 'lucide-react';
 import DockerNodes from './DockerNodes';
 
@@ -89,6 +89,23 @@ export default function AdminPage() {
     } catch (err) {
       alert(err.message);
     }
+  };
+
+  const handleDeleteUser = async (user) => {
+    showConfirm(
+      `ยืนยันการลบผู้ใช้ ${user.username} หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้`,
+      async () => {
+        closeConfirm();
+        try {
+          await api.deleteAdminUser(user.id);
+          alert('ลบผู้ใช้สำเร็จ');
+          fetchData();
+        } catch (err) {
+          alert('❌ ' + (err.message || 'เกิดข้อผิดพลาด'));
+        }
+      },
+      { title: 'ยืนยันการลบผู้ใช้', confirmText: 'ลบผู้ใช้', variant: 'danger' }
+    );
   };
 
   const formatCurrency = (val) => {
@@ -525,6 +542,9 @@ export default function AdminPage() {
                               </button>
                               <button className="btn btn-ghost btn-icon" onClick={() => setEditingUser(editingUser === u.id ? null : u.id)} style={{ width: 28, height: 28 }}>
                                 <Edit2 size={12} />
+                              </button>
+                              <button className="btn btn-ghost btn-icon" onClick={() => handleDeleteUser(u)} style={{ width: 28, height: 28 }} title="ลบผู้ใช้">
+                                <Trash2 size={12} style={{ color: 'var(--loss)' }} />
                               </button>
                               <button className="btn btn-ghost btn-icon" onClick={() => handleUpdateUser(u.id, { is_active: !u.is_active })} style={{ width: 28, height: 28 }}>
                                 {u.is_active ? <UserX size={12} style={{ color: 'var(--loss)' }} /> : <UserCheck size={12} style={{ color: 'var(--profit)' }} />}

@@ -141,6 +141,61 @@ router.put('/users/:id', async (req, res) => {
   }
 });
 
+// DELETE /api/admin/users/:id — delete a user and their data completely
+router.delete('/users/:id', async (req, res) => {
+  if (req.user.role !== 'super_admin' && req.user.role !== 'team_lead') {
+    return res.status(403).json({ error: 'Insufficient permissions to delete users' });
+  }
+
+  const client = await pool.connect();
+  try {
+    const userId = parseInt(req.params.id);
+    
+    // Check if user exists and cannot delete self
+    if (userId === req.user.id) {
+      return res.status(400).json({ error: 'Cannot delete your own account' });
+    }
+    
+    await client.query('BEGIN');
+    
+    // First confirm user exists
+    const checkUser = await client.query('SELECT username FROM users WHERE id = $1', [userId]);
+    if (checkUser.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Delete related records
+    await client.query('DELETE FROM trades WHERE account_id IN (SELECT id FROM accounts WHERE user_id = $1)', [userId]);
+    await client.query('DELETE FROM orders WHERE account_id IN (SELECT id FROM accounts WHERE user_id = $1)', [userId]);
+    await client.query('DELETE FROM accounts WHERE user_id = $1', [userId]);
+    await client.query('DELETE FROM trade_history WHERE user_id = $1', [userId]);
+    await client.query('DELETE FROM bot_positions WHERE user_id = $1', [userId]);
+    await client.query('DELETE FROM terminal_logs WHERE user_id = $1', [userId]);
+    await client.query('DELETE FROM manual_orders WHERE user_id = $1', [userId]);
+    await client.query('DELETE FROM financial_transactions WHERE user_id = $1', [userId]);
+    await client.query('DELETE FROM balance_adjustments WHERE user_id = $1', [userId]);
+    await client.query('DELETE FROM agent_commissions WHERE user_id = $1 OR agent_user_id = $1', [userId]);
+    await client.query('DELETE FROM wallets WHERE user_id = $1', [userId]);
+    await client.query('DELETE FROM users WHERE id = $1', [userId]);
+    
+    await client.query(
+      `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details)
+       VALUES ($1, 'admin.delete_user', 'user', $2, $3)`,
+      [req.user.id, userId, JSON.stringify({ deleted_username: checkUser.rows[0].username })]
+    );
+
+    await client.query('COMMIT');
+    res.json({ success: true, message: 'User deleted successfully' });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Delete user error:', err);
+    res.status(500).json({ error: 'Internal server error while deleting user' });
+  } finally {
+    client.release();
+  }
+});
+
 // POST /api/admin/users/:id/adjust-balance — Maker-Checker Balance adjustment request
 router.post('/users/:id/adjust-balance', async (req, res) => {
   const client = await pool.connect();

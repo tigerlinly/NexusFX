@@ -48,6 +48,15 @@ router.post('/sync', async (req, res) => {
       [balance, equity, req.account.id]
     );
 
+    // Auto update target to 5% if it's currently 0 or NULL
+    if (balance > 0) {
+      await client.query(
+        `UPDATE daily_targets SET target_amount = $1 
+         WHERE account_id = $2 AND (target_amount = 0 OR target_amount IS NULL)`,
+        [(balance * 0.05).toFixed(2), req.account.id]
+      );
+    }
+
     // 2. Sync Trades (UPSERT pattern for open positions)
     if (trades && Array.isArray(trades)) {
       for (const trade of trades) {

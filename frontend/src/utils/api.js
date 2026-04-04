@@ -158,6 +158,7 @@ export const api = {
   getAdminOverview: () => request('/admin/overview'),
   getAdminUsers: (params = {}) => request(`/admin/users?${new URLSearchParams(params)}`),
   updateAdminUser: (id, body) => request(`/admin/users/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  deleteAdminUser: (id) => request(`/admin/users/${id}`, { method: 'DELETE' }),
   adjustUserBalance: (id, body) => request(`/admin/users/${id}/adjust-balance`, { method: 'POST', body: JSON.stringify(body) }),
   getAdjustments: (status = 'PENDING') => request(`/admin/adjustments?status=${status}`),
   approveAdjustment: (id, action) => request(`/admin/adjustments/${id}/approve`, { method: 'POST', body: JSON.stringify({ action }) }),
