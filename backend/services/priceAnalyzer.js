@@ -298,6 +298,18 @@ function calcSMA(closes, period) {
   return parseFloat((slice.reduce((a, b) => a + b) / period).toFixed(6));
 }
 
+/**
+ * Recent High / Low (Donchian Channel style)
+ * Finds the highest high and lowest low of the last N periods (excluding current candle).
+ */
+function calcRecentHighLow(candles, period = 20) {
+  if (candles.length < period + 1) return null;
+  const slice = candles.slice(-(period + 1), -1);
+  const highest = Math.max(...slice.map(c => c.high));
+  const lowest = Math.min(...slice.map(c => c.low));
+  return { highest, lowest };
+}
+
 // =============================================
 // CANDLESTICK PATTERNS
 // =============================================
@@ -380,6 +392,7 @@ async function analyze(symbol, interval = '5m', limit = 100) {
   const ema21 = calcEMA(closes, 21);
   const ema50 = calcEMA(closes, 50);
   const ema200 = sma200_available ? calcEMA(closes, 200) : null;
+  const recent_high_low = calcRecentHighLow(candles, 20);
 
   // EMA cross detection (last 2 values)
   const ema9Series  = calcEMASeries(closes, 9);
@@ -405,7 +418,7 @@ async function analyze(symbol, interval = '5m', limit = 100) {
     last_candle:   candles[candles.length - 1],
     indicators: {
       rsi, macd, bb,
-      ema9, ema21, ema50, ema200,
+      ema9, ema21, ema50, ema200, recent_high_low,
       ema_cross_up: emaCrossUp, ema_cross_down: emaCrossDown,
       trend_up:   ema200 ? currentPrice > ema200 : ema9 > ema21,
       trend_down: ema200 ? currentPrice < ema200 : ema9 < ema21,
@@ -418,6 +431,6 @@ module.exports = {
   fetchCandles,
   analyze,
   calcRSI, calcEMA, calcEMASeries, calcMACD,
-  calcBollingerBands, calcSMA,
+  calcBollingerBands, calcSMA, calcRecentHighLow,
   detectEngulfing, detectPinBar, detectDoji,
 };

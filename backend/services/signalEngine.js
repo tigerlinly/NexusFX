@@ -25,6 +25,7 @@ const STRATEGY_SYMBOLS = {
   Grid:       ['XAUUSD', 'EURUSD'],
   Martingale: ['BTCUSDT', 'ETHUSDT', 'XAUUSD'],
   Custom:     ['XAUUSD', 'EURUSD', 'BTCUSDT'],
+  Breakout:   ['XAUUSD', 'EURUSD', 'GBPUSD', 'BTCUSDT'],
 };
 
 // Interval per strategy
@@ -34,6 +35,7 @@ const STRATEGY_INTERVAL = {
   Grid:       '15m',
   Martingale: '5m',
   Custom:     '5m',
+  Breakout:   '1h',
 };
 
 // =============================================
@@ -294,6 +296,67 @@ async function analyzeCustom(symbol) {
   return null;
 }
 
+/**
+ * BREAKOUT — H1 Range Breakout + M5/M15 Pullback/Entry
+ *
+ * BUY:  H1 Price breaks above 20-period High + M5 MACD Bullish & RSI confirms
+ * SELL: H1 Price breaks below 20-period Low  + M5 MACD Bearish & RSI confirms
+ */
+async function analyzeBreakout(symbol) {
+  // 1. Analyze Higher Timeframe (H1) for Breakout
+  const h1Data = await analyze(symbol, '1h', 40);
+  const { recent_high_low } = h1Data.indicators;
+  const h1Price = h1Data.current_price;
+
+  if (!recent_high_low || !h1Price) return null;
+
+  const isBreakoutUp = h1Price > recent_high_low.highest;
+  const isBreakoutDown = h1Price < recent_high_low.lowest;
+
+  if (!isBreakoutUp && !isBreakoutDown) return null;
+
+  // 2. Analyze Lower Timeframe (M5) for Entry Timing
+  const m5Data = await analyze(symbol, '5m', 60);
+  const { rsi, macd, ema9 } = m5Data.indicators;
+  
+  if (rsi === null || !macd || ema9 === null) return null;
+
+  // BUY Entry (H1 broke UP)
+  // Look for M5 confirmation: momentum is upwards (MACD > 0)
+  if (isBreakoutUp && macd.histogram > 0 && rsi < 70) {
+    const confidence = calcConfidence([
+      50, // H1 Breakout is strong indicator
+      macd.histogram > 0 ? 30 : 0, // M5 confirm timeframe momentum
+      rsi > 40 && rsi < 65 ? 20 : 10 // Entry zone condition
+    ]);
+    return {
+      symbol,
+      side: 'BUY',
+      confidence,
+      reason: `H1 Breakout UP (${h1Price} > ${recent_high_low.highest}) + M5 MACD Confirmed`,
+      indicators: { h1_resistance: recent_high_low.highest, m5_rsi: rsi, m5_macd: macd.histogram }
+    };
+  }
+
+  // SELL Entry (H1 broke DOWN)
+  if (isBreakoutDown && macd.histogram < 0 && rsi > 30) {
+    const confidence = calcConfidence([
+      50,
+      macd.histogram < 0 ? 30 : 0,
+      rsi > 35 && rsi < 60 ? 20 : 10
+    ]);
+    return {
+      symbol,
+      side: 'SELL',
+      confidence,
+      reason: `H1 Breakout DOWN (${h1Price} < ${recent_high_low.lowest}) + M5 MACD Confirmed`,
+      indicators: { h1_support: recent_high_low.lowest, m5_rsi: rsi, m5_macd: macd.histogram }
+    };
+  }
+
+  return null; // Breakout occurred but lower timeframe entry condition not met
+}
+
 // =============================================
 // MAIN: Generate Signal for a Bot
 // =============================================
@@ -313,6 +376,7 @@ async function generateSignal(bot) {
     Swing:      analyzeSwing,
     Grid:       analyzeGrid,
     Martingale: analyzeMartingale,
+    Breakout:   analyzeBreakout,
     Custom:     analyzeCustom,
   }[strategyType] || analyzeCustom;
 
