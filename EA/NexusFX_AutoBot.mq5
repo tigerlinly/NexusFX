@@ -55,6 +55,10 @@ input group    "=== Multi-Timeframe ==="
 input bool     UseMTF           = false;      // ใช้ Multi-Timeframe Confirmation
 input ENUM_TIMEFRAMES  HTF_Period = PERIOD_H1; // Higher Timeframe
 
+input group    "=== Breakout Strategy ==="
+input bool     UseBreakout      = true;       // ใช้กลยุทธ์ Breakout (H1)
+input int      BreakoutPeriod   = 20;         // จำนวนแท่ง H1 (หา High/Low)
+
 input group    "=== Session Filter ==="
 input bool     UseSessionFilter = false;      // กรองเวลาเทรด
 input int      SessionStart1    = 8;          // London Open (GMT hour)
@@ -65,6 +69,7 @@ input int      GMT_Offset       = 0;          // Server GMT offset
 
 input group    "=== Confidence Scoring ==="
 input int      MinConfidence    = 50;         // คะแนนขั้นต่ำที่จะเปิดออเดอร์ (0-100)
+input int      Weight_Breakout  = 30;         // น้ำหนัก Breakout H1
 input int      Weight_EMACross  = 30;         // น้ำหนัก EMA Cross
 input int      Weight_RSI       = 20;         // น้ำหนัก RSI
 input int      Weight_MACD      = 20;         // น้ำหนัก MACD
@@ -114,6 +119,7 @@ string         g_scoreDetails   = "";
 string         g_macdText       = "-";
 string         g_bbText         = "-";
 string         g_htfText        = "-";
+string         g_brkText        = "-";
 bool           g_inSession      = true;
 bool           g_breakevenDone[];
 
@@ -121,6 +127,7 @@ bool           g_breakevenDone[];
 double g_emaFast=0, g_emaSlow=0, g_ema200=0, g_rsi=0;
 double g_macdMain=0, g_macdSignal=0, g_macdHist=0;
 double g_bbUpper=0, g_bbMiddle=0, g_bbLower=0;
+double g_highestH1=0, g_lowestH1=0;
 
 #define PREFIX "NXBot3_"
 
@@ -288,6 +295,24 @@ void UpdateIndicators()
          else
             g_htfText = "▼ HTF Bearish";
       }
+   }
+   
+   // Breakout H1
+   if(UseBreakout)
+   {
+      double htfHigh[], htfLow[];
+      if(CopyHigh(_Symbol, PERIOD_H1, 1, BreakoutPeriod, htfHigh) == BreakoutPeriod &&
+         CopyLow(_Symbol, PERIOD_H1, 1, BreakoutPeriod, htfLow) == BreakoutPeriod)
+      {
+         g_highestH1 = htfHigh[ArrayMaximum(htfHigh, 0, WHOLE_ARRAY)];
+         g_lowestH1  = htfLow[ArrayMinimum(htfLow, 0, WHOLE_ARRAY)];
+         
+         double price = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+         if(price > g_highestH1) g_brkText = "▲ Break UP";
+         else if(price < g_lowestH1) g_brkText = "▼ Break DOWN";
+         else g_brkText = "Inside Range";
+      }
+      else { g_brkText = "No Data"; g_highestH1 = 0; g_lowestH1 = 0; }
    }
    
    // Trend
@@ -507,6 +532,15 @@ void CalculateConfidence(int &buyScore, int &sellScore, string &details)
       if(htfEma9Buf[0] > htfEma21Buf[0]) { buyScore  += 10; details += "HTF↑ "; }
       else                                { sellScore += 10; details += "HTF↓ "; }
    }
+   
+   // 8. Breakout H1
+   if(UseBreakout && g_highestH1 > 0 && g_lowestH1 > 0)
+   {
+      double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+      double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+      if(ask > g_highestH1) { buyScore += Weight_Breakout; details += "BrkUP "; }
+      else if(bid < g_lowestH1) { sellScore += Weight_Breakout; details += "BrkDN "; }
+   }
 }
 
 //+------------------------------------------------------------------+
@@ -716,7 +750,7 @@ void ManageTrailingStop()
 void CreatePanel()
 {
    int pw = 340;
-   int ph = 520;
+   int ph = 540;
    
    CreateRect(PREFIX+"BG", PanelX, PanelY, pw, ph, PanelBgColor, PanelBorderColor);
    CreateRect(PREFIX+"TBG", PanelX, PanelY, pw, 26, C'25,32,48', PanelBorderColor);
@@ -763,6 +797,10 @@ void CreatePanel()
    if(UseMTF) {
       CreateLbl(PREFIX+"LHtf",  lx, y, "HTF:", NeutralColor, 8, false);
       CreateLbl(PREFIX+"VHtf",  vx, y, "-", TextColor, 8, false); y+=h;
+   }
+   if(UseBreakout) {
+      CreateLbl(PREFIX+"LBrk",  lx, y, "Breakout:", NeutralColor, 8, false);
+      CreateLbl(PREFIX+"VBrk",  vx, y, "-", TextColor, 8, false); y+=h;
    }
    y+=4;
    
@@ -825,6 +863,10 @@ void UpdatePanel()
    if(UseBB) SetText(PREFIX+"VBb", g_bbText);
    if(UseMTF) { SetText(PREFIX+"VHtf", g_htfText);
       SetColor(PREFIX+"VHtf", StringFind(g_htfText, "Bull") >= 0 ? BuyColor : SellColor); }
+   if(UseBreakout) {
+      SetText(PREFIX+"VBrk", g_brkText);
+      SetColor(PREFIX+"VBrk", StringFind(g_brkText, "UP") >= 0 ? BuyColor : (StringFind(g_brkText, "DOWN") >= 0 ? SellColor : NeutralColor));
+   }
    
    // Scoring
    SetText(PREFIX+"VScBuy",  StringFormat("%d%%", g_buyScore));
