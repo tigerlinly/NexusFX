@@ -1,8 +1,10 @@
+const { pool } = require('../config/database');
+
 /**
  * =============================================
  * NEXUSFX — Price Analyzer
  * ดึงข้อมูล OHLCV Candles + คำนวณ Indicators จริง
- * Sources: Binance API (crypto/gold) + Yahoo Finance (FX)
+ * Sources: Local PostgreSQL (market_candles) fallback to External APIs
  * =============================================
  */
 
@@ -32,7 +34,36 @@ const YAHOO_SYMBOLS = {
 // =============================================
 async function fetchCandles(symbol, interval = '5m', limit = 100) {
   const sym = symbol.toUpperCase().replace('/', '');
+  const dbInterval = mapToDbInterval(interval);
 
+  try {
+    // 1. Try to fetch from Local DB (Master Feed) first
+    const res = await pool.query(
+      `SELECT open_time as time, open, high, low, close, volume 
+       FROM market_candles 
+       WHERE symbol = $1 AND interval = $2 
+       ORDER BY open_time DESC 
+       LIMIT $3`,
+      [sym, dbInterval, limit]
+    );
+
+    if (res.rows.length >= Math.min(limit, 10)) { // If we have decent amount of local data, use it
+      // Sort ascending (oldest first) for indicator math
+      return res.rows.sort((a, b) => Number(a.time) - Number(b.time)).map(row => ({
+        time: Number(row.time),
+        open: Number(row.open),
+        high: Number(row.high),
+        low: Number(row.low),
+        close: Number(row.close),
+        volume: Number(row.volume)
+      }));
+    }
+  } catch (dbErr) {
+    console.error('Local DB fetch failed, falling back to APIs', dbErr);
+  }
+
+  // 2. Fallback to External APIs if Local DB lacks data
+  console.log(`Falling back to External API for ${sym} ${interval}`);
   if (BINANCE_SYMBOLS[sym]) {
     return fetchFromBinance(BINANCE_SYMBOLS[sym], interval, limit);
   }
@@ -41,6 +72,14 @@ async function fetchCandles(symbol, interval = '5m', limit = 100) {
   }
 
   throw new Error(`Unsupported symbol: ${symbol}`);
+}
+
+function mapToDbInterval(interval) {
+  const map = {
+    'M1': '1m', 'M5': '5m', 'M15': '15m', 'M30': '30m',
+    'H1': '1h', 'H4': '4h', 'D1': '1d'
+  };
+  return map[interval.toUpperCase()] || interval.toLowerCase();
 }
 
 function mapToBinanceInterval(interval) {

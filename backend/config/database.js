@@ -178,10 +178,15 @@ async function initDatabase() {
         api_credentials JSONB DEFAULT '{}',
         last_sync_at TIMESTAMPTZ,
         created_at TIMESTAMPTZ DEFAULT NOW(),
-        updated_at TIMESTAMPTZ DEFAULT NOW(),
-        UNIQUE(user_id, broker_id, account_number)
+        updated_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
+
+    // Standard 1: Partial Unique Index to allow duplicate account_numbers if they are soft-deleted
+    try {
+      await client.query(`ALTER TABLE accounts DROP CONSTRAINT IF EXISTS accounts_user_id_broker_id_account_number_key;`);
+      await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_accounts_unique_active_account ON accounts (user_id, broker_id, account_number) WHERE is_active = true;`);
+    } catch (e) { console.error('Migration error index:', e); }
 
     // Add missing columns for existing accounts table
     try {
@@ -1217,6 +1222,26 @@ async function initDatabase() {
         CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, is_read, created_at DESC);
       `);
     } catch (e) { /* ignore if exists */ }
+
+    // Market Candles (From DataFeed EA)
+    try {
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS market_candles (
+          id SERIAL PRIMARY KEY,
+          symbol VARCHAR(20) NOT NULL,
+          interval VARCHAR(10) NOT NULL,
+          open_time BIGINT NOT NULL,
+          open DECIMAL(18,6) NOT NULL,
+          high DECIMAL(18,6) NOT NULL,
+          low DECIMAL(18,6) NOT NULL,
+          close DECIMAL(18,6) NOT NULL,
+          volume DECIMAL(18,6) DEFAULT 0,
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          UNIQUE(symbol, interval, open_time)
+        );
+        CREATE INDEX IF NOT EXISTS idx_market_candles_lookup ON market_candles(symbol, interval, open_time DESC);
+      `);
+    } catch (e) { console.error('Migration error candles:', e); }
 
     console.log('✅ Database schema initialized successfully');
   } catch (err) {

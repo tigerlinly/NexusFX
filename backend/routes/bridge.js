@@ -6,6 +6,60 @@ const LineNotify = require('../services/lineNotify');
 const TelegramNotify = require('../services/telegramNotify');
 const router = express.Router();
 
+// POST /api/bridge/feed — Master Feed EA pushes market candles
+router.post('/feed', async (req, res) => {
+  try {
+    const feedToken = req.headers['x-feed-token'];
+    if (feedToken !== (process.env.FEED_TOKEN || 'NEXUS_FEED_SECRET_123')) {
+      return res.status(401).json({ error: 'Unauthorized feed token' });
+    }
+
+    const { candles } = req.body;
+    if (!candles || !Array.isArray(candles)) {
+      return res.status(400).json({ error: 'Invalid payload' });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      for (const candle of candles) {
+        await client.query(`
+          INSERT INTO market_candles (symbol, interval, open_time, open, high, low, close, volume)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          ON CONFLICT (symbol, interval, open_time) 
+          DO UPDATE SET 
+            open = EXCLUDED.open,
+            high = EXCLUDED.high,
+            low = EXCLUDED.low,
+            close = EXCLUDED.close,
+            volume = EXCLUDED.volume
+        `, [
+          candle.symbol, 
+          candle.interval, 
+          candle.open_time, 
+          candle.open, 
+          candle.high, 
+          candle.low, 
+          candle.close, 
+          candle.volume
+        ]);
+      }
+
+      await client.query('COMMIT');
+      res.json({ success: true, count: candles.length });
+    } catch (dbErr) {
+      await client.query('ROLLBACK');
+      throw dbErr;
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    console.error('Bridge feed error:', err);
+    res.status(500).json({ error: 'Internal server error while processing feed' });
+  }
+});
+
 router.use(bridgeAuth);
 
 // GET /api/bridge/ping — EA Heartbeat
