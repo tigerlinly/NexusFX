@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { api } from '../../utils/api';
 import { useAccounts } from '../../context/AccountContext';
 import {
-  Building2, Plus, Pencil, Trash2, Link2, Link2Off, Save, RefreshCw
+  Building2, Plus, Pencil, Trash2, Link2, Link2Off, Save, RefreshCw, Copy, CheckCircle2
 } from 'lucide-react';
 
 export default function AccountsPage() {
@@ -403,11 +403,26 @@ export default function AccountsPage() {
               </div>
               
               {acc.bridge_token && (
-                  <div style={{ marginTop: '0px', padding: '8px 12px', background: 'var(--bg-secondary)', borderRadius: '6px', fontSize: '11px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ marginTop: '12px', padding: '10px 14px', background: 'var(--bg-secondary)', borderRadius: '6px', fontSize: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center', color: 'var(--text-secondary)' }}>
                        <span style={{ fontWeight: '500', color: 'var(--text-primary)' }}>EA Bridge Token:</span>
-                       <code style={{ background: 'var(--bg-primary)', padding: '2px 6px', borderRadius: '4px', userSelect: 'all' }}>{acc.bridge_token}</code>
+                       <code style={{ background: 'var(--bg-primary)', padding: '4px 8px', borderRadius: '4px', userSelect: 'all', fontSize: '11px' }}>{acc.bridge_token}</code>
+                       <button className="btn btn-ghost btn-sm" onClick={() => {
+                          navigator.clipboard.writeText(acc.bridge_token);
+                          alert('✅ คัดลอก Token เรียบร้อยแล้ว นำไปวางใน EA ได้เลยครับ');
+                       }} style={{ padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <Copy size={13} /> <span style={{ fontSize: '11px' }}>คัดลอก Token</span>
+                       </button>
                     </div>
+                    {acc.is_connected ? (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#10b981', fontWeight: 500, fontSize: '11px', padding: '4px 8px', background: 'rgba(16,185,129,0.1)', borderRadius: '4px' }}>
+                         <CheckCircle2 size={14} /> EA รันแล้ว (เชื่อมต่อติด)
+                      </span>
+                    ) : (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-muted)', fontSize: '11px' }}>
+                         ⏳ กำลังรอเชื่อมต่อจาก EA...
+                      </span>
+                    )}
                   </div>
               )}
             </div>
