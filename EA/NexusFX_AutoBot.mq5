@@ -78,6 +78,8 @@ input int      Weight_Pattern   = 15;         // น้ำหนัก Candlesti
 
 input group    "=== Display ==="
 input bool     ShowPanel        = true;       // แสดง Dashboard Panel
+input bool     DrawBreakoutBoxOverlay = true; // วาดกรอบ Breakout H1 บนกราฟ
+input color    BoxColor         = C'40,50,70';// สีของกรอบ Breakout
 input int      PanelX           = 10;         // ตำแหน่ง X
 input int      PanelY           = 25;         // ตำแหน่ง Y
 input color    PanelBgColor     = C'20,25,35';
@@ -195,6 +197,7 @@ void OnDeinit(const int reason)
    if(UseBB)     IndicatorRelease(handleBB);
    if(UseMTF)  { IndicatorRelease(handleHTF_EMA9); IndicatorRelease(handleHTF_EMA21); }
    DeletePanel();
+   if(ObjectFind(0, PREFIX+"BrkBox") >= 0) ObjectDelete(0, PREFIX+"BrkBox");
 }
 
 //+------------------------------------------------------------------+
@@ -336,6 +339,13 @@ void UpdateIndicators()
          if(price > g_highestH1) g_brkText = "▲ Break UP";
          else if(price < g_lowestH1) g_brkText = "▼ Break DOWN";
          else g_brkText = "Inside Range";
+         
+         if(DrawBreakoutBoxOverlay)
+         {
+            datetime t1 = iTime(_Symbol, PERIOD_H1, BreakoutPeriod);
+            datetime t2 = iTime(_Symbol, PERIOD_H1, 0) + PeriodSeconds(PERIOD_H1);
+            DrawBreakoutBox(PREFIX+"BrkBox", t1, g_highestH1, t2, g_lowestH1);
+         }
       }
       else { g_brkText = "No Data"; g_highestH1 = 0; g_lowestH1 = 0; }
    }
@@ -977,7 +987,33 @@ void SetColor(string name, color clr)  { ObjectSetInteger(0,name,OBJPROP_COLOR,c
 void DeletePanel()
 {
    for(int i = ObjectsTotal(0,0,-1)-1; i>=0; i--)
-   { string n=ObjectName(0,i); if(StringFind(n,PREFIX)==0) ObjectDelete(0,n); }
+   { string n=ObjectName(0,i); if(StringFind(n,PREFIX)==0 && StringFind(n,"BrkBox")<0) ObjectDelete(0,n); }
    ChartRedraw();
+}
+
+//+------------------------------------------------------------------+
+//| DRAW BREAKOUT BOX                                                |
+//+------------------------------------------------------------------+
+void DrawBreakoutBox(string name, datetime t1, double price1, datetime t2, double price2)
+{
+   if(ObjectFind(0, name) < 0)
+   {
+      ObjectCreate(0, name, OBJ_RECTANGLE, 0, t1, price1, t2, price2);
+      ObjectSetInteger(0, name, OBJPROP_COLOR, BoxColor);
+      ObjectSetInteger(0, name, OBJPROP_STYLE, STYLE_SOLID); // Outline
+      ObjectSetInteger(0, name, OBJPROP_WIDTH, 1);
+      ObjectSetInteger(0, name, OBJPROP_BACK, true); // Behind chart
+      ObjectSetInteger(0, name, OBJPROP_FILL, false); // Don't fill
+      ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
+      ObjectSetInteger(0, name, OBJPROP_HIDDEN, true);
+      ObjectSetString(0, name, OBJPROP_TOOLTIP, "H1 Breakout Range:\n" + DoubleToString(price1, 5) + " / " + DoubleToString(price2, 5));
+   }
+   else
+   {
+      ObjectSetInteger(0, name, OBJPROP_TIME, 0, t1);
+      ObjectSetDouble(0, name, OBJPROP_PRICE, 0, price1);
+      ObjectSetInteger(0, name, OBJPROP_TIME, 1, t2);
+      ObjectSetDouble(0, name, OBJPROP_PRICE, 1, price2);
+   }
 }
 //+------------------------------------------------------------------+
