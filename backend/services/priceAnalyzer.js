@@ -47,7 +47,7 @@ async function fetchCandles(symbol, interval = '5m', limit = 100) {
       [sym, dbInterval, limit]
     );
 
-    if (res.rows.length >= Math.min(limit, 10)) { // If we have decent amount of local data, use it
+    if (res.rows.length >= Math.min(limit, 35)) { // Need at least 35 for MACD/Indicators
       // Sort ascending (oldest first) for indicator math
       return res.rows.sort((a, b) => Number(a.time) - Number(b.time)).map(row => ({
         time: Number(row.time),

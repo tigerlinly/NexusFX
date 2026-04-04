@@ -11,7 +11,7 @@ router.get('/', async (req, res) => {
     const result = await pool.query(
       `SELECT b.*, a.account_name, a.account_number,
               (SELECT COUNT(*) FROM bot_events be WHERE be.bot_id = b.id
-               AND be.event_type IN ('TRADE','SIGNAL_RECEIVED','ORDER_PLACED','SIGNAL_GENERATED','STATE_CHANGE')
+               AND be.event_type IN ('TRADE','SIGNAL_RECEIVED','ORDER_PLACED','SIGNAL_GENERATED','SIGNAL_REJECTED','STATE_CHANGE','SCAN_COMPLETE')
                AND be.created_at >= NOW() - INTERVAL '24 hours')::int AS recent_events,
               (SELECT COUNT(*) FROM orders o WHERE o.bot_id = b.id AND o.status = 'FILLED')::int AS total_trades,
               (SELECT COUNT(*) FROM orders o WHERE o.bot_id = b.id AND o.status = 'PENDING')::int AS pending_orders
@@ -28,21 +28,62 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET /api/bots/logs/all
+// GET /api/bots/logs/all?filter=SIGNAL_GENERATED,SCAN_COMPLETE&limit=200
 router.get('/logs/all', async (req, res) => {
   try {
-    const result = await pool.query(
-      `SELECT be.*, b.bot_name
+    const limit = Math.min(parseInt(req.query.limit) || 100, 500);
+    const filterTypes = req.query.filter ? req.query.filter.split(',').map(s => s.trim()) : null;
+
+    let query, params;
+    if (filterTypes && filterTypes.length > 0) {
+      query = `SELECT be.*, b.bot_name
+       FROM bot_events be
+       JOIN trading_bots b ON be.bot_id = b.id
+       WHERE b.user_id = $1 AND be.event_type = ANY($2)
+       ORDER BY be.created_at DESC
+       LIMIT $3`;
+      params = [req.user.id, filterTypes, limit];
+    } else {
+      query = `SELECT be.*, b.bot_name
        FROM bot_events be
        JOIN trading_bots b ON be.bot_id = b.id
        WHERE b.user_id = $1
        ORDER BY be.created_at DESC
-       LIMIT 100`,
-      [req.user.id]
-    );
+       LIMIT $2`;
+      params = [req.user.id, limit];
+    }
+
+    const result = await pool.query(query, params);
     res.json(result.rows);
   } catch (err) {
     console.error('Fetch all bot logs error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/bots/:id/scan-history — Detailed scan results with indicator data
+router.get('/:id/scan-history', async (req, res) => {
+  try {
+    const botCheck = await pool.query(
+      'SELECT id FROM trading_bots WHERE id = $1 AND user_id = $2',
+      [req.params.id, req.user.id]
+    );
+    if (botCheck.rows.length === 0) return res.status(404).json({ error: 'Bot not found' });
+
+    const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+
+    const result = await pool.query(
+      `SELECT id, event_type, message, payload, created_at
+       FROM bot_events 
+       WHERE bot_id = $1 
+         AND event_type IN ('SCAN_START', 'SCAN_RESULT', 'SCAN_COMPLETE', 'SIGNAL_GENERATED', 'SIGNAL_REJECTED')
+       ORDER BY created_at DESC
+       LIMIT $2`,
+      [req.params.id, limit]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Fetch scan history error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

@@ -160,7 +160,7 @@ router.post('/sync', async (req, res) => {
       `UPDATE orders 
        SET status = 'PROCESSING', updated_at = NOW()
        WHERE account_id = $1 AND status = 'PENDING'
-       RETURNING id, symbol, side, lot_size as quantity, order_type, price, stop_loss, take_profit`,
+       RETURNING id, symbol, side, quantity, order_type, price, stop_loss, take_profit`,
        [req.account.id]
     );
 

@@ -299,6 +299,8 @@ async function analyzeCustom(symbol) {
 // =============================================
 async function generateSignal(bot) {
   const strategyType = bot.strategy_type || 'Custom';
+  const minConfidence = bot.parameters?.min_confidence || bot.min_confidence || 60;
+  const scanStartTime = Date.now();
 
   // Use bot's configured symbols or default set
   const botSymbols = bot.parameters?.symbols
@@ -314,6 +316,14 @@ async function generateSignal(bot) {
     Custom:     analyzeCustom,
   }[strategyType] || analyzeCustom;
 
+  // Log SCAN_START
+  await logBotEvent(bot.id, 'SCAN_START', `🔍 เริ่มสแกน ${strategyType} | Symbols: ${botSymbols.join(', ')}`, {
+    strategy: strategyType,
+    symbols: botSymbols,
+    min_confidence: minConfidence,
+    interval: STRATEGY_INTERVAL[strategyType] || '5m',
+  });
+
   // Check if there's already an open position for any of these symbols (avoid overtrading)
   const existingRes = await pool.query(
     `SELECT symbol FROM orders WHERE account_id = $1 AND status = 'FILLED' AND bot_id = $2`,
@@ -322,40 +332,186 @@ async function generateSignal(bot) {
   const openSymbols = new Set(existingRes.rows.map(r => r.symbol.toUpperCase()));
 
   const signals = [];
+  const scanResults = [];
 
   // Scan each symbol
   for (const symbol of botSymbols) {
     if (openSymbols.has(symbol.toUpperCase())) {
       console.log(`[SignalEngine] Skip ${symbol} — already has open position`);
+      
+      await logBotEvent(bot.id, 'SCAN_RESULT', `⏭️ ${symbol} — ข้ามเพราะมี position เปิดอยู่`, {
+        symbol,
+        result: 'SKIPPED',
+        reason: 'Position already open',
+      });
+      
+      scanResults.push({ symbol, result: 'SKIPPED', reason: 'Position already open' });
       continue;
     }
 
     try {
+      // Run full analysis to get indicator data for logging
+      const analysisData = await analyze(symbol, STRATEGY_INTERVAL[strategyType] || '5m',
+        strategyType === 'Swing' ? 220 : (strategyType === 'Scalper' || strategyType === 'Martingale' ? 80 : 60));
+      
       const signal = await analyzerFn(symbol);
+
+      // Build indicator summary for logging
+      const indicatorSummary = {
+        rsi: analysisData.indicators.rsi,
+        ema9: analysisData.indicators.ema9 ? parseFloat(analysisData.indicators.ema9.toFixed(5)) : null,
+        ema21: analysisData.indicators.ema21 ? parseFloat(analysisData.indicators.ema21.toFixed(5)) : null,
+        ema200: analysisData.indicators.ema200 ? parseFloat(analysisData.indicators.ema200.toFixed(5)) : null,
+        macd: analysisData.indicators.macd ? {
+          macd: analysisData.indicators.macd.macd,
+          signal: analysisData.indicators.macd.signal,
+          histogram: analysisData.indicators.macd.histogram,
+          crossedUp: analysisData.indicators.macd.crossedUp,
+          crossedDown: analysisData.indicators.macd.crossedDown,
+        } : null,
+        bb: analysisData.indicators.bb ? {
+          percentB: analysisData.indicators.bb.percentB,
+          bandwidth: analysisData.indicators.bb.bandwidth,
+        } : null,
+        trend_up: analysisData.indicators.trend_up,
+        trend_down: analysisData.indicators.trend_down,
+        ema_cross_up: analysisData.indicators.ema_cross_up,
+        ema_cross_down: analysisData.indicators.ema_cross_down,
+      };
+
+      const patternSummary = {
+        engulfing: analysisData.patterns.engulfing,
+        pin_bar: analysisData.patterns.pin_bar,
+        doji: analysisData.patterns.doji,
+      };
+
       if (signal) {
         signals.push({ ...signal, strategy: strategyType });
         console.log(`✅ [SignalEngine] ${strategyType} | ${symbol} → ${signal.side} | Confidence: ${signal.confidence}% | ${signal.reason}`);
+
+        // Check min_confidence
+        if (signal.confidence < minConfidence) {
+          await logBotEvent(bot.id, 'SIGNAL_REJECTED', 
+            `🚫 ${symbol} ${signal.side} — Confidence ${signal.confidence}% < ${minConfidence}% (ต่ำกว่าเกณฑ์)\nReason: ${signal.reason}`, {
+            symbol,
+            side: signal.side,
+            confidence: signal.confidence,
+            min_confidence: minConfidence,
+            reason: signal.reason,
+            indicators: indicatorSummary,
+            patterns: patternSummary,
+            current_price: analysisData.current_price,
+            result: 'REJECTED',
+          });
+          
+          scanResults.push({ symbol, result: 'REJECTED', side: signal.side, confidence: signal.confidence });
+        } else {
+          await logBotEvent(bot.id, 'SIGNAL_GENERATED',
+            `✅ ${symbol} → ${signal.side} | Confidence: ${signal.confidence}% | ${signal.reason}`, {
+            symbol,
+            side: signal.side,
+            confidence: signal.confidence,
+            reason: signal.reason,
+            indicators: indicatorSummary,
+            patterns: patternSummary,
+            current_price: analysisData.current_price,
+            result: 'APPROVED',
+          });
+
+          scanResults.push({ symbol, result: 'APPROVED', side: signal.side, confidence: signal.confidence });
+        }
       } else {
         console.log(`⏳ [SignalEngine] ${strategyType} | ${symbol} → No signal`);
+
+        // Build reason why no signal
+        const noSignalReasons = [];
+        const rsi = analysisData.indicators.rsi;
+        if (rsi !== null) {
+          if (rsi >= 35 && rsi <= 65) noSignalReasons.push(`RSI neutral (${rsi})`);
+        }
+        if (!analysisData.patterns.engulfing && !analysisData.patterns.pin_bar) {
+          noSignalReasons.push('No candlestick pattern');
+        }
+        if (analysisData.indicators.macd && !analysisData.indicators.macd.crossedUp && !analysisData.indicators.macd.crossedDown) {
+          noSignalReasons.push('No MACD cross');
+        }
+        if (!analysisData.indicators.ema_cross_up && !analysisData.indicators.ema_cross_down) {
+          noSignalReasons.push('No EMA cross');
+        }
+
+        await logBotEvent(bot.id, 'SCAN_RESULT',
+          `⏳ ${symbol} — ไม่มีสัญญาณ | RSI: ${rsi || '-'} | ${noSignalReasons.slice(0, 2).join(', ')}`, {
+          symbol,
+          result: 'NO_SIGNAL',
+          indicators: indicatorSummary,
+          patterns: patternSummary,
+          current_price: analysisData.current_price,
+          reasons: noSignalReasons,
+        });
+        
+        scanResults.push({ symbol, result: 'NO_SIGNAL', rsi });
       }
     } catch (err) {
       console.warn(`⚠️ [SignalEngine] ${symbol} analysis error: ${err.message}`);
+
+      await logBotEvent(bot.id, 'SCAN_RESULT', `❌ ${symbol} — Error: ${err.message}`, {
+        symbol,
+        result: 'ERROR',
+        error: err.message,
+      });
+
+      scanResults.push({ symbol, result: 'ERROR', error: err.message });
     }
   }
 
+  // Log SCAN_COMPLETE summary
+  const scanDuration = Date.now() - scanStartTime;
+  const approved = scanResults.filter(r => r.result === 'APPROVED').length;
+  const rejected = scanResults.filter(r => r.result === 'REJECTED').length;
+  const noSignal = scanResults.filter(r => r.result === 'NO_SIGNAL').length;
+  const errors = scanResults.filter(r => r.result === 'ERROR').length;
+  const skipped = scanResults.filter(r => r.result === 'SKIPPED').length;
+
+  await logBotEvent(bot.id, 'SCAN_COMPLETE',
+    `📊 สแกนเสร็จ (${(scanDuration / 1000).toFixed(1)}s) | ✅ Signal: ${approved} | 🚫 Rejected: ${rejected} | ⏳ No Signal: ${noSignal} | ⏭️ Skipped: ${skipped}${errors > 0 ? ` | ❌ Error: ${errors}` : ''}`, {
+    duration_ms: scanDuration,
+    summary: { approved, rejected, no_signal: noSignal, errors, skipped },
+    results: scanResults,
+  });
+
   if (signals.length === 0) return null;
 
+  // Filter by min_confidence
+  const validSignals = signals.filter(s => s.confidence >= minConfidence);
+  if (validSignals.length === 0) return null;
+
   // Return highest confidence signal
-  signals.sort((a, b) => b.confidence - a.confidence);
-  return signals[0];
+  validSignals.sort((a, b) => b.confidence - a.confidence);
+  return validSignals[0];
 }
 
 // =============================================
-// HELPER
+// HELPERS
 // =============================================
 function calcConfidence(scores) {
   const total = scores.reduce((a, b) => a + b, 0);
   return Math.min(100, Math.max(0, total));
+}
+
+/**
+ * Log event to bot_events table for UI monitoring
+ */
+async function logBotEvent(botId, eventType, message, payload = null) {
+  try {
+    await pool.query(
+      `INSERT INTO bot_events (bot_id, event_type, message, payload, created_at) 
+       VALUES ($1, $2, $3, $4, NOW())`,
+      [botId, eventType, message, payload ? JSON.stringify(payload) : '{}']
+    );
+  } catch (err) {
+    // Don't let logging failures break the signal engine
+    console.warn(`[SignalEngine] Failed to log bot event: ${err.message}`);
+  }
 }
 
 module.exports = { generateSignal, STRATEGY_SYMBOLS, STRATEGY_INTERVAL };

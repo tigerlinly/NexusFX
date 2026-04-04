@@ -85,7 +85,8 @@ export const api = {
   updateBot: (id, body) => request(`/bots/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   deleteBot: (id) => request(`/bots/${id}`, { method: 'DELETE' }),
   getBotLogs: (id) => request(`/bots/${id}/logs`),
-  getAllBotLogs: () => request('/bots/logs/all'),
+  getAllBotLogs: (filter) => request(`/bots/logs/all${filter ? `?filter=${filter}` : ''}`),
+  getBotScanHistory: (id, limit = 50) => request(`/bots/${id}/scan-history?limit=${limit}`),
   clearBotLogs: (id) => request(`/bots/${id}/logs`, { method: 'DELETE' }),
   // Store & Billing
   getStoreBots: () => request('/store/bots'),
