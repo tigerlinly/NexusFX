@@ -44,8 +44,8 @@ app.post('/api/ingest', async (req, res) => {
     for (const record of data) {
       if (paramIndex > 1) insertQuery += ', ';
       
-      // แปลง Unix Timestamp จากวินาทีเป็น Timestamp with Timezone ของระบบ
-      insertQuery += `($${paramIndex++}, $${paramIndex++}, $${paramIndex++}, to_timestamp($${paramIndex++}), $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++})`;
+      // แปลง Unix Timestamp จากวินาทีเป็น Timestamp with Timezone ของระบบ และเพิ่ม ::numeric ป้องกัน Postgres ตีความผิดเป็น Text
+      insertQuery += `($${paramIndex++}, $${paramIndex++}, $${paramIndex++}, to_timestamp($${paramIndex++}), $${paramIndex++}::numeric, $${paramIndex++}::numeric, $${paramIndex++}::numeric, $${paramIndex++}::numeric, $${paramIndex++}::numeric)`;
       
       values.push(
         record.broker || 'GbeBrokers',
