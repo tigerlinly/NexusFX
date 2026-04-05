@@ -5,15 +5,12 @@
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2026, NexusFX Co."
 #property link      "https://nexusfx.com"
-#property version   "1.01"
+#property version   "1.02"   // อัปเดต Version ตรงนี้ให้เห็นชัดๆ!
 #property script_show_inputs
-#property description "Historical Data Pumper for NexusFX Data Center"
-#property description "Run this SCRIPT once to backfill historical candles."
-#property description "Last Modified: 2026-04-05"
 
 input string   InpGatewayURL        = "http://127.0.0.1:3000/api/ingest"; 
 input string   InpBrokerName        = "EXNESS";                       
-input int      InpBarsToPump        = 10000;  // จำนวนแท่งเทียนย้อนหลังที่ต้องการดึง
+input int      InpBarsToPump        = 10000;
 
 string TimeframeToString(ENUM_TIMEFRAMES tf) {
     if(tf == PERIOD_M1) return "M1";
@@ -31,7 +28,7 @@ void SendToGateway(string json) {
     string headers = "Content-Type: application/json\r\n";
     
     StringToCharArray(json, post, 0, WHOLE_ARRAY, CP_UTF8);
-    ArrayResize(post, ArraySize(post) - 1); // Remove trailing null terminator
+    ArrayResize(post, ArraySize(post) - 1); 
     int post_size = ArraySize(post);
     if (post_size <= 2) return; 
 
@@ -40,6 +37,7 @@ void SendToGateway(string json) {
     
     if(res != 200 && res != 201) {
         string errorDetails = CharArrayToString(result);
+        // สังเกตบรรทัดนี้ จะไม่มีคำว่า GetLastError แล้ว
         Print("[ERROR] HTTP Status: ", res, " | Details: ", errorDetails);
     } else {
         Print("[SUCCESS] Batch sent. Size: ", post_size, " bytes.");
@@ -58,12 +56,10 @@ void OnStart()
         MqlRates rates[];
         ArraySetAsSeries(rates, true);
         
-        // Fetch historical rates
         int copied = CopyRates(_Symbol, tfs[i], 0, InpBarsToPump, rates);
         Print("Fetched ", copied, " bars for TF: ", TimeframeToString(tfs[i]));
         
         if(copied > 0) {
-            // Process in chunks to avoid out-of-memory or huge payloads
             int chunkSize = 1000;
             int totalChunks = (copied / chunkSize) + 1;
             
@@ -98,7 +94,7 @@ void OnStart()
                 
                 // Send chunk
                 SendToGateway(jsonPayload);
-                Sleep(200); // 200ms delay between chunks to prevent overwhelming the Node server
+                Sleep(200); 
             }
         }
     }
