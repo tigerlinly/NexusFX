@@ -15,7 +15,7 @@ input string   InpBrokerName        = "EXNESS";                           // Bro
 
 int OnInit() {
     EventSetTimer(1); 
-    Print("NexusFX_DataFeeder (v1.02) started for ", _Symbol);
+    Print("NexusFX_DataFeeder (v1.03) MULTI-SYMBOL started.");
     return(INIT_SUCCEEDED);
 }
 
@@ -25,55 +25,63 @@ void OnDeinit(const int reason) {
 }
 
 void OnTick() {
-    SendCurrentCandle(PERIOD_M1);
-    SendCurrentCandle(PERIOD_M5);
-    SendCurrentCandle(PERIOD_M15);
-    SendCurrentCandle(PERIOD_H1);
+    // Disabled. Using OnTimer for batch fetching 10 symbols.
 }
+
+string targetSymbols[] = {
+    "AUDUSD", "BTCUSD", "EURUSD", "GBPUSD", "GBPJPY", 
+    "XAUUSD", "USDJPY", "NZDUSD", "USDCAD", "USDCHF"
+};
 
 void OnTimer() {
-    // Backup sending in case of slow ticks
-}
+    int totalSymbols = ArraySize(targetSymbols);
+    string jsonPayload = "[";
+    bool isFirst = true;
+    int payloadCount = 0;
 
-void SendCurrentCandle(ENUM_TIMEFRAMES tf) {
-    MqlRates rates[];
-    ArraySetAsSeries(rates, true);
+    for(int s=0; s<totalSymbols; s++) {
+        string sym = targetSymbols[s];
+        SymbolSelect(sym, true); 
+        int digits = (int)SymbolInfoInteger(sym, SYMBOL_DIGITS);
+        
+        ENUM_TIMEFRAMES tfs[] = {PERIOD_M1, PERIOD_M5, PERIOD_M15, PERIOD_H1};
+        string tfStrs[] = {"M1", "M5", "M15", "H1"};
+        
+        for(int i=0; i<4; i++) {
+            MqlRates rates[];
+            ArraySetAsSeries(rates, true);
+            if(CopyRates(sym, tfs[i], 0, 1, rates) <= 0) continue;
+            
+            if(!isFirst) jsonPayload += ",";
+            jsonPayload += "{";
+            jsonPayload += "\"broker\":\"" + InpBrokerName + "\",";
+            jsonPayload += "\"symbol\":\"" + sym + "\",";
+            jsonPayload += "\"timeframe\":\"" + tfStrs[i] + "\",";
+            jsonPayload += "\"timestamp\":" + IntegerToString(rates[0].time) + ",";
+            jsonPayload += "\"open\":" + DoubleToString(rates[0].open, digits) + ",";
+            jsonPayload += "\"high\":" + DoubleToString(rates[0].high, digits) + ",";
+            jsonPayload += "\"low\":" + DoubleToString(rates[0].low, digits) + ",";
+            jsonPayload += "\"close\":" + DoubleToString(rates[0].close, digits) + ",";
+            jsonPayload += "\"volume\":" + IntegerToString(rates[0].tick_volume);
+            jsonPayload += "}";
+            
+            isFirst = false;
+            payloadCount++;
+        }
+    }
+    jsonPayload += "]";
     
-    // Copy the current active candle (index 0)
-    if(CopyRates(_Symbol, tf, 0, 1, rates) <= 0) return;
-    
-    // Construct JSON Payload for a Single Row (array format)
-    string tfStr = "";
-    if(tf == PERIOD_M1) tfStr = "M1";
-    else if(tf == PERIOD_M5) tfStr = "M5";
-    else if(tf == PERIOD_M15) tfStr = "M15";
-    else if(tf == PERIOD_H1) tfStr = "H1";
-    else return;
-
-    string jsonPayload = "[{";
-    jsonPayload += "\"broker\":\"" + InpBrokerName + "\",";
-    jsonPayload += "\"symbol\":\"" + _Symbol + "\",";
-    jsonPayload += "\"timeframe\":\"" + tfStr + "\",";
-    jsonPayload += "\"timestamp\":" + IntegerToString(rates[0].time) + ",";
-    jsonPayload += "\"open\":" + DoubleToString(rates[0].open, _Digits) + ",";
-    jsonPayload += "\"high\":" + DoubleToString(rates[0].high, _Digits) + ",";
-    jsonPayload += "\"low\":" + DoubleToString(rates[0].low, _Digits) + ",";
-    jsonPayload += "\"close\":" + DoubleToString(rates[0].close, _Digits) + ",";
-    jsonPayload += "\"volume\":" + IntegerToString(rates[0].tick_volume);
-    jsonPayload += "}]";
-
-    char post[], result[];
-    string headers = "Content-Type: application/json\r\n";
-    StringToCharArray(jsonPayload, post, 0, WHOLE_ARRAY, CP_UTF8);
-    ArrayResize(post, ArraySize(post) - 1); 
-    
-    if(ArraySize(post) <= 2) return;
-
-    string result_headers;
-    int res = WebRequest("POST", InpGatewayURL, headers, 3000, post, result, result_headers);
-    if(res != 200 && res != 201) {
-        string errorDetails = CharArrayToString(result);
-        // สังเกตโค้ดเปลี่ยนเป็นคำว่า Details เพื่อคายการตอบกลับจาก Express ออกมาครับ
-        Print("[ERROR] Gateway rejected real-time tick. HTTP Status: ", res, " | Details: ", errorDetails);
+    if(payloadCount > 0) {
+        char post[], result[];
+        string headers = "Content-Type: application/json\r\n";
+        StringToCharArray(jsonPayload, post, 0, WHOLE_ARRAY, CP_UTF8);
+        ArrayResize(post, ArraySize(post) - 1); 
+        
+        string result_headers;
+        int res = WebRequest("POST", InpGatewayURL, headers, 3000, post, result, result_headers);
+        if(res != 200 && res != 201) {
+            string errorDetails = CharArrayToString(result);
+            Print("[ERROR] Gateway rejected real-time batch. HTTP Status: ", res, " | Details: ", errorDetails);
+        }
     }
 }
