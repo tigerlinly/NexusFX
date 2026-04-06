@@ -68,6 +68,17 @@ server {
 
     location / {
         try_files $uri $uri/ /index.html;
+
+        # Prevent caching index.html
+        add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0";
+        add_header Pragma "no-cache";
+        add_header Expires "0";
+
+        # Cache static assets with hashed filenames
+        location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+            expires 30d;
+            add_header Cache-Control "public, immutable";
+        }
     }
 
     # API Proxy
