@@ -27,10 +27,15 @@ async function request(endpoint, options = {}) {
     ...options.headers,
   };
 
-  const res = await fetch(`${API_BASE}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  let res;
+  try {
+    res = await fetch(`${API_BASE}${endpoint}`, {
+      ...options,
+      headers,
+    });
+  } catch (networkErr) {
+    throw new Error('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่');
+  }
 
   if (res.status === 401 && !endpoint.includes('/auth/login')) {
     clearToken();
@@ -41,9 +46,15 @@ async function request(endpoint, options = {}) {
   const contentType = res.headers.get('content-type');
   if (!contentType || !contentType.includes('application/json')) {
     if (!res.ok) {
-       throw new Error('ระบบกำลังปรับปรุง หรือไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ (API Offline)');
+      if (res.status === 502 || res.status === 504) {
+        throw new Error('เซิร์ฟเวอร์กำลังเริ่มต้นระบบ กรุณารอสักครู่แล้วลองใหม่');
+      }
+      if (res.status === 522 || res.status === 524) {
+        throw new Error('การเชื่อมต่อเซิร์ฟเวอร์หมดเวลา กรุณาลองใหม่อีกครั้ง');
+      }
+      throw new Error('ระบบกำลังปรับปรุง กรุณาลองใหม่อีกครั้งในภายหลัง');
     }
-    // If it's OK but not JSON, maybe return text
+    // If it's OK but not JSON, return text
     const text = await res.text();
     return { success: true, text };
   }
@@ -52,10 +63,10 @@ async function request(endpoint, options = {}) {
   try {
     data = await res.json();
   } catch (err) {
-    throw new Error('ระบบเซิร์ฟเวอร์ตอบกลับข้อมูลผิดพลาด (Invalid JSON)');
+    throw new Error('เซิร์ฟเวอร์ตอบกลับข้อมูลผิดพลาด กรุณาลองใหม่อีกครั้ง');
   }
 
-  if (!res.ok) throw new Error(data.error || 'Request failed');
+  if (!res.ok) throw new Error(data.error || 'เกิดข้อผิดพลาด กรุณาลองใหม่');
   return data;
 }
 
@@ -257,9 +268,23 @@ export const api = {
 
   // Public invite validation (no auth needed)
   validateInvite: async (code) => {
-    const res = await fetch(`${API_BASE}/auth/validate-invite/${code}`);
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Invalid invite');
+    let res;
+    try {
+      res = await fetch(`${API_BASE}/auth/validate-invite/${code}`);
+    } catch {
+      throw new Error('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่');
+    }
+    const contentType = res.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      throw new Error('ระบบกำลังปรับปรุง กรุณาลองใหม่อีกครั้ง');
+    }
+    let data;
+    try {
+      data = await res.json();
+    } catch {
+      throw new Error('เซิร์ฟเวอร์ตอบกลับข้อมูลผิดพลาด');
+    }
+    if (!res.ok) throw new Error(data.error || 'ลิงก์เชิญไม่ถูกต้อง');
     return data;
   },
 
