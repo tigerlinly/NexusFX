@@ -32,7 +32,7 @@ router.post('/', auditLog('ADD_ACCOUNT', 'ACCOUNT'), async (req, res) => {
       return res.status(400).json({ error: 'broker_id and account_number required' });
     }
 
-    const cType = connection_type || 'TYPE_3_METAAPI';
+    const cType = connection_type || 'TYPE_1_EA';
     let bridgeToken = null;
     if (cType === 'TYPE_1_EA' || cType === 'TYPE_2_API') {
       bridgeToken = generateBridgeToken(); // Only generate token for non-cloud connections
@@ -114,70 +114,5 @@ router.delete('/:id', auditLog('DELETE_ACCOUNT', 'ACCOUNT'), async (req, res) =>
   }
 });
 
-// POST /api/accounts/:id/sync — manually sync a single account via MetaAPI
-router.post('/:id/sync', auditLog('SYNC_ACCOUNT', 'ACCOUNT'), async (req, res) => {
-  try {
-    const acctRes = await pool.query(
-      `SELECT a.*, us.metaapi_token
-       FROM accounts a
-       LEFT JOIN user_settings us ON us.user_id = a.user_id
-       WHERE a.id = $1 AND a.user_id = $2`,
-      [req.params.id, req.user.id]
-    );
-
-    if (acctRes.rows.length === 0) {
-      return res.status(404).json({ error: 'Account not found' });
-    }
-
-    const acct = acctRes.rows[0];
-    if (!acct.metaapi_account_id || !acct.metaapi_token) {
-      return res.status(400).json({ error: 'MetaAPI Account ID หรือ Token ยังไม่ได้ตั้งค่า' });
-    }
-
-    const metaApiService = require('../services/metaApiService');
-    const info = await metaApiService.getAccountInfo(acct.metaapi_account_id, decrypt(acct.metaapi_token));
-
-    if (info.connected) {
-      // Update balance, equity AND account_name, account_type from MetaAPI
-      const newName = info.account_name || acct.account_name;
-      const newType = info.account_type || acct.account_type;
-      const symbolsJson = info.symbols && info.symbols.length > 0 ? JSON.stringify(info.symbols) : null;
-
-      await pool.query(
-        `UPDATE accounts SET 
-          balance = $1, equity = $2, 
-          leverage = COALESCE($3, leverage),
-          server = COALESCE(NULLIF($4, ''), server),
-          currency = COALESCE(NULLIF($5, ''), currency),
-          account_name = COALESCE(NULLIF($6, ''), account_name),
-          account_type = COALESCE(NULLIF($7, ''), account_type),
-          supported_symbols = COALESCE($8::jsonb, supported_symbols),
-          is_connected = true, last_sync_at = NOW() 
-        WHERE id = $9`,
-        [info.balance, info.equity, info.leverage, info.server, info.currency, newName, newType, symbolsJson, acct.id]
-      );
-
-      // Set target to 5% of balance if it's currently 0
-      if (info.balance > 0) {
-        await pool.query(
-          `UPDATE daily_targets SET target_amount = $1 
-           WHERE account_id = $2 AND (target_amount = 0 OR target_amount IS NULL)`,
-          [(info.balance * 0.05).toFixed(2), acct.id]
-        );
-      }
-
-      res.json({ 
-        success: true, balance: info.balance, equity: info.equity,
-        account_name: newName, account_type: newType, supported_symbols: info.symbols
-      });
-    } else {
-      await pool.query(`UPDATE accounts SET is_connected = false WHERE id = $1`, [acct.id]);
-      res.status(400).json({ error: info.error || 'ไม่สามารถเชื่อมต่อ MetaAPI ได้' });
-    }
-  } catch (err) {
-    console.error('Sync account error:', err);
-    res.status(500).json({ error: err.message || 'Internal server error' });
-  }
-});
-
+// MetaApi Sync route removed
 module.exports = router;

@@ -579,51 +579,7 @@ export default function SettingsPage() {
                     onClick={() => handleLocalUpdate('auto_sync', !settings.auto_sync)} 
                   />
                 </div>
-                <div className="settings-row" style={{ flexDirection: 'column', alignItems: 'stretch', borderBottom: 'none' }}>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '12px' }}>
-                    <div className="settings-label" style={{ marginBottom: 0 }}>MetaApi Token</div>
-                    <div className="settings-desc" style={{ marginTop: 0 }}>
-                      ใช้สำหรับเชื่อมต่อกับ MetaTrader 5 โดยอัตโนมัติ — <a href="https://metaapi.cloud/" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-primary)', textDecoration: 'none' }}>รับ Token ที่นี่</a>
-                    </div>
-                  </div>
-                  <div style={{ position: 'relative', display: 'flex' }}>
-                    <textarea
-                      className="form-input"
-                      placeholder="ใส่ Token จาก metaapi.cloud"
-                      rows={20}
-                      style={{ 
-                        width: '100%', 
-                        fontFamily: 'monospace',
-                        minHeight: '400px',
-                        lineHeight: '1.5',
-                        resize: 'vertical',
-                        paddingRight: '84px',
-                        WebkitTextSecurity: showToken ? 'none' : 'disc'
-                      }}
-                      value={settings.metaapi_token}
-                      onChange={(e) => handleLocalUpdate('metaapi_token', e.target.value)}
-                    />
-                    <div style={{ position: 'absolute', right: '4px', top: '4px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <button 
-                        className="btn btn-ghost btn-icon" 
-                        onClick={() => setShowToken(!showToken)}
-                        title={showToken ? 'ซ่อน Token' : 'แสดง Token'}
-                      >
-                        {showToken ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </button>
-                      {settings.metaapi_token && (
-                        <button 
-                          className="btn btn-ghost btn-icon" 
-                          onClick={() => handleCopy('metaapi_token')}
-                          title="คัดลอก Token"
-                          style={{ color: copiedField === 'metaapi_token' ? 'var(--profit)' : undefined }}
-                        >
-                          {copiedField === 'metaapi_token' ? <Check size={16} /> : <Copy size={16} />}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                {/* MetaApi block removed */}
               </div>
             )}
 

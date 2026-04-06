@@ -17,7 +17,6 @@
     "express-rate-limit": "^8.3.1",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
-    "metaapi.cloud-sdk": "^27.2.0",
     "nodemailer": "^8.0.4",
     "pdfkit": "^0.18.0",
     "pg": "^8.13.0",

@@ -9,10 +9,9 @@ export default function AccountsPage() {
   const { accounts, brokers, fetchAccounts } = useAccounts();
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState(null);
-  const [syncingId, setSyncingId] = useState(null);
   const [formData, setFormData] = useState({
     broker_id: '', account_number: '', account_name: '', account_type: 'Real',
-    currency: 'USD', server: '', metaapi_account_id: '', connection_type: 'TYPE_3_METAAPI',
+    currency: 'USD', server: '', metaapi_account_id: '', connection_type: 'TYPE_1_EA',
     is_master: false, copy_target_id: '', api_credentials: '{}'
   });
 
@@ -51,7 +50,7 @@ export default function AccountsPage() {
       
       setShowForm(false);
       setEditId(null);
-      setFormData({ broker_id: '', account_number: '', account_name: '', account_type: 'Real', currency: 'USD', server: '', metaapi_account_id: '', connection_type: 'TYPE_3_METAAPI', is_master: false, copy_target_id: '', api_credentials: '{}' });
+      setFormData({ broker_id: '', account_number: '', account_name: '', account_type: 'Real', currency: 'USD', server: '', metaapi_account_id: '', connection_type: 'TYPE_1_EA', is_master: false, copy_target_id: '', api_credentials: '{}' });
       fetchAccounts();
     } catch (err) {
       alert(err.message);
@@ -67,7 +66,7 @@ export default function AccountsPage() {
       currency: acc.currency || 'USD',
       server: acc.server || '',
       metaapi_account_id: acc.metaapi_account_id || '',
-      connection_type: acc.connection_type || 'TYPE_3_METAAPI',
+      connection_type: acc.connection_type || 'TYPE_1_EA',
       is_master: acc.is_master || false,
       copy_target_id: acc.copy_target_id || '',
       api_credentials: JSON.stringify(acc.api_credentials || {}, null, 2)
@@ -83,18 +82,7 @@ export default function AccountsPage() {
     fetchAccounts();
   };
 
-  const handleSync = async (accId) => {
-    setSyncingId(accId);
-    try {
-      const result = await api.syncAccount(accId);
-      alert(`✅ Sync สำเร็จ! Balance: $${result.balance}, Equity: $${result.equity}`);
-      fetchAccounts();
-    } catch (err) {
-      alert(`❌ Sync ล้มเหลว: ${err.message}`);
-    } finally {
-      setSyncingId(null);
-    }
-  };
+  // Removed the handleSync block since MetaApi is disabled
 
   // Group by broker (with logo)
   const grouped = accounts.reduce((acc, a) => {
@@ -192,7 +180,7 @@ export default function AccountsPage() {
             setShowForm(!showForm);
             setEditId(null);
             if (!showForm) {
-              setFormData({ broker_id: '', account_number: '', account_name: '', account_type: 'Real', currency: 'USD', server: '', metaapi_account_id: '', connection_type: 'TYPE_3_METAAPI', is_master: false, copy_target_id: '', api_credentials: '{}' });
+              setFormData({ broker_id: '', account_number: '', account_name: '', account_type: 'Real', currency: 'USD', server: '', metaapi_account_id: '', connection_type: 'TYPE_1_EA', is_master: false, copy_target_id: '', api_credentials: '{}' });
             }
           }}>
             <Plus size={14} /> เพิ่มบัญชี
@@ -251,24 +239,13 @@ export default function AccountsPage() {
                 <select className="filter-select" value={formData.connection_type}
                   onChange={e => setFormData(p => ({ ...p, connection_type: e.target.value }))}
                   style={{ width: '100%', padding: '10px 14px' }}>
-                  <option value="TYPE_3_METAAPI">Cloud Protocol (MetaAPI)</option>
+                  {/* TYPE_3_METAAPI removed */}
                   <option value="TYPE_1_EA">MQL Bridge EA (รัน EA บน MT4/MT5 เอง)</option>
                   <option value="TYPE_2_API">Native Open API (เช่น cTrader/Binance)</option>
                 </select>
               </div>
 
-              {formData.connection_type === 'TYPE_3_METAAPI' && (
-                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
-                  <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', width: '100%', marginBottom: '6px' }}>
-                    <span>MetaApi Account ID</span>
-                    <a href="https://app.metaapi.cloud/" target="_blank" rel="noreferrer" style={{ fontSize: '11px', color: 'var(--accent-primary)', textDecoration: 'none', fontWeight: 500 }}>
-                      สมัครและรับ Token
-                    </a>
-                  </label>
-                  <input className="form-input" placeholder="สำหรับเชื่อมต่อ MT5 อัตโนมัติ" value={formData.metaapi_account_id}
-                    onChange={e => setFormData(p => ({ ...p, metaapi_account_id: e.target.value }))} />
-                </div>
-              )}
+              {/* MetaApi block removed */}
               
               {formData.connection_type !== 'TYPE_3_METAAPI' && (
                 <div className="form-group" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gridColumn: 'span 1' }}>
@@ -384,13 +361,7 @@ export default function AccountsPage() {
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end', flexShrink: 0 }}>
-                  {acc.metaapi_account_id && (
-                    <button className="btn btn-ghost btn-icon btn-sm" onClick={() => handleSync(acc.id)}
-                      disabled={syncingId === acc.id}
-                      style={{ color: 'var(--accent-primary)', padding: '4px' }} title="Sync จาก MetaAPI">
-                      <RefreshCw size={13} className={syncingId === acc.id ? 'spin' : ''} />
-                    </button>
-                  )}
+                  {/* MetaApi Sync button removed */}
                   <button className="btn btn-ghost btn-icon btn-sm" onClick={() => handleEdit(acc)}
                     style={{ color: 'var(--text-secondary)', padding: '4px' }} title="แก้ไขบัญชี">
                     <Pencil size={13} />
