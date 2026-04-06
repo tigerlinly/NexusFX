@@ -192,7 +192,6 @@ export default function SettingsPage() {
     { id: 'schedule', label: 'ตั้งเวลาอัพเดท', icon: Clock },
     { id: 'security', label: 'ความปลอดภัย', icon: Shield },
     { id: 'general', label: 'ทั่วไป', icon: Moon },
-    { id: 'mt5', label: 'การเชื่อมต่อ MT5', icon: Globe },
     { id: 'apis', label: 'API Keys', icon: Key },
   ];
 
@@ -566,22 +565,6 @@ export default function SettingsPage() {
               </div>
             )}
 
-            {/* MT5 Connection */}
-            {activeTab === 'mt5' && (
-              <div>
-                <div className="settings-row">
-                  <div>
-                    <div className="settings-label">ซิงค์อัตโนมัติ</div>
-                    <div className="settings-desc">ดึงข้อมูลเทรดจาก MT5 ทุก 10 วินาที</div>
-                  </div>
-                  <div 
-                    className={`toggle ${settings.auto_sync ? 'active' : ''}`} 
-                    onClick={() => handleLocalUpdate('auto_sync', !settings.auto_sync)} 
-                  />
-                </div>
-                {/* MetaApi block removed */}
-              </div>
-            )}
 
             {/* APIs Connections */}
             {activeTab === 'apis' && (
