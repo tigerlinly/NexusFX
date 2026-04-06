@@ -319,6 +319,38 @@ async function initDatabase() {
     `);
 
     // =============================================
+    // TRADING BOTS
+    // =============================================
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS trading_bots (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        account_id INTEGER REFERENCES accounts(id),
+        group_id INTEGER REFERENCES groups(id),
+        bot_name VARCHAR(100) NOT NULL,
+        strategy_type VARCHAR(50) DEFAULT 'Custom',
+        primary_timeframe VARCHAR(10) DEFAULT '5m',
+        analysis_timeframes JSONB DEFAULT '["5m", "15m"]'::jsonb,
+        indicators_config JSONB DEFAULT '[]'::jsonb,
+        min_confidence INTEGER DEFAULT 60,
+        parameters JSONB DEFAULT '{}',
+        status VARCHAR(20) DEFAULT 'STOPPED',
+        is_active BOOLEAN DEFAULT true,
+        last_run_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    // Add missing columns for existing bots (backward-compat migration)
+    try {
+      await client.query(`ALTER TABLE trading_bots ADD COLUMN IF NOT EXISTS primary_timeframe VARCHAR(10) DEFAULT '5m';`);
+      await client.query(`ALTER TABLE trading_bots ADD COLUMN IF NOT EXISTS analysis_timeframes JSONB DEFAULT '["5m", "15m"]'::jsonb;`);
+      await client.query(`ALTER TABLE trading_bots ADD COLUMN IF NOT EXISTS indicators_config JSONB DEFAULT '[]'::jsonb;`);
+      await client.query(`ALTER TABLE trading_bots ADD COLUMN IF NOT EXISTS min_confidence INTEGER DEFAULT 60;`);
+    } catch (e) { /* ignore */ }
+
+    // =============================================
     // ORDERS (Normalized order records)
     // =============================================
     await client.query(`
@@ -402,39 +434,6 @@ async function initDatabase() {
       );
     `);
 
-    // =============================================
-    // TRADING BOTS
-    // =============================================
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS trading_bots (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        account_id INTEGER REFERENCES accounts(id),
-        group_id INTEGER REFERENCES groups(id),
-        bot_name VARCHAR(100) NOT NULL,
-        strategy_type VARCHAR(50) DEFAULT 'Custom',
-        primary_timeframe VARCHAR(10) DEFAULT '5m',
-        analysis_timeframes JSONB DEFAULT '["5m", "15m"]'::jsonb,
-        indicators_config JSONB DEFAULT '[]'::jsonb,
-        min_confidence INTEGER DEFAULT 60,
-        parameters JSONB DEFAULT '{}',
-        status VARCHAR(20) DEFAULT 'STOPPED',
-        is_active BOOLEAN DEFAULT true,
-        last_run_at TIMESTAMPTZ,
-        created_at TIMESTAMPTZ DEFAULT NOW(),
-        updated_at TIMESTAMPTZ DEFAULT NOW()
-      );
-    `);
-
-    // Add missing columns for existing bots (backward-compat migration)
-    try {
-      await client.query(`ALTER TABLE trading_bots ADD COLUMN IF NOT EXISTS primary_timeframe VARCHAR(10) DEFAULT '5m';`);
-      await client.query(`ALTER TABLE trading_bots ADD COLUMN IF NOT EXISTS analysis_timeframes JSONB DEFAULT '["5m", "15m"]'::jsonb;`);
-      await client.query(`ALTER TABLE trading_bots ADD COLUMN IF NOT EXISTS indicators_config JSONB DEFAULT '[]'::jsonb;`);
-      await client.query(`ALTER TABLE trading_bots ADD COLUMN IF NOT EXISTS min_confidence INTEGER DEFAULT 60;`);
-    } catch (e) { /* ignore */ }
-
-    // bot_events table is created below (after dashboard_widgets)
 
     // =============================================
     // DAILY TARGETS
