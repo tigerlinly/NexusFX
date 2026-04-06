@@ -14,7 +14,6 @@ pool.on('error', (err) => {
 async function initDatabase() {
   const client = await pool.connect();
   try {
-    await client.query('BEGIN');
 
     // =============================================
     // TENANTS (B2B / White-label)
@@ -1197,8 +1196,6 @@ async function initDatabase() {
       console.warn('⚠️ USDT to USD wallet migration skipped or failed:', e.message);
     }
 
-    await client.query('COMMIT');
-
     // Safe to run outside transaction:
     try {
       await client.query(`ALTER TABLE trades ADD COLUMN IF NOT EXISTS current_price DECIMAL(18,6);`);
@@ -1245,7 +1242,6 @@ async function initDatabase() {
 
     console.log('✅ Database schema initialized successfully');
   } catch (err) {
-    await client.query('ROLLBACK');
     console.error('❌ Error initializing database:', err);
     throw err;
   } finally {
