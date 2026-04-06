@@ -10,9 +10,11 @@ services:
       dockerfile: Dockerfile
     container_name: nexusfx-api
     restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
-      # ชี้ไปยัง Database Data Center ของระบบ
-      DATABASE_URL: postgresql://nexus_admin:N3xusFX_DataC3nter2026!@203.151.66.51:5432/nexus_datacenter
+      # ชี้ไปยัง Database Data Center ของระบบที่รันอยู่บนเครื่องเดียวกัน (ใช้ host.docker.internal เพื่อแก้ EHOSTUNREACH)
+      DATABASE_URL: postgresql://nexus_admin:N3xusFX_DataC3nter2026!@host.docker.internal:5432/nexus_datacenter
       JWT_SECRET: ${JWT_SECRET:-nexusfx-production-secret-change-this}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
       PORT: 4000
