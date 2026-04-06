@@ -5,7 +5,7 @@
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2026, NexusFX Co."
 #property link      "https://nexusfx.com"
-#property version   "1.04"   // อัปเดต Version ตรงนี้ให้เห็นชัดๆ!
+#property version   "0.0.1"
 #property script_show_inputs
 
 input string   InpGatewayURL        = "http://127.0.0.1:3000/api/ingest"; 

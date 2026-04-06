@@ -5,7 +5,7 @@
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2026, NexusFX Co."
 #property link      "https://nexusfx.com"
-#property version   "1.00"
+#property version   "0.0.1"
 
 #include <Trade\Trade.mqh>
 

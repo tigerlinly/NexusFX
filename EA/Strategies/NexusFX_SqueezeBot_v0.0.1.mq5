@@ -4,7 +4,7 @@
 //+------------------------------------------------------------------+
 #property copyright "NexusFX"
 #property link      "https://nexusfx.biz"
-#property version   "3.1" // Clean Architecture
+#property version   "0.0.1"
 
 #include <Trade\Trade.mqh>
 #include "world_class_bots\NexusFX_Dashboard_v2.mqh"

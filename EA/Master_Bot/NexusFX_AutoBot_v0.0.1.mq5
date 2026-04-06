@@ -4,7 +4,7 @@
 //+------------------------------------------------------------------+
 #property copyright "NexusFX"
 #property link      "https://nexusfx.biz"
-#property version   "3.00"
+#property version   "0.0.1"
 #property strict
 
 #include <Trade\Trade.mqh>

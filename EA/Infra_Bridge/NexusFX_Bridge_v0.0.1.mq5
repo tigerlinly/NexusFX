@@ -4,7 +4,7 @@
 //+------------------------------------------------------------------+
 #property copyright "NexusFX"
 #property link      "https://nexusfx.com"
-#property version   "1.00"
+#property version   "0.0.1"
 #property strict
 
 //--- Input parameters
