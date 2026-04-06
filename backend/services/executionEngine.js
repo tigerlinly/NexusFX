@@ -39,7 +39,7 @@ class ExecutionEngine {
          JOIN brokers b ON b.id = a.broker_id
          LEFT JOIN user_settings us ON us.user_id = a.user_id
           WHERE o.status = 'PENDING' 
-            AND (a.connection_type IS NULL OR a.connection_type = 'TYPE_3_METAAPI' OR a.connection_type = 'TYPE_2_API')
+            AND (a.connection_type = 'TYPE_2_API')
           ORDER BY o.created_at ASC
           LIMIT 50`
       );
@@ -71,18 +71,6 @@ class ExecutionEngine {
             executionResult = await this.executeBinance(order, userKey, userSecret);
             if (executionResult && executionResult.price) {
               executionPrice = parseFloat(executionResult.price);
-            }
-          } else if (!order.connection_type || order.connection_type === 'TYPE_3_METAAPI') {
-            // MT5 Broker via MetaAPI (e.g. Exness, IC Markets)
-            const metaApiService = require('./metaApiService');
-            if (!metaApiToken || !metaApiAccountId) {
-              throw new Error('MetaApi Token or Account ID is missing');
-            }
-            const mt5Result = await metaApiService.executeTrade(metaApiAccountId, metaApiToken, order);
-            if (mt5Result) {
-              executionResult = true;
-              exchangeOrderId = mt5Result.positionId || mt5Result.orderId || null;
-              executionPrice = mt5Result.openPrice || mt5Result.price || null;
             }
           } else if (order.connection_type === 'TYPE_2_API') {
             // Placeholder for other Native API connects (e.g. cTrader, DxTrade)

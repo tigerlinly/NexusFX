@@ -7,18 +7,16 @@ const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
 const { initDatabase } = require('./config/database');
-const MT5Service = require('./services/mt5Service');
+// MT5Service removed
 const ProfitTracker = require('./services/profitTracker');
 const AggregationService = require('./services/aggregationService');
 const BinanceFeed = require('./services/binanceFeed');
 const ExecutionEngine = require('./services/executionEngine');
+const trailingStopEngine = require('./services/trailingStopEngine');
 const RiskEngine = require('./services/riskEngine');
 const metrics = require('./services/metrics');
 const FeeTracker = require('./services/feeTracker');
 
-const orderSyncEngine = require('./services/orderSyncEngine');
-const trailingStopEngine = require('./services/trailingStopEngine');
-const scheduleSyncEngine = require('./services/scheduleSyncEngine');
 const commissionEngine = require('./services/commissionEngine');
 
 const app = express();
@@ -227,7 +225,7 @@ io.on('connection', (socket) => {
 });
 
 // Initialize services
-const ms = new MT5Service(io);
+// mt5Service removed
 const profitTracker = new ProfitTracker(io);
 const aggregationService = new AggregationService();
 const feeTracker = new FeeTracker();
@@ -239,10 +237,10 @@ const riskEngine = new RiskEngine(io);
 const NotificationService = require('./services/notificationService');
 const notificationService = new NotificationService(io);
 executionEngine.setNotificationService(notificationService);
-orderSyncEngine.setNotificationService(notificationService);
+// orderSyncEngine removed
 
 // Store services for route access
-app.set('mt5Service', ms);
+// app.set('mt5Service', ms) removed
 app.set('io', io);
 
 // Start server
@@ -251,12 +249,11 @@ const PORT = process.env.PORT || 4000;
 async function start() {
   try {
     await initDatabase();
-    await ms.init();
+    // await ms.init() removed
     profitTracker.start();
     aggregationService.start();
     feeTracker.start();
-    orderSyncEngine.start();
-    scheduleSyncEngine.start();
+    // MetaApi engines removed
     binanceFeed.start();
     executionEngine.start();
     riskEngine.start();
@@ -289,8 +286,7 @@ process.on('SIGTERM', () => {
   profitTracker.stop?.();
   aggregationService.stop?.();
   feeTracker.stop?.();
-  orderSyncEngine.stop?.();
-  scheduleSyncEngine.stop?.();
+  // MetaApi engines removed
   trailingStopEngine.stop?.();
   server.close(() => {
     console.log('✅ Server closed. Goodbye!');

@@ -207,16 +207,7 @@ class TrailingStopEngine {
   }
 
   async getMetaApiPrice(order) {
-    if (!order.metaapi_token || !order.metaapi_account_id) return null;
-    const MetaApi = require('metaapi.cloud-sdk').default;
-    const api = new MetaApi(order.metaapi_token.trim());
-    const account = await api.metatraderAccountApi.getAccount(order.metaapi_account_id);
-    if (account.state !== 'DEPLOYED') return null;
-    const conn = account.getRPCConnection();
-    await conn.connect();
-    const price = await conn.getSymbolPrice(order.symbol.toUpperCase());
-    try { await conn.close(); } catch (e) {}
-    return order.side === 'BUY' ? parseFloat(price.ask) : parseFloat(price.bid);
+    return null;
   }
 
   // =============================================
@@ -230,30 +221,9 @@ class TrailingStopEngine {
       return;
     }
 
-    // MT5 via MetaAPI
-    if (!order.metaapi_token || !order.metaapi_account_id || !order.exchange_order_id) {
-      console.warn(`[TrailingEngine] Missing MetaAPI credentials or position ID for order ${order.id}`);
-      return;
-    }
-
-    const MetaApi = require('metaapi.cloud-sdk').default;
-    const api = new MetaApi(order.metaapi_token.trim());
-    const account = await api.metatraderAccountApi.getAccount(order.metaapi_account_id);
-    if (account.state !== 'DEPLOYED') return;
-
-    const conn = account.getRPCConnection();
-    await conn.connect();
-
-    try {
-      await conn.modifyPosition(
-        order.exchange_order_id,
-        trailingResult.new_sl ?? undefined,
-        trailingResult.new_tp ?? undefined,
-      );
-      console.log(`✅ [TrailingEngine] Modified position ${order.exchange_order_id} | SL: ${trailingResult.new_sl} | TP: ${trailingResult.new_tp}`);
-    } finally {
-      try { await conn.close(); } catch (e) {}
-    }
+    // MT5 via MetaAPI disabled
+    console.warn(`[TrailingEngine] MetaAPI implementation removed`);
+    return false;
   }
 
   // =============================================
