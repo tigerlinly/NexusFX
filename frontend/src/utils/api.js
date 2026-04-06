@@ -38,7 +38,23 @@ async function request(endpoint, options = {}) {
     throw new Error('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่');
   }
 
-  const data = await res.json();
+  const contentType = res.headers.get('content-type');
+  if (!contentType || !contentType.includes('application/json')) {
+    if (!res.ok) {
+       throw new Error('ระบบกำลังปรับปรุง หรือไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ (API Offline)');
+    }
+    // If it's OK but not JSON, maybe return text
+    const text = await res.text();
+    return { success: true, text };
+  }
+
+  let data;
+  try {
+    data = await res.json();
+  } catch (err) {
+    throw new Error('ระบบเซิร์ฟเวอร์ตอบกลับข้อมูลผิดพลาด (Invalid JSON)');
+  }
+
   if (!res.ok) throw new Error(data.error || 'Request failed');
   return data;
 }
