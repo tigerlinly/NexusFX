@@ -1,13 +1,13 @@
 ---
-description: NexusFX - Deploy to INET Production (Docker + GitHub Actions CI/CD)
+description: NexusFX - Deploy to INET Production (Docker + GitHub Self-hosted Runner)
 ---
 
 # NexusFX Deploy Workflow
 
-> **Note:** GitHub Actions CI/CD is active — pushing to `main` auto-deploys via `.github/workflows/deploy.yml`
-> ⚠️ SSH ไม่สามารถเข้าถึงจากภายนอกได้ (Firewall บล็อก) — ใช้ CI/CD เท่านั้น
+> **Note:** GitHub Actions CI/CD ใช้ Self-hosted Runner บน INET Server
+> ⚠️ SSH ไม่สามารถเข้าถึงจากภายนอกได้ (Firewall) — Runner ทำงานบนเครื่องโดยตรง
 
-## 🖥️ Server Information (จำไว้ตลอด)
+## 🖥️ Server Information
 
 | รายการ | ค่า |
 |---|---|
@@ -16,7 +16,19 @@ description: NexusFX - Deploy to INET Production (Docker + GitHub Actions CI/CD)
 | **OS** | Ubuntu (Docker) |
 | **App Directory** | `/var/www/nexusfx` |
 | **Domain** | `nexusfx.biz` |
-| **SSH Access** | ❌ ไม่สามารถ SSH จากภายนอก (Firewall) — ใช้ CI/CD |
+| **SSH Access** | ❌ Firewall บล็อก — ใช้ Self-hosted Runner |
+| **SSH Credentials** | TECH-BIZ / 0611@Techbiz (ใช้ภายในเท่านั้น) |
+
+## 🤖 Self-hosted Runner Setup (ครั้งแรกเท่านั้น)
+
+1. Login เข้า INET Server (ผ่าน INET Control Panel)
+2. ไปที่ https://github.com/tigerlinly/NexusFX/settings/actions/runners/new
+3. คัดลอก Runner Token
+4. รันสคริปต์:
+```bash
+cd /var/www/nexusfx
+bash scripts/setup-github-runner.sh <RUNNER_TOKEN>
+```
 
 ## 🐳 Docker Containers
 
@@ -35,7 +47,7 @@ cd c:\Task\freelancce\trading\NexusFX\frontend
 npm run build
 ```
 
-### Step 2: Git Commit & Push (auto-triggers CI/CD deploy)
+### Step 2: Git Commit & Push (auto-triggers deploy via Runner)
 ```bash
 cd c:\Task\freelancce\trading\NexusFX
 git add -A
@@ -48,9 +60,7 @@ git push origin main
 - ตรวจสอบว่า "Deploy to INET Production" workflow สำเร็จ (✅)
 - เปิด https://nexusfx.biz เพื่อตรวจสอบหน้าเว็บ
 
-## 🔧 Quick Commands (ผ่าน GitHub Actions เท่านั้น)
-
-> เนื่องจาก SSH ไม่สามารถเข้าถึงจากภายนอก คำสั่งด้านล่างต้องรันผ่าน CI/CD หรือ INET console
+## 🔧 Quick Commands (รันบน Server ผ่าน INET Console)
 
 ```bash
 # ดู logs backend
@@ -65,14 +75,8 @@ docker logs -f nexusfx-db --tail=100
 # Restart เฉพาะ backend
 docker-compose restart api
 
-# Restart เฉพาะ frontend
-docker-compose restart web
-
-# Rebuild & restart เฉพาะ backend (มีการเปลี่ยน code)
-docker-compose up -d --build api
-
-# Rebuild & restart เฉพาะ frontend (มีการเปลี่ยน code)
-docker-compose up -d --build web
+# Rebuild & restart (มีการเปลี่ยน code)
+docker-compose up -d --build api web
 
 # เข้า database
 docker exec -it nexusfx-db psql -U postgres -d nexusfx
@@ -81,7 +85,7 @@ docker exec -it nexusfx-db psql -U postgres -d nexusfx
 docker exec nexusfx-db pg_dump -U postgres nexusfx > backup_$(date +%Y%m%d).sql
 ```
 
-## ⚡ Quick Deploy (เมื่อแก้ไขเสร็จ)
+## ⚡ Quick Deploy
 
 ```bash
 # === บน Local (Windows) ===
@@ -93,7 +97,7 @@ git add -A
 git commit -m "fix: description"
 git push origin main
 
-# === CI/CD จะ deploy อัตโนมัติ ===
+# === Self-hosted Runner จะ deploy อัตโนมัติ ===
 # ตรวจสอบที่: https://github.com/tigerlinly/NexusFX/actions
 ```
 
