@@ -2,27 +2,6 @@ version: '3.8'
 
 services:
   # =============================================
-  # PostgreSQL Database
-  # =============================================
-  db:
-    image: postgres:16-alpine
-    container_name: nexusfx-db
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nexusfx_secure_password}
-      POSTGRES_DB: ${POSTGRES_DB:-nexusfx}
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    ports:
-      - "5433:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # =============================================
   # NexusFX Backend API
   # =============================================
   api:
@@ -31,16 +10,14 @@ services:
       dockerfile: Dockerfile
     container_name: nexusfx-api
     restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-nexusfx_secure_password}@db:5432/${POSTGRES_DB:-nexusfx}
+      # ชี้ไปยัง Database Data Center ของระบบ
+      DATABASE_URL: postgresql://nexus_admin:N3xusFX_DataC3nter2026!@203.151.66.51:5432/nexus_datacenter
       JWT_SECRET: ${JWT_SECRET:-nexusfx-production-secret-change-this}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
       PORT: 4000
       NODE_ENV: production
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:3000,https://nexusfx.biz,http://nexusfx.biz,https://www.nexusfx.biz,http://139.59.96.10}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:3000,https://nexusfx.biz,http://nexusfx.biz,https://www.nexusfx.biz,http://203.151.66.51}
     ports:
       - "4000:4000"
     healthcheck:
@@ -82,8 +59,6 @@ services:
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do sleep 12h & wait $${!}; certbot renew --quiet; done'"
 
 volumes:
-  pgdata:
-    driver: local
   certbot-etc:
     driver: local
   certbot-var:
