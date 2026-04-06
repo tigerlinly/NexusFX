@@ -129,7 +129,7 @@ flowchart LR
 
 | Scale | Infrastructure | ต้นทุน/เดือน |
 |---|---|---|
-| 100 Users | DigitalOcean | ~$70 |
+| 100 Users | INET / VPS | ~$70 |
 | 1,000 Users | AWS/GCP Managed | ~$500-$2,000 |
 | 10,000+ Users | Multi-region AWS + CockroachDB | > $12,000 |
 

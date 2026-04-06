@@ -51,7 +51,7 @@
 - [x] Brokers (multi-broker support)
 - [x] Notifications (in-app + socket.io)
 - [x] PWA Support (mobile-ready)
-- [x] Docker deployment (DigitalOcean)
+- [x] Docker deployment (INET Thailand)
 
 ---
 

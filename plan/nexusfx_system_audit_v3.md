@@ -317,7 +317,7 @@
 | **Encryption** | AES-256-GCM | ✅ |
 | **Real-time** | Socket.io + Binance WebSocket | ✅ |
 | **MT5** | MetaAPI (cloud.metaapi.cloud) | ✅ |
-| **Deploy** | Docker Compose / DigitalOcean | ✅ |
+| **Deploy** | Docker Compose / INET Thailand | ✅ |
 | **API Docs** | Swagger/OpenAPI | ✅ |
 | **Monitoring** | Prometheus metrics endpoint | ✅ |
 

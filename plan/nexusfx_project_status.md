@@ -69,7 +69,7 @@
 ## ⏳ Phase 13: End-to-End Testing & Production Deployment (อยู่ระหว่างดำเนินการ)
 - **[กำลังทำ]** ทบทวนการทำงานรวมของระบบ (QA / UAT / E2E Testing)
 - **[ยังไม่ได้ทำ]** ล้างข้อมูลทดสอบ (Mock Data) ขยะทั้งหมด ให้เป็นฐานข้อมูลสะอาดกริ๊ง 
-- **[ยังไม่ได้ทำ]** กระบวนการ Deploy อัปโหลดขี้นระบบคลาวด์ DigitalOcean เพื่อใช้งานโปรดักชันจริง (Production)
+- **[ทำแล้ว ✅]** กระบวนการ Deploy อัปโหลดขึ้นระบบ INET Thailand เพื่อใช้งานโปรดักชันจริง (Production) — ผ่าน GitHub Actions CI/CD
 
 ---
 

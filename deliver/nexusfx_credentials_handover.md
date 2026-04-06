@@ -4,15 +4,17 @@
 
 ---
 
-## 1. 🖥️ Server Access (DigitalOcean)
+## 1. 🖥️ Server Access (INET Thailand)
 
 | Detail | Value |
 |--------|-------|
-| **IP** | `139.59.96.10` |
-| **SSH User** | `root` |
-| **SSH Password** | `4215Tiger` |
-| **SSH Command** | `ssh root@139.59.96.10` |
+| **Provider** | INET (Thailand) |
+| **IP** | `203.151.66.51` |
+| **SSH User** | `TECH-BIZ` |
+| **SSH Password** | `0611@Techbiz` |
+| **SSH Command** | `ssh TECH-BIZ@203.151.66.51` |
 | **Path** | `/var/www/nexusfx` |
+| **SSH Access** | ⚠️ อาจถูก Firewall บล็อกจากภายนอก — ใช้ CI/CD deploy |
 
 ---
 
@@ -38,15 +40,16 @@
 | **Password** | `qa_password` |
 | **Connection** | `postgresql://qa_user:qa_password@db.qa-server.internal:5432/nexusfx_qa` |
 
-### 2.3 Production (DigitalOcean Docker)
+### 2.3 Production (INET Docker)
 
 | Key | Value |
 |-----|-------|
-| **Host** | `db:5432` (Docker internal) / `139.59.96.10:5432` (external) |
+| **Host** | `db:5432` (Docker internal) / `203.151.66.51:5433` (external) |
 | **Database** | `nexusfx` |
 | **User** | `postgres` |
 | **Password** | `nexusfx_secure_password` (Docker default) |
 | **Connection** | `postgresql://postgres:nexusfx_secure_password@db:5432/nexusfx` |
+| **External Connection** | `postgresql://postgres:nexusfx_secure_password@203.151.66.51:5433/nexusfx` |
 | **psql Command** | `docker exec -it nexusfx-db psql -U postgres -d nexusfx` |
 
 ---
@@ -153,8 +156,8 @@
 |--------|-------|
 | **Repo** | `tigerlinly/NexusFX` |
 | **Branch** | `main` |
-| **CI/CD** | GitHub Actions (auto-deploy on push) |
-| **Secrets** | `HOST=139.59.96.10`, `USERNAME=root`, `PASSWORD=4215Tiger` |
+| **CI/CD** | GitHub Actions (auto-deploy on push to main) |
+| **Secrets** | `HOST=203.151.66.51`, `USERNAME=TECH-BIZ`, `PASSWORD=0611@Techbiz` |
 
 ---
 
@@ -164,17 +167,18 @@
 |-------------|----------|-----|
 | **Development** | `http://localhost:5173` | `http://localhost:4000` |
 | **QA** | `https://qa.nexusfx.com` | QA server |
-| **Production** | `http://139.59.96.10` | `http://139.59.96.10:4000` |
-| **Production (Domain)** | `https://nexusfx.biz` *(หลังชี้ DNS)* | Same origin (`/api/*`) |
+| **Production** | `https://nexusfx.biz` | `https://nexusfx.biz/api` |
+| **Production (IP)** | `http://203.151.66.51` | `http://203.151.66.51:4000` |
 
 ---
 
 ## 9. 📋 สคริปต์สำคัญ
 
 | Script | Purpose | Command |
-|--------|---------|---------|
+|--------|---------|---------||
 | `resetPasswords.js` | รีเซ็ตรหัสผ่าน user ทั้งหมดเป็น `123456` | `node resetPasswords.js` |
 | `promote_admin.js` | เลื่อนสิทธิ์ user `tiger` และ `admin` เป็น admin | `node promote_admin.js` |
+| `seed_brokers.js` | เพิ่มข้อมูลโบรกเกอร์แนะนำ 10 แห่ง | `node scripts/seed_brokers.js` |
 | `setup-ssl.sh` | ติดตั้ง SSL (Let's Encrypt) | `bash scripts/setup-ssl.sh` |
 
 ---
@@ -183,17 +187,19 @@
 
 ### เข้าใช้งานหน้าเว็บ (Production)
 ```
-URL:      http://139.59.96.10
+URL:      https://nexusfx.biz
 Username: admin
 Password: 123456
 ```
 
-### SSH เข้า Server
+### SSH เข้า Server (INET)
 ```bash
-ssh root@139.59.96.10
-# Password: 4215Tiger
+ssh TECH-BIZ@203.151.66.51
+# Password: 0611@Techbiz
 cd /var/www/nexusfx
 ```
+
+> ⚠️ SSH อาจถูก Firewall บล็อก — ใช้ GitHub Actions CI/CD เป็นหลัก
 
 ### ดู Container Status
 ```bash
@@ -204,6 +210,11 @@ docker logs nexusfx-api --tail 50
 ### เข้า Database โดยตรง
 ```bash
 docker exec -it nexusfx-db psql -U postgres -d nexusfx
+```
+
+### เชื่อมต่อ Database จาก Local
+```bash
+psql postgresql://postgres:nexusfx_secure_password@203.151.66.51:5433/nexusfx
 ```
 
 ---

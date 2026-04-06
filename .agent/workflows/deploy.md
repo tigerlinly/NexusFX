@@ -1,31 +1,30 @@
 ---
-description: NexusFX - Deploy to DigitalOcean Production (Docker)
+description: NexusFX - Deploy to INET Production (Docker + GitHub Actions CI/CD)
 ---
 
 # NexusFX Deploy Workflow
 
-> **Note:** GitHub Actions CI/CD is now active — pushing to `main` auto-deploys via `.github/workflows/deploy.yml`
+> **Note:** GitHub Actions CI/CD is active — pushing to `main` auto-deploys via `.github/workflows/deploy.yml`
+> ⚠️ SSH ไม่สามารถเข้าถึงจากภายนอกได้ (Firewall บล็อก) — ใช้ CI/CD เท่านั้น
 
 ## 🖥️ Server Information (จำไว้ตลอด)
 
 | รายการ | ค่า |
 |---|---|
-| **Provider** | DigitalOcean Droplet |
-| **Droplet Name** | `nexusfx-server` |
-| **Droplet ID** | `561586482` |
-| **Public IP** | `139.59.96.10` |
-| **Private IP** | `10.15.0.6` |
-| **OS** | Ubuntu 24.04.3 LTS |
+| **Provider** | INET (Thailand) |
+| **Server IP** | `203.151.66.51` |
+| **OS** | Ubuntu (Docker) |
 | **App Directory** | `/var/www/nexusfx` |
 | **Domain** | `nexusfx.biz` |
+| **SSH Access** | ❌ ไม่สามารถ SSH จากภายนอก (Firewall) — ใช้ CI/CD |
 
 ## 🐳 Docker Containers
 
 | Container Name | Image | Port | Role |
 |---|---|---|---|
-| `nexusfx-web` | nexusfx-web (nginx) | 80:80 | Frontend (Vite + Nginx) |
+| `nexusfx-web` | nexusfx-web (nginx) | 80:80, 443:443 | Frontend (Vite + Nginx + SSL) |
 | `nexusfx-api` | nexusfx-api (node:20) | 4000:4000 | Backend API (Express) |
-| `nexusfx-db` | postgres:16-alpine | 5432:5432 | Database (PostgreSQL 16) |
+| `nexusfx-db` | postgres:16-alpine | 5433:5432 | Database (PostgreSQL 16) |
 
 ## 📋 Deploy Steps
 
@@ -36,7 +35,7 @@ cd c:\Task\freelancce\trading\NexusFX\frontend
 npm run build
 ```
 
-### Step 2: Git Commit & Push
+### Step 2: Git Commit & Push (auto-triggers CI/CD deploy)
 ```bash
 cd c:\Task\freelancce\trading\NexusFX
 git add -A
@@ -44,38 +43,14 @@ git commit -m "description of changes"
 git push origin main
 ```
 
-### Step 3: SSH to Server & Pull
-```bash
-ssh root@139.59.96.10
-cd /var/www/nexusfx
-git pull origin main
-```
+### Step 3: Verify Deployment
+- เปิด GitHub Actions: https://github.com/tigerlinly/NexusFX/actions
+- ตรวจสอบว่า "Deploy to INET Production" workflow สำเร็จ (✅)
+- เปิด https://nexusfx.biz เพื่อตรวจสอบหน้าเว็บ
 
-### Step 4: Rebuild & Restart Docker Containers
-```bash
-# Rebuild only changed services (backend + frontend)
-docker-compose up -d --build api web
+## 🔧 Quick Commands (ผ่าน GitHub Actions เท่านั้น)
 
-# Or rebuild all including db
-docker-compose up -d --build
-
-# View logs to check for errors
-docker-compose logs -f --tail=50
-```
-
-### Step 5: Verify Deployment
-```bash
-# Check all containers are running & healthy
-docker ps
-
-# Check API health
-curl http://localhost:4000/api/health
-
-# Check frontend
-curl -I http://localhost:80
-```
-
-## 🔧 Quick Commands (บน Server)
+> เนื่องจาก SSH ไม่สามารถเข้าถึงจากภายนอก คำสั่งด้านล่างต้องรันผ่าน CI/CD หรือ INET console
 
 ```bash
 # ดู logs backend
@@ -118,9 +93,13 @@ git add -A
 git commit -m "fix: description"
 git push origin main
 
-# === บน Server (SSH: root@139.59.96.10) ===
-cd /var/www/nexusfx
-git pull origin main
-docker-compose up -d --build api web
-docker ps
+# === CI/CD จะ deploy อัตโนมัติ ===
+# ตรวจสอบที่: https://github.com/tigerlinly/NexusFX/actions
+```
+
+## 🗄️ Database Access (จาก Local)
+
+```bash
+# เชื่อมต่อ Production DB จากเครื่อง Local (Port 5433)
+DATABASE_URL=postgresql://postgres:nexusfx_secure_password@203.151.66.51:5433/nexusfx node script.js
 ```

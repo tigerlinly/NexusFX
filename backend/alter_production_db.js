@@ -1,5 +1,5 @@
 const { Pool } = require('pg');
-const pool = new Pool({ connectionString: 'postgresql://postgres:nexusfx_secure_password@139.59.96.10:5432/nexusfx' });
+const pool = new Pool({ connectionString: 'postgresql://postgres:nexusfx_secure_password@203.151.66.51:5433/nexusfx' });
 
 async function run() {
   const client = await pool.connect();

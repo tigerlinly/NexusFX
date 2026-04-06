@@ -164,7 +164,7 @@ $70 - $120 (~2,500
 $840 - $1,440 
 (~30,000 - 51,000 
 บาท) 
-DigitalOcean 
+INET / VPS 
 Droplets + Basic 
 Managed DB 
 1,000 Users 
