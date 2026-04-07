@@ -29,13 +29,6 @@ const CATEGORY_META = {
     color: '#e17055',
     desc: 'Prometheus, Grafana, Sentry, Health Check'
   },
-  trading: {
-    label: 'เครื่องมือเทรด',
-    sublabel: 'Trading Engine',
-    icon: BarChart3,
-    color: '#0984e3',
-    desc: 'Risk Limits, Execution Mode, Sync Intervals'
-  },
   notification: {
     label: 'การแจ้งเตือน',
     sublabel: 'Notification',

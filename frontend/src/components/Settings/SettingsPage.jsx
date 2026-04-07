@@ -49,13 +49,9 @@ export default function SettingsPage() {
     notifications_enabled: true,
     sound_enabled: true,
     notify_new_trade: false,
-    metaapi_token: '',
     auto_sync: true,
     language: 'th',
     timezone: 'Asia/Bangkok',
-    binance_api_key: '',
-    binance_api_secret: '',
-    twelvedata_api_key: '',
     line_notify_token: '',
     telegram_bot_token: '',
     telegram_chat_id: '',
@@ -87,13 +83,9 @@ export default function SettingsPage() {
         notifications_enabled: data.notifications_enabled ?? true,
         sound_enabled: data.sound_enabled ?? true,
         notify_new_trade: data.notify_new_trade ?? false,
-        metaapi_token: data.metaapi_token_actual || '',
         auto_sync: data.auto_sync ?? true,
         language: data.language || 'th',
         timezone: data.timezone || 'Asia/Bangkok',
-        binance_api_key: data.binance_api_key_actual || '',
-        binance_api_secret: data.binance_api_secret_actual || '',
-        twelvedata_api_key: data.twelvedata_api_key_actual || '',
         line_notify_token: data.line_notify_token_actual || '',
         telegram_bot_token: data.telegram_bot_token_actual || '',
         telegram_chat_id: data.telegram_chat_id || '',
@@ -168,10 +160,6 @@ export default function SettingsPage() {
       };
 
       // Always include API keys so they re-encrypt correctly
-      if (settings.metaapi_token) payload.metaapi_token = settings.metaapi_token;
-      if (settings.binance_api_key) payload.binance_api_key = settings.binance_api_key;
-      if (settings.binance_api_secret) payload.binance_api_secret = settings.binance_api_secret;
-      if (settings.twelvedata_api_key) payload.twelvedata_api_key = settings.twelvedata_api_key;
       if (settings.line_notify_token) payload.line_notify_token = settings.line_notify_token;
       if (settings.telegram_bot_token) payload.telegram_bot_token = settings.telegram_bot_token;
 

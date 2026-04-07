@@ -780,17 +780,6 @@ async function initDatabase() {
         ('LOG_LEVEL', 'info', 'ระดับ Log (debug/info/warn/error)', 'monitoring', false),
         ('ERROR_TRACKING_DSN', '', 'Sentry DSN สำหรับ Error Tracking', 'monitoring', true),
 
-        -- Trading Engine
-        ('EXECUTION_MODE', 'live', 'โหมดเทรด (live/simulation/paper)', 'trading', false),
-        ('MAX_LOT_SIZE', '100', 'ล็อตสูงสุดต่อออเดอร์', 'trading', false),
-        ('MAX_OPEN_POSITIONS', '50', 'จำนวนไม้เปิดสูงสุดต่อบัญชี', 'trading', false),
-        ('MAX_TOTAL_EXPOSURE', '500', 'Exposure รวมสูงสุด (lots)', 'trading', false),
-        ('DUPLICATE_ORDER_WINDOW', '5', 'ช่วงเวลาตรวจ Duplicate Order (วินาที)', 'trading', false),
-        ('TRAILING_STOP_INTERVAL', '5000', 'ช่วงเวลาตรวจ Trailing Stop (มิลลิวินาที)', 'trading', false),
-        ('ORDER_SYNC_INTERVAL', '60000', 'ช่วงเวลา Sync Live Orders (มิลลิวินาที)', 'trading', false),
-        ('RISK_ENGINE_INTERVAL', '15000', 'ช่วงเวลาตรวจ Risk (มิลลิวินาที)', 'trading', false),
-        ('BINANCE_TESTNET', 'true', 'ใช้ Binance Testnet', 'trading', false),
-
         -- Notification
         ('SMTP_HOST', '', 'SMTP Server', 'notification', false),
         ('SMTP_PORT', '587', 'SMTP Port', 'notification', false),

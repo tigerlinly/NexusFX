@@ -7,8 +7,7 @@ const BROKER_SYMBOLS = {
   exness: ['XAUUSDm', 'EURUSDm', 'GBPUSDm', 'BTCUSDm', 'XAUUSD', 'EURUSD', 'BTCUSD'],
   xm: ['XAUUSD#', 'EURUSD#', 'GBPUSD#', 'BTCUSD#', 'XAUUSD', 'EURUSD'],
   hfm: ['XAUUSD-c', 'EURUSD-c', 'XAUUSD', 'EURUSD'],
-  icmarkets: ['XAUUSD', 'EURUSD', 'GBPUSD', 'AUDUSD', 'BTCUSD'],
-  binance: ['BTCUSDT', 'ETHUSDT', 'XRPUSDT', 'BNBUSDT', 'SOLUSDT', 'DOGEUSDT'],
+  icmarkets: ['EURUSD', 'GBPUSD', 'USDCAD', 'USDJPY', 'XAUUSD', 'BTCUSD', 'WS30'],
   fbs: ['XAUUSD', 'EURUSD', 'GBPUSD']
 };
 
@@ -265,7 +264,6 @@ export default function TerminalPage({ embedded = false, isActive = false }) {
       else if (bName.includes('xm')) matchedSymbols = BROKER_SYMBOLS.xm;
       else if (bName.includes('hfm') || bName.includes('hot')) matchedSymbols = BROKER_SYMBOLS.hfm;
       else if (bName.includes('icmarket')) matchedSymbols = BROKER_SYMBOLS.icmarkets;
-      else if (bName.includes('binance')) matchedSymbols = BROKER_SYMBOLS.binance;
       else if (bName.includes('fbs')) matchedSymbols = BROKER_SYMBOLS.fbs;
       else matchedSymbols = ['BTCUSDT', 'XAUUSD', 'EURUSD'];
     }
@@ -595,7 +593,6 @@ export default function TerminalPage({ embedded = false, isActive = false }) {
                         else if (bName.includes('xm')) matchedSymbols = BROKER_SYMBOLS.xm;
                         else if (bName.includes('hfm') || bName.includes('hot')) matchedSymbols = BROKER_SYMBOLS.hfm;
                         else if (bName.includes('icmarket')) matchedSymbols = BROKER_SYMBOLS.icmarkets;
-                        else if (bName.includes('binance')) matchedSymbols = BROKER_SYMBOLS.binance;
                         else if (bName.includes('fbs')) matchedSymbols = BROKER_SYMBOLS.fbs;
                         else matchedSymbols = ['BTCUSDT', 'XAUUSD', 'EURUSD'];
                       }
