@@ -191,8 +191,7 @@ export default function SettingsPage() {
     { id: 'notifications', label: 'การแจ้งเตือน', icon: Bell },
     { id: 'schedule', label: 'ตั้งเวลาอัพเดท', icon: Clock },
     { id: 'security', label: 'ความปลอดภัย', icon: Shield },
-    { id: 'general', label: 'ทั่วไป', icon: Moon },
-    { id: 'apis', label: 'การแจ้งเตือน', icon: Key },
+    { id: 'general', label: 'ทั่วไป', icon: Moon }
   ];
 
   const handleSetupMFA = async () => {
@@ -522,6 +521,100 @@ export default function SettingsPage() {
                     onClick={() => handleLocalUpdate('notify_new_trade', !settings.notify_new_trade)} 
                   />
                 </div>
+
+                <div style={{ marginTop: 'var(--space-2xl)' }}>
+                  <h3 style={{ marginBottom: 'var(--space-md)', fontSize: 15, fontWeight: 600 }}>เชื่อมต่อการแจ้งเตือนภายนอก</h3>
+                  <p style={{ color: 'var(--text-tertiary)', fontSize: 13, marginBottom: 'var(--space-lg)' }}>
+                    เชื่อมต่อช่องทางการแจ้งเตือนไปยังแอปพลิเคชันภายนอก (LINE Notify, Telegram)
+                  </p>
+
+                  {/* Line Notify Token */}
+                  <div className="settings-row" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '12px' }}>
+                      <div className="settings-label" style={{ marginBottom: 0 }}>Line Notify Token</div>
+                      <div className="settings-desc" style={{ marginTop: 0 }}>
+                        ยิงแจ้งเตือนการเทรดผ่าน LINE — <a href="https://notify-bot.line.me/my/" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-primary)', textDecoration: 'none' }}>รับ Token ที่นี่</a>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                      <div style={{ flex: 1, position: 'relative' }}>
+                        <input
+                          className="form-input"
+                          type={showToken ? 'text' : 'password'}
+                          placeholder="ใส่ Line Notify Token"
+                          style={{ width: '100%', paddingRight: '80px' }}
+                          value={settings.line_notify_token}
+                          onChange={(e) => handleLocalUpdate('line_notify_token', e.target.value)}
+                        />
+                        <div style={{ position: 'absolute', right: '4px', top: '4px', display: 'flex', gap: '2px' }}>
+                          <button className="btn btn-ghost btn-icon" onClick={() => setShowToken(!showToken)} title={showToken ? 'ซ่อน' : 'แสดง'}>
+                            {showToken ? <EyeOff size={16} /> : <Eye size={16} />}
+                          </button>
+                          {settings.line_notify_token && (
+                            <button className="btn btn-ghost btn-icon" onClick={() => handleCopy('line_notify_token')} title="คัดลอก" style={{ color: copiedField === 'line_notify_token' ? 'var(--profit)' : undefined }}>
+                              {copiedField === 'line_notify_token' ? <Check size={16} /> : <Copy size={16} />}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <button onClick={handleTestLineNotify} className="btn-secondary" style={{ whiteSpace: 'nowrap' }}>
+                        ทดสอบการส่ง
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Telegram Bot Token & Chat ID */}
+                  <div className="settings-row" style={{ borderBottom: 'none', flexDirection: 'column', alignItems: 'stretch' }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '12px' }}>
+                      <div className="settings-label" style={{ marginBottom: 0 }}>Telegram Notifications</div>
+                      <div className="settings-desc" style={{ marginTop: 0 }}>
+                        ยิงแจ้งเตือนการเทรดผ่าน Telegram (สร้าง Bot ด้วย @BotFather)
+                      </div>
+                    </div>
+                    
+                    <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
+                      <div style={{ flex: 1, position: 'relative' }}>
+                        <label className="form-label" style={{ fontSize: 12 }}>Bot Token</label>
+                        <input
+                          className="form-input"
+                          type={showToken ? 'text' : 'password'}
+                          placeholder="123456789:ABCDEF..."
+                          style={{ width: '100%', paddingRight: '80px' }}
+                          value={settings.telegram_bot_token}
+                          onChange={(e) => handleLocalUpdate('telegram_bot_token', e.target.value)}
+                        />
+                        <div style={{ position: 'absolute', right: '4px', top: '22px', display: 'flex', gap: '2px' }}>
+                          <button className="btn btn-ghost btn-icon" onClick={() => setShowToken(!showToken)} title={showToken ? 'ซ่อน' : 'แสดง'}>
+                            {showToken ? <EyeOff size={16} /> : <Eye size={16} />}
+                          </button>
+                          {settings.telegram_bot_token && (
+                            <button className="btn btn-ghost btn-icon" onClick={() => handleCopy('telegram_bot_token')} title="คัดลอก" style={{ color: copiedField === 'telegram_bot_token' ? 'var(--profit)' : undefined }}>
+                              {copiedField === 'telegram_bot_token' ? <Check size={16} /> : <Copy size={16} />}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      <div style={{ flex: 1 }}>
+                        <label className="form-label" style={{ fontSize: 12 }}>Chat ID</label>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <input
+                            className="form-input"
+                            type="text"
+                            placeholder="เช่น 123456789"
+                            style={{ flex: 1 }}
+                            value={settings.telegram_chat_id}
+                            onChange={(e) => handleLocalUpdate('telegram_chat_id', e.target.value)}
+                          />
+                          <button onClick={handleTestTelegram} className="btn-secondary" style={{ whiteSpace: 'nowrap' }}>
+                            ทดสอบการส่ง
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
               </div>
             )}
 
@@ -565,103 +658,6 @@ export default function SettingsPage() {
               </div>
             )}
 
-
-            {/* APIs Connections */}
-            {activeTab === 'apis' && (
-              <div>
-                <p style={{ color: 'var(--text-tertiary)', fontSize: 13, marginBottom: 'var(--space-lg)' }}>
-                  เชื่อมต่อช่องทางการแจ้งเตือนไปยังแอปพลิเคชันภายนอก (LINE Notify, Telegram)
-                </p>
-
-                {/* Legacy APIs have been removed (Binance, TwelveData) */}
-
-                {/* Line Notify Token */}
-                <div className="settings-row" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '12px' }}>
-                    <div className="settings-label" style={{ marginBottom: 0 }}>Line Notify Token</div>
-                    <div className="settings-desc" style={{ marginTop: 0 }}>
-                      ยิงแจ้งเตือนการเทรดผ่าน LINE — <a href="https://notify-bot.line.me/my/" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-primary)', textDecoration: 'none' }}>รับ Token ที่นี่</a>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', gap: '12px' }}>
-                    <div style={{ flex: 1, position: 'relative' }}>
-                      <input
-                        className="form-input"
-                        type={showToken ? 'text' : 'password'}
-                        placeholder="ใส่ Line Notify Token"
-                        style={{ width: '100%', paddingRight: '80px' }}
-                        value={settings.line_notify_token}
-                        onChange={(e) => handleLocalUpdate('line_notify_token', e.target.value)}
-                      />
-                      <div style={{ position: 'absolute', right: '4px', top: '4px', display: 'flex', gap: '2px' }}>
-                        <button className="btn btn-ghost btn-icon" onClick={() => setShowToken(!showToken)} title={showToken ? 'ซ่อน' : 'แสดง'}>
-                          {showToken ? <EyeOff size={16} /> : <Eye size={16} />}
-                        </button>
-                        {settings.line_notify_token && (
-                          <button className="btn btn-ghost btn-icon" onClick={() => handleCopy('line_notify_token')} title="คัดลอก" style={{ color: copiedField === 'line_notify_token' ? 'var(--profit)' : undefined }}>
-                            {copiedField === 'line_notify_token' ? <Check size={16} /> : <Copy size={16} />}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                    <button onClick={handleTestLineNotify} className="btn-secondary" style={{ whiteSpace: 'nowrap' }}>
-                      ทดสอบการส่ง
-                    </button>
-                  </div>
-                </div>
-
-                {/* Telegram Bot Token & Chat ID */}
-                <div className="settings-row" style={{ borderBottom: 'none', flexDirection: 'column', alignItems: 'stretch' }}>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '12px' }}>
-                    <div className="settings-label" style={{ marginBottom: 0 }}>Telegram Notifications</div>
-                    <div className="settings-desc" style={{ marginTop: 0 }}>
-                      ยิงแจ้งเตือนการเทรดผ่าน Telegram (สร้าง Bot ด้วย @BotFather)
-                    </div>
-                  </div>
-                  
-                  <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
-                    <div style={{ flex: 1, position: 'relative' }}>
-                      <label className="form-label" style={{ fontSize: 12 }}>Bot Token</label>
-                      <input
-                        className="form-input"
-                        type={showToken ? 'text' : 'password'}
-                        placeholder="123456789:ABCDEF..."
-                        style={{ width: '100%', paddingRight: '80px' }}
-                        value={settings.telegram_bot_token}
-                        onChange={(e) => handleLocalUpdate('telegram_bot_token', e.target.value)}
-                      />
-                      <div style={{ position: 'absolute', right: '4px', top: '22px', display: 'flex', gap: '2px' }}>
-                        <button className="btn btn-ghost btn-icon" onClick={() => setShowToken(!showToken)} title={showToken ? 'ซ่อน' : 'แสดง'}>
-                          {showToken ? <EyeOff size={16} /> : <Eye size={16} />}
-                        </button>
-                        {settings.telegram_bot_token && (
-                          <button className="btn btn-ghost btn-icon" onClick={() => handleCopy('telegram_bot_token')} title="คัดลอก" style={{ color: copiedField === 'telegram_bot_token' ? 'var(--profit)' : undefined }}>
-                            {copiedField === 'telegram_bot_token' ? <Check size={16} /> : <Copy size={16} />}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    <div style={{ flex: 1 }}>
-                      <label className="form-label" style={{ fontSize: 12 }}>Chat ID</label>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <input
-                          className="form-input"
-                          type="text"
-                          placeholder="เช่น 123456789"
-                          style={{ flex: 1 }}
-                          value={settings.telegram_chat_id}
-                          onChange={(e) => handleLocalUpdate('telegram_chat_id', e.target.value)}
-                        />
-                        <button onClick={handleTestTelegram} className="btn-secondary" style={{ whiteSpace: 'nowrap' }}>
-                          ทดสอบการส่ง
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* Security / MFA */}
             {activeTab === 'security' && (
