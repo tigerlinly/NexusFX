@@ -60,6 +60,97 @@ const storeBots = [
       trend_tf: 'H1 ในการดูภาพรวมระยะกลาง',
       extra_details: 'ระบบจะทบไม้ (Martingale Multiplier) เมื่อเปิดออเดอร์ผิดทาง และมี Max Step Safety Limit เมื่อถึงไม้สูงสุดจะสั่งคัทล็อตใหญ่ เพื่อป้องกันพอร์ตแตก'
     }
+  },
+  {
+    id: 5, name: 'Nexus SMC Bot', type: 'Smart Money Concepts', price: 0,
+    author: 'NexusFX Labs', roi: '+240%', drawdown: '8.5%', rating: 4.9, users: 432,
+    description: 'เทรดตามรอยรายใหญ่ (Smart Money Concepts) หาจุดเข้า Order Block (OB), Fair Value Gap (FVG) และการเกิด Change of Character (ChoCh)',
+    isHot: true,
+    config: { strategy: 'smc', timeframe: '15m', sl_pct: 1.0, tp_pct: 3.0, symbols: ['EURUSD', 'GBPUSD', 'XAUUSD'] },
+    strategy_details: {
+      indicators: 'Order Block, Liquidity Sweep, Market Structure Break (BOS)',
+      entry_tf: 'M5 และ M15',
+      trend_tf: 'H1 หรือ H4 สำหรับหาทิศทางของสถาบันการเงิน',
+      extra_details: 'เน้น Risk:Reward สูง 1:3 ขึ้นไป ลดอัตราการโดน Stop Hunt ออกแบบมาสำหรับนักเทรดสาย Price Action ขั้นสูง'
+    }
+  },
+  {
+    id: 6, name: 'Nexus VSA Bot', type: 'Volume Spread Analysis', price: 0,
+    author: 'NexusFX Labs', roi: '+190%', drawdown: '12.0%', rating: 4.7, users: 310,
+    description: 'วิเคราะห์แรงซื้อขายด้วยปริมาณ (Volume) เสริมความแม่นยำให้ Price Action ค้นหาจุดกลับตัวที่แข็งแกร่งด้วยความสัมพันธ์ของแท่งเทียนและปริมาณซื้อขาย',
+    isHot: false,
+    config: { strategy: 'vsa', timeframe: '1h', sl_pct: 1.5, tp_pct: 2.5, symbols: ['XAUUSD', 'BTCUSD'] },
+    strategy_details: {
+      indicators: 'Tick Volume, Spread Length, Climax Volume, Stopping Volume',
+      entry_tf: 'M15 และ H1',
+      trend_tf: 'H4',
+      extra_details: 'เจาะลึกพฤติกรรมเจ้ามือหลอกล่อ ใช้หลักการ Wyckoff Logic เพื่อแกะรอยสะสมและกระจายของ'
+    }
+  },
+  {
+    id: 7, name: 'Nexus Turtle Bot', type: 'Turtle Trading', price: 0,
+    author: 'NexusFX Labs', roi: '+110%', drawdown: '15.0%', rating: 4.6, users: 500,
+    description: 'กลยุทธ์ระดับตำนาน Turtle Trading ทำตามเทรนด์ยาวๆ Breakout จากกรอบสะสม 20 วันและ 55 วัน ตัดขาดทุนเร็วและรันเทรนด์ให้สุด (Let Profits Run)',
+    isHot: false,
+    config: { strategy: 'turtle', timeframe: '1d', sl_pct: 2.0, tp_pct: 10.0, symbols: ['EURUSD', 'BTCUSD', 'WS30'] },
+    strategy_details: {
+      indicators: 'Donchian Channel (20, 55 periods), ATR สำหรับกำหนดขนาด Lot',
+      entry_tf: 'H4 และ D1',
+      trend_tf: 'W1',
+      extra_details: 'ใช้เวลาถือค่อนข้างนาน Drawdown จะกว้างหน่อย แต่เวลาจับรอบใหญ่ได้ผลตอบแทนจะมหาศาล (วินเรทไม่สูงแต่ R:R สูงลิ่ว)'
+    }
+  },
+  {
+    id: 8, name: 'Nexus Zone Bot', type: 'Supply & Demand', price: 0,
+    author: 'NexusFX Labs', roi: '+165%', drawdown: '9.0%', rating: 4.8, users: 650,
+    description: 'ระบบหาจุดกลับตัวจากโซน Supply และ Demand ที่แข็งแกร่ง เปิดออเดอร์เมื่อราคาสัมผัสโซนพร้อมเกิดแท่งเทียนกลับตัว',
+    isHot: false,
+    config: { strategy: 'zone', timeframe: '1h', sl_pct: 1.5, tp_pct: 4.0, symbols: ['XAUUSD', 'GBPUSDJPY'] },
+    strategy_details: {
+      indicators: 'Supply & Demand Zones, Engulfing/Pinbar Reversal pattern',
+      entry_tf: 'M15',
+      trend_tf: 'H4',
+      extra_details: 'เน้น Pending Order (Limit) ในโซน พร้อม SL เหนือ/ใต้ โซนอย่างชัดเจน รูปแบบ Drop-Base-Drop และ Rally-Base-Rally'
+    }
+  },
+  {
+    id: 9, name: 'Nexus Pairs Bot', type: 'Pairs Trades', price: 0,
+    author: 'NexusFX Labs', roi: '+70%', drawdown: '1.5%', rating: 4.5, users: 200,
+    description: 'กลยุทธ์ Pairs Trading / Statistical Arbitrage ตรวจจับความห่าง (Spread) ของ 2 สินทรัพย์ที่สัมพันธ์กัน (Correlation) เข้าเทรดเพื่อกินส่วนต่างรวบยอด',
+    isHot: false,
+    config: { strategy: 'pairs', timeframe: '15m', sl_pct: 5.0, tp_pct: 1.0, symbols: ['EURUSD_GBPUSD', 'AUDUSD_NZDUSD'] },
+    strategy_details: {
+      indicators: 'Correlation Coefficient, Z-Score',
+      entry_tf: 'M15',
+      trend_tf: 'H4',
+      extra_details: 'ความเสี่ยงต่ำที่สุด เนื่องจากเป็นการแทง Hedge ข้ามคู่เงิน ป้องกันความเสี่ยงของตลาดโดยรวมแบบ Market Neutral'
+    }
+  },
+  {
+    id: 10, name: 'Nexus Breakout Bot', type: 'Breakout', price: 0,
+    author: 'NexusFX Labs', roi: '+135%', drawdown: '18.0%', rating: 4.4, users: 490,
+    description: 'บอทเทรดช่วงทะลุกรอบ (Breakout) จากแนวรับแนวต้านสำคัญ อาศัยจังหวะระเบิดของราคาที่มีโมเมนตัมแรงๆ ในช่วงการประกาศข่าวหรือการเปิดตลาดยุโรปอเมริกา',
+    isHot: true,
+    config: { strategy: 'breakout', timeframe: '15m', sl_pct: 1.5, tp_pct: 3.5, symbols: ['GBPUSD', 'XAUUSD', 'US30'] },
+    strategy_details: {
+      indicators: 'Support/Resistance Break, Momentum Oscillator, Volume',
+      entry_tf: 'M5 และ M15',
+      trend_tf: 'H1',
+      extra_details: 'เน้นเปิด Pending Stop Orders รอดักราคาพุ่งไปในทิศทางใดทิศทางหนึ่ง ตัดพอร์ตออกก่อนการกลับตัวแรง'
+    }
+  },
+  {
+    id: 11, name: 'Nexus Squeeze Bot', type: 'Momentum', price: 0,
+    author: 'NexusFX Labs', roi: '+150%', drawdown: '11.0%', rating: 4.6, users: 380,
+    description: 'ระบบหาจุดอัดอั้นของราคา (Squeeze) เพื่อเกาะไปกับทิศทางระเบิด ใช้พลังงานจาก Bollinger Bands บีบตัวร่วมกับ Keltner Channel เพื่อหาจังหวะ Release',
+    isHot: false,
+    config: { strategy: 'squeeze', timeframe: '1h', sl_pct: 2.0, tp_pct: 4.0, symbols: ['EURUSD', 'BTCUSD'] },
+    strategy_details: {
+      indicators: 'TTM Squeeze (Bollinger Bands + Keltner Channel), Momentum Histogram',
+      entry_tf: 'H1',
+      trend_tf: 'D1',
+      extra_details: 'ใช้หาจังหวะที่ราคาสะสมพลังก่อนยิงทำรอบ มีทิศทางที่ชัดเจนและโอกาส Breakout ปลอม (False Breakout) ต่ำกว่าระบบอื่น'
+    }
   }
 ];
 
