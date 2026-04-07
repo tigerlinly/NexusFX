@@ -192,7 +192,7 @@ export default function SettingsPage() {
     { id: 'schedule', label: 'ตั้งเวลาอัพเดท', icon: Clock },
     { id: 'security', label: 'ความปลอดภัย', icon: Shield },
     { id: 'general', label: 'ทั่วไป', icon: Moon },
-    { id: 'apis', label: 'API Keys', icon: Key },
+    { id: 'apis', label: 'การแจ้งเตือน', icon: Key },
   ];
 
   const handleSetupMFA = async () => {
@@ -570,7 +570,7 @@ export default function SettingsPage() {
             {activeTab === 'apis' && (
               <div>
                 <p style={{ color: 'var(--text-tertiary)', fontSize: 13, marginBottom: 'var(--space-lg)' }}>
-                  เชื่อมต่อกุญแจ API ต่างๆ (API Tokens) เพื่อดึงข้อมูลราคาและการเทรดจากภายนอก
+                  เชื่อมต่อช่องทางการแจ้งเตือนไปยังแอปพลิเคชันภายนอก (LINE Notify, Telegram)
                 </p>
 
                 {/* Legacy APIs have been removed (Binance, TwelveData) */}
