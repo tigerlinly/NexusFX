@@ -21,18 +21,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     mkdir -p /var/log/supervisor && \
     rm -rf /var/lib/apt/lists/*
 
-# Download MT5 Installer
-RUN wget -q -O /home/wineuser/mt5setup.exe https://download.mql5.com/cdn/web/metaquotes.software.corp/mt5/mt5setup.exe && \
-    chown wineuser:wineuser /home/wineuser/mt5setup.exe
+# Download MT5 Installer to /tmp first, then move to wineuser home
+RUN wget -q -O /tmp/mt5setup.exe https://download.mql5.com/cdn/web/metaquotes.software.corp/mt5/mt5setup.exe
 
 # Setup Supervisord 
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-# Switch to wineuser (the default user of this base image)
+# Ensure wineuser home exists and copy MT5 installer
+RUN mkdir -p /home/wineuser && \
+    cp /tmp/mt5setup.exe /home/wineuser/mt5setup.exe && \
+    chown -R wineuser:wineuser /home/wineuser && \
+    rm /tmp/mt5setup.exe
+
+# Switch to wineuser
 USER wineuser
 WORKDIR /home/wineuser
 
-# Initialize Wine prefix if not already done
+# Initialize Wine prefix
 RUN WINEARCH=win64 WINEPREFIX=/home/wineuser/.wine wineboot --init 2>/dev/null; sleep 3; wineserver --wait 2>/dev/null || true
 
 EXPOSE 8080 5900

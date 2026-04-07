@@ -8,27 +8,6 @@ import {
 } from 'lucide-react';
 
 const CATEGORY_META = {
-  infrastructure: {
-    label: 'โครงสร้างพื้นฐาน',
-    sublabel: 'Infrastructure',
-    icon: Server,
-    color: '#6c5ce7',
-    desc: 'SSL, CloudFlare, CDN, Nginx, Backup'
-  },
-  cicd: {
-    label: 'CI/CD Pipeline',
-    sublabel: 'Deployment',
-    icon: GitBranch,
-    color: '#fdcb6e',
-    desc: 'GitHub Actions, Docker Registry, Auto Deploy'
-  },
-  monitoring: {
-    label: 'ระบบตรวจสอบ',
-    sublabel: 'Monitoring',
-    icon: Activity,
-    color: '#e17055',
-    desc: 'Prometheus, Grafana, Sentry, Health Check'
-  },
   notification: {
     label: 'การแจ้งเตือน',
     sublabel: 'Notification',

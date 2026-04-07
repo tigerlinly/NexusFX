@@ -754,32 +754,6 @@ async function initDatabase() {
         ('MIN_DEPOSIT', '100', 'จำนวนฝากขั้นต่ำ (USD)', 'payment', false),
         ('MIN_WITHDRAWAL', '50', 'จำนวนถอนขั้นต่ำ (USD)', 'payment', false),
 
-        -- Infrastructure (SSL/CDN/Deploy)
-        ('SSL_DOMAIN', '', 'โดเมนหลักสำหรับ SSL', 'infrastructure', false),
-        ('SSL_PROVIDER', 'letsencrypt', 'ผู้ให้บริการ SSL (letsencrypt/cloudflare/custom)', 'infrastructure', false),
-        ('SSL_ENABLED', 'false', 'สถานะ HTTPS', 'infrastructure', false),
-        ('CLOUDFLARE_API_KEY', '', 'Cloudflare API Key', 'infrastructure', true),
-        ('CLOUDFLARE_ZONE_ID', '', 'Cloudflare Zone ID', 'infrastructure', false),
-        ('CDN_ENABLED', 'false', 'เปิด/ปิด CDN', 'infrastructure', false),
-        ('NGINX_CONFIG', 'reverse_proxy', 'โหมด Nginx (reverse_proxy/load_balancer)', 'infrastructure', false),
-        ('BACKUP_SCHEDULE', '0 2 * * *', 'ตารางสำรองข้อมูล (Cron expression)', 'infrastructure', false),
-        ('BACKUP_RETENTION_DAYS', '30', 'จำนวนวันเก็บ backup', 'infrastructure', false),
-
-        -- CI/CD
-        ('CICD_PROVIDER', 'github_actions', 'ระบบ CI/CD (github_actions/gitlab_ci/manual)', 'cicd', false),
-        ('CICD_REPO_URL', '', 'URL ของ Repository', 'cicd', false),
-        ('CICD_AUTO_DEPLOY', 'false', 'Deploy อัตโนมัติ', 'cicd', false),
-        ('DOCKER_REGISTRY', '', 'Docker Registry URL', 'cicd', false),
-
-        -- Monitoring
-        ('PROMETHEUS_ENABLED', 'true', 'เปิด/ปิด Prometheus metrics', 'monitoring', false),
-        ('GRAFANA_URL', '', 'URL สำหรับ Grafana Dashboard', 'monitoring', false),
-        ('GRAFANA_API_KEY', '', 'Grafana API Key', 'monitoring', true),
-        ('ALERT_EMAIL', '', 'อีเมลสำหรับแจ้งเตือนระบบ', 'monitoring', false),
-        ('HEALTH_CHECK_INTERVAL', '60', 'ช่วงเวลาตรวจสุขภาพระบบ (วินาที)', 'monitoring', false),
-        ('LOG_LEVEL', 'info', 'ระดับ Log (debug/info/warn/error)', 'monitoring', false),
-        ('ERROR_TRACKING_DSN', '', 'Sentry DSN สำหรับ Error Tracking', 'monitoring', true),
-
         -- Notification
         ('SMTP_HOST', '', 'SMTP Server', 'notification', false),
         ('SMTP_PORT', '587', 'SMTP Port', 'notification', false),
