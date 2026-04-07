@@ -8,8 +8,7 @@ router.use(authMiddleware);
 
 // Sensitive fields that must be encrypted in DB
 const SENSITIVE_FIELDS = [
-  'metaapi_token', 'binance_api_key', 'binance_api_secret',
-  'twelvedata_api_key', 'line_notify_token', 'telegram_bot_token'
+  'line_notify_token', 'telegram_bot_token'
 ];
 
 /**
@@ -77,8 +76,8 @@ router.put('/', auditLog('UPDATE_SETTINGS', 'SETTING'), async (req, res) => {
     const {
       theme_id, custom_colors, dashboard_layout,
       notifications_enabled, sound_enabled, language, timezone,
-      notify_new_trade, metaapi_token, auto_sync,
-      binance_api_key, binance_api_secret, twelvedata_api_key, line_notify_token,
+      notify_new_trade, auto_sync,
+      line_notify_token,
       telegram_bot_token, telegram_chat_id, sync_schedules
     } = req.body;
 
@@ -96,11 +95,6 @@ router.put('/', auditLog('UPDATE_SETTINGS', 'SETTING'), async (req, res) => {
       });
     }
 
-    // Encrypt sensitive fields before storing
-    const valMetaapi = metaapi_token !== undefined ? encrypt((metaapi_token || '').trim()) : null;
-    const valBinanceKey = binance_api_key !== undefined ? encrypt((binance_api_key || '').trim()) : null;
-    const valBinanceSecret = binance_api_secret !== undefined ? encrypt((binance_api_secret || '').trim()) : null;
-    const valTwelvedata = twelvedata_api_key !== undefined ? encrypt((twelvedata_api_key || '').trim()) : null;
     const valLineToken = line_notify_token !== undefined ? encrypt((line_notify_token || '').trim()) : null;
     const valTelegramToken = telegram_bot_token !== undefined ? encrypt((telegram_bot_token || '').trim()) : null;
 
@@ -114,15 +108,11 @@ router.put('/', auditLog('UPDATE_SETTINGS', 'SETTING'), async (req, res) => {
         language = COALESCE($7, language),
         timezone = COALESCE($8, timezone),
         notify_new_trade = COALESCE($9, notify_new_trade),
-        metaapi_token = COALESCE($10, metaapi_token),
-        auto_sync = COALESCE($11, auto_sync),
-        binance_api_key = COALESCE($12, binance_api_key),
-        binance_api_secret = COALESCE($13, binance_api_secret),
-        twelvedata_api_key = COALESCE($14, twelvedata_api_key),
-        line_notify_token = COALESCE($15, line_notify_token),
-        telegram_bot_token = COALESCE($16, telegram_bot_token),
-        telegram_chat_id = COALESCE($17, telegram_chat_id),
-        sync_schedules = COALESCE($18, sync_schedules),
+        auto_sync = COALESCE($10, auto_sync),
+        line_notify_token = COALESCE($11, line_notify_token),
+        telegram_bot_token = COALESCE($12, telegram_bot_token),
+        telegram_chat_id = COALESCE($13, telegram_chat_id),
+        sync_schedules = COALESCE($14, sync_schedules),
         updated_at = NOW()
       WHERE user_id = $1
       RETURNING *`,
@@ -136,11 +126,7 @@ router.put('/', auditLog('UPDATE_SETTINGS', 'SETTING'), async (req, res) => {
         language || null,
         timezone || null,
         notify_new_trade !== undefined ? notify_new_trade : null,
-        valMetaapi,
         auto_sync !== undefined ? auto_sync : null,
-        valBinanceKey,
-        valBinanceSecret,
-        valTwelvedata,
         valLineToken,
         valTelegramToken,
         telegram_chat_id !== undefined ? telegram_chat_id : null,
@@ -150,10 +136,10 @@ router.put('/', auditLog('UPDATE_SETTINGS', 'SETTING'), async (req, res) => {
 
     if (result.rows.length === 0) {
       const insertResult = await pool.query(
-        `INSERT INTO user_settings (user_id, theme_id, notifications_enabled, sound_enabled, language, timezone, notify_new_trade, metaapi_token, auto_sync, binance_api_key, binance_api_secret, twelvedata_api_key, line_notify_token, telegram_bot_token, telegram_chat_id, sync_schedules)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        `INSERT INTO user_settings (user_id, theme_id, notifications_enabled, sound_enabled, language, timezone, notify_new_trade, auto_sync, line_notify_token, telegram_bot_token, telegram_chat_id, sync_schedules)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
          RETURNING *`,
-        [req.user.id, theme_id || 'dark-trading', notifications_enabled ?? true, sound_enabled ?? true, language || 'th', timezone || 'Asia/Bangkok', notify_new_trade ?? false, valMetaapi || '', auto_sync ?? true, valBinanceKey || '', valBinanceSecret || '', valTwelvedata || '', valLineToken || '', valTelegramToken || '', telegram_chat_id || '', sync_schedules ? JSON.stringify(sync_schedules) : JSON.stringify(['07:00'])]
+        [req.user.id, theme_id || 'dark-trading', notifications_enabled ?? true, sound_enabled ?? true, language || 'th', timezone || 'Asia/Bangkok', notify_new_trade ?? false, auto_sync ?? true, valLineToken || '', valTelegramToken || '', telegram_chat_id || '', sync_schedules ? JSON.stringify(sync_schedules) : JSON.stringify(['07:00'])]
       );
       return res.json(insertResult.rows[0]);
     }

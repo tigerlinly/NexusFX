@@ -27,7 +27,7 @@ router.get('/', async (req, res) => {
 // POST /api/accounts — add account
 router.post('/', auditLog('ADD_ACCOUNT', 'ACCOUNT'), async (req, res) => {
   try {
-    const { broker_id, account_number, account_name, account_type, currency, server, metaapi_account_id, connection_type, api_credentials, is_master, copy_target_id } = req.body;
+    const { broker_id, account_number, account_name, account_type, currency, server, connection_type, api_credentials, is_master, copy_target_id } = req.body;
     if (!broker_id || !account_number) {
       return res.status(400).json({ error: 'broker_id and account_number required' });
     }
@@ -39,10 +39,10 @@ router.post('/', auditLog('ADD_ACCOUNT', 'ACCOUNT'), async (req, res) => {
     }
 
     const result = await pool.query(
-      `INSERT INTO accounts (user_id, broker_id, account_number, account_name, account_type, currency, server, metaapi_account_id, connection_type, bridge_token, api_credentials, is_master, copy_target_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
+      `INSERT INTO accounts (user_id, broker_id, account_number, account_name, account_type, currency, server, connection_type, bridge_token, api_credentials, is_master, copy_target_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
       [req.user.id, broker_id, account_number, account_name || `Account ${account_number}`,
-       account_type || 'Real', currency || 'USD', server, metaapi_account_id, cType, bridgeToken,
+       account_type || 'Real', currency || 'USD', server, cType, bridgeToken,
        api_credentials || '{}', is_master || false, copy_target_id || null]
     );
 
@@ -75,7 +75,6 @@ router.put('/:id', auditLog('UPDATE_ACCOUNT', 'ACCOUNT'), async (req, res) => {
     const account_type = req.body.account_type !== undefined ? req.body.account_type : current.account_type;
     const currency = req.body.currency !== undefined ? req.body.currency : current.currency;
     const is_active = req.body.is_active !== undefined ? req.body.is_active : current.is_active;
-    const metaapi_account_id = req.body.metaapi_account_id !== undefined ? req.body.metaapi_account_id : current.metaapi_account_id;
     const server = req.body.server !== undefined ? req.body.server : current.server;
     const account_number = req.body.account_number !== undefined ? req.body.account_number : current.account_number;
     const broker_id = req.body.broker_id !== undefined ? req.body.broker_id : current.broker_id;
@@ -87,11 +86,11 @@ router.put('/:id', auditLog('UPDATE_ACCOUNT', 'ACCOUNT'), async (req, res) => {
     const result = await pool.query(
       `UPDATE accounts SET 
         account_name = $1, account_type = $2, currency = $3, is_active = $4,
-        metaapi_account_id = $5, server = $6, account_number = $7, broker_id = $8,
-        connection_type = $9, api_credentials = $10, is_master = $11, copy_target_id = $12,
+        server = $5, account_number = $6, broker_id = $7,
+        connection_type = $8, api_credentials = $9, is_master = $10, copy_target_id = $11,
         updated_at = NOW()
-       WHERE id = $13 AND user_id = $14 RETURNING *`,
-      [account_name, account_type, currency, is_active, metaapi_account_id, server, account_number, broker_id, connection_type, api_credentials, is_master, copy_target_id, req.params.id, req.user.id]
+       WHERE id = $12 AND user_id = $13 RETURNING *`,
+      [account_name, account_type, currency, is_active, server, account_number, broker_id, connection_type, api_credentials, is_master, copy_target_id, req.params.id, req.user.id]
     );
     res.json(result.rows[0]);
   } catch (err) {
