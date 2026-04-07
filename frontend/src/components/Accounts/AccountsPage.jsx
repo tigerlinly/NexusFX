@@ -239,35 +239,18 @@ export default function AccountsPage() {
                 <select className="filter-select" value={formData.connection_type}
                   onChange={e => setFormData(p => ({ ...p, connection_type: e.target.value }))}
                   style={{ width: '100%', padding: '10px 14px' }}>
-                  {/* TYPE_3_METAAPI removed */}
                   <option value="TYPE_1_EA">MQL Bridge EA (รัน EA บน MT4/MT5 เอง)</option>
-                  <option value="TYPE_2_API">Native Open API (เช่น cTrader/Binance)</option>
                 </select>
               </div>
 
               {/* MetaApi block removed */}
               
-              {formData.connection_type !== 'TYPE_3_METAAPI' && (
-                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gridColumn: 'span 1' }}>
-                  <div style={{ padding: '12px', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px dashed var(--border-color)', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                    <p style={{ margin: '0 0 6px 0', color: 'var(--text-primary)', fontWeight: '500' }}>ℹ️ System Note</p>
-                    {formData.connection_type === 'TYPE_1_EA' 
-                      ? 'ระบบจะสร้าง Bridge Token ให้อัตโนมัติหลังจากท่านบันทึก กรุณานำ Token ไปใส่ใน EA Bridge ของคุณเพื่อเริ่มการเชื่อมต่อ 24/7'
-                      : 'กรุณากรอก API Credentials ในช่องด้านล่าง (รูปแบบ JSON)'
-                    }
-                  </div>
+              <div className="form-group" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gridColumn: 'span 4' }}>
+                <div style={{ padding: '12px', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px dashed var(--border-color)', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                  <p style={{ margin: '0 0 6px 0', color: 'var(--text-primary)', fontWeight: '500' }}>ℹ️ System Note</p>
+                  ระบบจะสร้าง Bridge Token ให้อัตโนมัติหลังจากท่านบันทึก กรุณานำ Token ไปใส่ใน EA Bridge ของคุณเพื่อเริ่มการเชื่อมต่อ 24/7
                 </div>
-              )}
-
-              {formData.connection_type === 'TYPE_2_API' && (
-                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gridColumn: 'span 4' }}>
-                  <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', width: '100%', marginBottom: '6px' }}>
-                    <span>API Credentials (JSON format)</span>
-                  </label>
-                  <textarea className="form-input font-mono" placeholder={'{\n  "apiKey": "xxxx",\n  "apiSecret": "xxxx"\n}'} value={formData.api_credentials}
-                    onChange={e => setFormData(p => ({ ...p, api_credentials: e.target.value }))} rows={4} />
-                </div>
-              )}
+              </div>
 
               <div className="form-group" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gridColumn: 'span 2' }}>
                 <label className="form-label text-emerald-400">Master Account (สัญญาณเทรดต้นทาง)</label>
