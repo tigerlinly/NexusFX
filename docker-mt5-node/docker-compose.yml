@@ -8,8 +8,8 @@ services:
       - "8080:8080" # NoVNC Web Interface
       - "5900:5900" # VNC Direct
     volumes:
-      - mt5-data-1:/home/wineuser/.wine
-      - ./../EA/Infra_Data:/home/wineuser/ea-source/Infra_Data
+      - mt5-data-1:/root/.wine
+      - ./../EA/Infra_Data:/root/ea-source/Infra_Data
     restart: always
 
   # === Node 2 (Uncomment to add) ===
@@ -20,8 +20,8 @@ services:
   #     - "8081:8080"
   #     - "5901:5900"
   #   volumes:
-  #     - mt5-data-2:/home/wineuser/.wine
-  #     - ./../EA/Infra_Data:/home/wineuser/ea-source/Infra_Data
+  #     - mt5-data-2:/root/.wine
+  #     - ./../EA/Infra_Data:/root/ea-source/Infra_Data
   #   restart: always
 
 volumes:
