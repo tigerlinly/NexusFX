@@ -8,11 +8,26 @@ services:
       - "8080:8080" # NoVNC Web Interface
       - "5900:5900" # VNC Direct
     volumes:
-      - mt5-data-1:/root/.wine/drive_c/Program Files/MetaTrader 5
-      - ./../EA/Infra_Data:/root/.wine/drive_c/Program Files/MetaTrader 5/MQL5/Experts/Infra_Data
+      - mt5-data-1:/root/.wine
+      - ./../EA/Infra_Data:/root/ea-source/Infra_Data
+    environment:
+      - VNC_RESOLUTION=1280x800
     restart: always
-# You can add mt5-node-2, mt5-node-3 easily by copying the block above
-# and changing the ports (e.g. 8081:8080, 5901:5900)
+
+  # === Node 2 (Uncomment to add) ===
+  # mt5-node-2:
+  #   build: .
+  #   container_name: nexusfx-mt5-node-2
+  #   ports:
+  #     - "8081:8080"
+  #     - "5901:5900"
+  #   volumes:
+  #     - mt5-data-2:/root/.wine
+  #     - ./../EA/Infra_Data:/root/ea-source/Infra_Data
+  #   environment:
+  #     - VNC_RESOLUTION=1280x800
+  #   restart: always
 
 volumes:
   mt5-data-1:
+  # mt5-data-2:
