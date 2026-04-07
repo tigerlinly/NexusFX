@@ -27,9 +27,12 @@ RUN mkdir -pm755 /etc/apt/keyrings && \
     apt-get install -y --install-recommends winehq-stable && \
     rm -rf /var/lib/apt/lists/*
 
-# Install noVNC + websockify
-RUN apt-get update && apt-get install -y --no-install-recommends novnc websockify && \
+# Install noVNC + websockify from source to fix Ubuntu 22.04 apt package UI bugs (Cannot read properties of null 'type')
+RUN apt-get update && apt-get install -y --no-install-recommends git websockify && \
+    git clone https://github.com/novnc/noVNC.git /opt/novnc && \
+    cp /opt/novnc/vnc.html /opt/novnc/index.html && \
     rm -rf /var/lib/apt/lists/*
+
 
 # Create log dir
 RUN mkdir -p /var/log/supervisor
