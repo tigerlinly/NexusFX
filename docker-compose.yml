@@ -13,7 +13,6 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
-      # ชี้ไปยัง Database Data Center ของระบบที่รันอยู่บนเครื่องเดียวกัน (ใช้ host.docker.internal เพื่อแก้ EHOSTUNREACH)
       DATABASE_URL: postgresql://postgres:nexusfx_secure_password@host.docker.internal:5433/nexusfx
       JWT_SECRET: ${JWT_SECRET:-nexusfx-production-secret-change-this}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
@@ -60,8 +59,29 @@ services:
       - web
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do sleep 12h & wait $${!}; certbot renew --quiet; done'"
 
+  # =============================================
+  # NexusFX MT5 Node (Wine + VNC)
+  # =============================================
+  mt5-node-1:
+    build:
+      context: ./docker-mt5-node
+      dockerfile: Dockerfile
+    container_name: nexusfx-mt5-node-1
+    privileged: true
+    ports:
+      - "8080:8080"
+      - "5900:5900"
+    volumes:
+      - mt5-data-1:/root/.wine
+      - ./EA:/root/ea-source
+    environment:
+      - WINEDEBUG=-all
+      - WINEDLLOVERRIDES=winedbg.exe=d;dbghelp=d
+    restart: unless-stopped
+
 volumes:
   certbot-etc:
     driver: local
   certbot-var:
     driver: local
+  mt5-data-1:
