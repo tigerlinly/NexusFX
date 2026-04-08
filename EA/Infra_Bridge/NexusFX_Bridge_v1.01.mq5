@@ -1,16 +1,94 @@
 //+------------------------------------------------------------------+
 //|                                              NexusFX_Bridge.mq5  |
 //|                                    Copyright 2026, NexusFX Corp. |
+//| Created: 2026-04-01                                              |
+//| Updated: 2026-04-08                                              |
 //+------------------------------------------------------------------+
 #property copyright "NexusFX"
 #property link      "https://nexusfx.com"
-#property version   "0.0.1"
+#property version   "1.01"
 #property strict
 
 //--- Input parameters
-input string   API_URL = "http://YOUR_VPS_IP:5000"; // Web Service URL 
+input string   API_URL = "http://203.151.66.51:4000"; // Web Service URL 
 input string   BRIDGE_TOKEN = "";                   // EA Bridge Token (จากหน้าระบบ)
 input int      SyncDelayMS = 3000;                  // ความถี่ในการ Sync (มิลลิวินาที)
+
+//--- Dashboard Globals
+string dash_status = "Waiting...";
+string dash_last_update = "-";
+string dash_balance = "0.00";
+string dash_equity = "0.00";
+string dash_http_code = "-";
+
+int g_PanelX = 20;
+int g_PanelY = 20;
+bool g_minimized = false;
+void UpdateLabel(string name, string text, int x, int y, color clr, int fontsize=10, string font="Arial") {
+    if(ObjectFind(0, name) < 0) {
+        ObjectCreate(0, name, OBJ_LABEL, 0, 0, 0);
+        ObjectSetInteger(0, name, OBJPROP_CORNER, CORNER_LEFT_UPPER);
+    }
+    ObjectSetInteger(0, name, OBJPROP_XDISTANCE, x);
+    ObjectSetInteger(0, name, OBJPROP_YDISTANCE, y);
+    ObjectSetString(0, name, OBJPROP_TEXT, text);
+    ObjectSetInteger(0, name, OBJPROP_COLOR, clr);
+    ObjectSetInteger(0, name, OBJPROP_FONTSIZE, fontsize);
+    ObjectSetString(0, name, OBJPROP_FONT, font);
+}
+
+void DrawDashboard() {
+    RemoveDashboard();
+    int x = g_PanelX;
+    int y = g_PanelY;
+    int y_gap = 25;
+    int width = 450;
+    int height = g_minimized ? 35 : 180;
+    
+    // Background
+    ObjectCreate(0, "BRG_BG", OBJ_RECTANGLE_LABEL, 0, 0, 0);
+    ObjectSetInteger(0, "BRG_BG", OBJPROP_XDISTANCE, x - 10);
+    ObjectSetInteger(0, "BRG_BG", OBJPROP_YDISTANCE, y - 10);
+    ObjectSetInteger(0, "BRG_BG", OBJPROP_XSIZE, width);
+    ObjectSetInteger(0, "BRG_BG", OBJPROP_YSIZE, height);
+    ObjectSetInteger(0, "BRG_BG", OBJPROP_BGCOLOR, C'15,20,30');
+    ObjectSetInteger(0, "BRG_BG", OBJPROP_COLOR, clrDodgerBlue);
+    ObjectSetInteger(0, "BRG_BG", OBJPROP_BORDER_TYPE, BORDER_FLAT);
+    ObjectSetInteger(0, "BRG_BG", OBJPROP_CORNER, CORNER_LEFT_UPPER);
+    ObjectSetInteger(0, "BRG_BG", OBJPROP_SELECTABLE, true);
+    
+    UpdateLabel("BRG_Title", "🌉 NexusFX Bridge (Two-Way Sync)", x, y, clrCyan, 12, "Arial Bold");
+    UpdateLabel("BRG_Toggle", g_minimized ? "[+]" : "[-]", x + width - 40, y, clrOrange, 12, "Arial Bold");
+    
+    if(g_minimized) return;
+    
+    y += y_gap;
+    UpdateLabel("BRG_Lbl1", "Server URL:", x, y, clrLightGray);
+    UpdateLabel("BRG_Val1", API_URL, x + 100, y, clrWhite);
+    y += y_gap;
+
+    UpdateLabel("BRG_Lbl2", "Status:", x, y, clrLightGray);
+    color statusClr = (StringFind(dash_status, "ERROR") >= 0 || StringFind(dash_status, "❌") >= 0) ? clrRed : clrLime;
+    UpdateLabel("BRG_Val2", dash_status, x + 100, y, statusClr);
+    y += y_gap;
+
+    UpdateLabel("BRG_Lbl3", "Last Sync:", x, y, clrLightGray);
+    UpdateLabel("BRG_Val3", dash_last_update, x + 100, y, clrYellow);
+    y += y_gap;
+
+    UpdateLabel("BRG_Lbl4", "Balance / Eq:", x, y, clrLightGray);
+    UpdateLabel("BRG_Val4", "$" + dash_balance + "  /  $" + dash_equity, x + 100, y, clrWhite);
+    y += y_gap;
+
+    UpdateLabel("BRG_Lbl5", "HTTP Code:", x, y, clrLightGray);
+    UpdateLabel("BRG_Val5", dash_http_code, x + 100, y, clrOrange);
+    
+    ChartRedraw(0);
+}
+
+void RemoveDashboard() {
+    ObjectsDeleteAll(0, "BRG_");
+}
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
@@ -18,43 +96,55 @@ input int      SyncDelayMS = 3000;                  // ความถี่ใ�
 int OnInit()
 {
    if (BRIDGE_TOKEN == "") {
+      dash_status = "❌ ERROR: No Token!";
+      dash_http_code = "WAIT";
+      DrawDashboard();
       Alert("NexusFX Error: Please enter BRIDGE_TOKEN in inputs!");
       return(INIT_FAILED);
    }
 
-   // Enable millisecond timer
+   DrawDashboard();
    EventSetMillisecondTimer(SyncDelayMS);
    Print("NexusFX Bridge Started. Sync every ", SyncDelayMS/1000.0, " seconds.");
    
    return(INIT_SUCCEEDED);
 }
 
-//+------------------------------------------------------------------+
-//| Expert deinitialization function                                 |
-//+------------------------------------------------------------------+
 void OnDeinit(const int reason)
 {
    EventKillTimer();
+   RemoveDashboard();
    Print("NexusFX Bridge Stopped.");
 }
 
-//+------------------------------------------------------------------+
-//| Timer function                                                   |
-//+------------------------------------------------------------------+
 void OnTimer()
 {
    SendSyncData();
 }
 
-//+------------------------------------------------------------------+
-//| Send Sync Data to Backend (Balance, Equity, Trades)              |
-//+------------------------------------------------------------------+
+void OnChartEvent(const int id, const long &lparam, const double &dparam, const string &sparam) {
+    if(id == CHARTEVENT_OBJECT_CLICK && sparam == "BRG_Toggle") {
+        g_minimized = !g_minimized;
+        DrawDashboard();
+    }
+    if(id == CHARTEVENT_OBJECT_DRAG && sparam == "BRG_BG") {
+        g_PanelX = (int)ObjectGetInteger(0, sparam, OBJPROP_XDISTANCE) + 10;
+        g_PanelY = (int)ObjectGetInteger(0, sparam, OBJPROP_YDISTANCE) + 10;
+        DrawDashboard();
+    }
+    if(id == CHARTEVENT_OBJECT_CLICK && sparam == "BRG_BG") {
+        ObjectSetInteger(0, "BRG_BG", OBJPROP_SELECTED, false); 
+    }
+}
+
 void SendSyncData()
 {
    double balance = AccountInfoDouble(ACCOUNT_BALANCE);
    double equity  = AccountInfoDouble(ACCOUNT_EQUITY);
+   
+   dash_balance = DoubleToString(balance, 2);
+   dash_equity = DoubleToString(equity, 2);
 
-   // สร้าง Payload เป็น JSON แบบรวดเร็ว
    string json = "{";
    json += "\"balance\":" + DoubleToString(balance, 2) + ",";
    json += "\"equity\":" + DoubleToString(equity, 2) + ",";
@@ -68,7 +158,7 @@ void SendSyncData()
       if(ticket > 0)
       {
          string symbol = PositionGetString(POSITION_SYMBOL);
-         int type = (int)PositionGetInteger(POSITION_TYPE); // 0=BUY, 1=SELL
+         int type = (int)PositionGetInteger(POSITION_TYPE); 
          double lots = PositionGetDouble(POSITION_VOLUME);
          double open_price = PositionGetDouble(POSITION_PRICE_OPEN);
          double sl = PositionGetDouble(POSITION_SL);
@@ -97,11 +187,8 @@ void SendSyncData()
    }
    json += "]}";
 
-   // แปลงข้อมูลเป็น Char Array สำหรับ POST request
    char post_data[];
    int str_len = StringToCharArray(json, post_data, 0, WHOLE_ARRAY, CP_UTF8);
-   
-   // เราลบ null terminator ตอนส่ง
    if (str_len > 0) ArrayResize(post_data, str_len - 1); 
 
    string headers = "Content-Type: application/json\r\n";
@@ -109,31 +196,31 @@ void SendSyncData()
    
    string result_headers;
    char result_data[];
-   
    string url = API_URL + "/api/bridge/sync";
 
-   // Call WebRequest
    int res = WebRequest("POST", url, headers, 3000, post_data, result_data, result_headers);
-   
-   // พิมพ์เตือนถ้าพัง
-   if(res == 401) {
-      Print("NexusFX Error: Invalid Bridge Token.");
-      EventKillTimer(); // ปิดการส่งถ้า Token ผิด
-   } else if (res == 1) { // 1 = ERROR_NOT_PERMISSION_URL ในบางแพลตฟอร์ม
-      Print("NexusFX Error: WebRequest failed! Did you allow the URL in MT5 Tools -> Options -> Expert Advisors?");
+   dash_http_code = IntegerToString(res);
+   dash_last_update = TimeToString(TimeCurrent(), TIME_DATE|TIME_SECONDS);
+
+   if(res == 401 || res == 403 || res == 404) {
+      dash_status = "❌ Token Invalid / Rejected (" + IntegerToString(res) + ")";
+      EventKillTimer(); 
+   } else if (res == -1 || res == 1) { 
+      dash_status = "❌ MT5 Blocked WebRequest URL";
       EventKillTimer();
-   } else if (res == 200) {
-      // Process pending commands
+   } else if (res == 200 || res == 201) {
+      dash_status = "✅ Connected & Syncing";
       string response_text = CharArrayToString(result_data);
       ProcessPendingCommands(response_text);
    } else {
-      Print("Sync failed. Error HTTP code: ", res);
+      string err_txt = CharArrayToString(result_data);
+      if(StringLen(err_txt) > 30) err_txt = StringSubstr(err_txt, 0, 30);
+      dash_status = "⚠️ Error: " + err_txt;
    }
+   
+   DrawDashboard();
 }
 
-//+------------------------------------------------------------------+
-//| Simple JSON Extractor (Manual Parse)                             |
-//+------------------------------------------------------------------+
 string ExtractJsonValue(string json, string key) {
    string searchObj = "\"" + key + "\":";
    int start = StringFind(json, searchObj);
@@ -141,13 +228,11 @@ string ExtractJsonValue(string json, string key) {
    
    start += StringLen(searchObj);
    
-   // Check if string
    if(StringSubstr(json, start, 1) == "\"") {
-      start++; // skip quote
+      start++; 
       int end = StringFind(json, "\"", start);
       return StringSubstr(json, start, end - start);
    } else {
-      // Find next comma or bracket
       int endComma = StringFind(json, ",", start);
       int endBracket = StringFind(json, "}", start);
       int end = -1;
@@ -158,16 +243,13 @@ string ExtractJsonValue(string json, string key) {
       
       if(end != -1) {
          string val = StringSubstr(json, start, end - start);
-         StringReplace(val, " ", ""); // strip spaces
+         StringReplace(val, " ", ""); 
          return val;
       }
    }
    return "";
 }
 
-//+------------------------------------------------------------------+
-//| Order Execution                                                  |
-//+------------------------------------------------------------------+
 #include <Trade\Trade.mqh>
 CTrade trade;
 
@@ -181,9 +263,8 @@ void ProcessPendingCommands(string response)
    if(commands_array_end == -1) return;
    
    string commands_str = StringSubstr(response, commands_array_start, commands_array_end - commands_array_start);
-   if(StringLen(commands_str) <= 2) return; // Empty array
+   if(StringLen(commands_str) <= 2) return; 
    
-   // Loop through objects
    int pos = 0;
    while(true) {
       int obj_start = StringFind(commands_str, "{", pos);

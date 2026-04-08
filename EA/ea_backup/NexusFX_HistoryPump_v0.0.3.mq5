@@ -5,24 +5,18 @@
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2026, NexusFX Co."
 #property link      "https://nexusfx.com"
-#property version   "0.0.1"
+#property version   "0.0.3"
 #property script_show_inputs
 
-input string   InpGatewayURL        = "http://127.0.0.1:3000/api/ingest"; 
+input string   InpGatewayURL        = "http://127.0.0.1:4000/api/ingest"; // เปลี่ยนเป็นพอร์ต 4000
 input string   InpBrokerName        = "EXNESS";                       
-input int      InpBarsToPump        = 500000;
+input int      InpMonthsToPump      = 1; // ดึงข้อมูลย้อนหลัง (เดือน) 
 
 string TimeframeToString(ENUM_TIMEFRAMES tf) {
     if(tf == PERIOD_M1) return "M1";
-    if(tf == PERIOD_M2) return "M2";
-    if(tf == PERIOD_M3) return "M3";
-    if(tf == PERIOD_M4) return "M4";
     if(tf == PERIOD_M5) return "M5";
-    if(tf == PERIOD_M6) return "M6";
     if(tf == PERIOD_M10) return "M10";
-    if(tf == PERIOD_M12) return "M12";
     if(tf == PERIOD_M15) return "M15";
-    if(tf == PERIOD_M20) return "M20";
     if(tf == PERIOD_M30) return "M30";
     if(tf == PERIOD_H1) return "H1";
     if(tf == PERIOD_H2) return "H2";
@@ -51,7 +45,6 @@ void SendToGateway(string json) {
     
     if(res != 200 && res != 201) {
         string errorDetails = CharArrayToString(result);
-        // สังเกตบรรทัดนี้ จะไม่มีคำว่า GetLastError แล้ว
         Print("[ERROR] HTTP Status: ", res, " | Details: ", errorDetails);
     } else {
         Print("[SUCCESS] Batch sent. Size: ", post_size, " bytes.");
@@ -66,33 +59,36 @@ void OnStart()
         "XAUUSD", "USDJPY", "NZDUSD", "USDCAD", "USDCHF"
     };
     int totalSymbols = ArraySize(targetSymbols);
-    Print("🚀 Starting SUPER PUMP for ", totalSymbols, " SPECIFIC symbols!");
+    Print("🚀 Starting SUPER PUMP (Last ", InpMonthsToPump, " Months) for ", totalSymbols, " SPECIFIC symbols!");
     
     ENUM_TIMEFRAMES tfs[] = {
-        PERIOD_M1, PERIOD_M2, PERIOD_M3, PERIOD_M4, PERIOD_M5, PERIOD_M6, PERIOD_M10, PERIOD_M12, PERIOD_M15, PERIOD_M20, PERIOD_M30,
-        PERIOD_H1, PERIOD_H2, PERIOD_H3, PERIOD_H4, PERIOD_H6, PERIOD_H8, PERIOD_H12,
-        PERIOD_D1, PERIOD_W1, PERIOD_MN1
+        PERIOD_M1, PERIOD_M5, PERIOD_M15, PERIOD_M30,
+        PERIOD_H1, PERIOD_H4, PERIOD_D1, PERIOD_W1, PERIOD_MN1
     };
     int numTfs = ArraySize(tfs);
     
-    // Loop through the specific target symbols
+    // กำหนดเวลาดึงข้อมูลย้อนหลัง 1 เดือนเป๊ะๆ เพื่อกันข้อมูลซ้ำซ้อน
+    datetime endTime = TimeCurrent();
+    datetime startTime = endTime - (InpMonthsToPump * 30 * 24 * 60 * 60);
+
     for(int s=0; s<totalSymbols; s++) {
         string currentSymbol = targetSymbols[s];
         SymbolSelect(currentSymbol, true); // Force MT5 to add it to Market Watch if missing
         Print(">>> Processing Symbol [", s+1, "/", totalSymbols, "]: ", currentSymbol);
         
-        // Get the correct decimal digits for each symbol to format JSON properly (e.g. 5 for EURUSD, 2 or 3 for JPY)
         int currentDigits = (int)SymbolInfoInteger(currentSymbol, SYMBOL_DIGITS);
         
-        // Loop through all Timeframes for this symbol
         for(int i=0; i<numTfs; i++) {
             MqlRates rates[];
             ArraySetAsSeries(rates, true);
             
-            int copied = CopyRates(currentSymbol, tfs[i], 0, InpBarsToPump, rates);
+            // ใช้ CopyRates ระบุ เวลาเริ่ม-จบ เพื่อบังคับให้ MT5 โหลดข้อมูลที่ขาดหาย (Fill gaps)
+            int copied = CopyRates(currentSymbol, tfs[i], startTime, endTime, rates);
             
             if (copied <= 0) {
-               Print("⚠️ Warning: No data or error fetching ", currentSymbol, " over ", TimeframeToString(tfs[i]));
+               Print("⚠️ Warning: No data or error fetching ", currentSymbol, " over ", TimeframeToString(tfs[i]), ". Please scroll chart manually to download history from Broker.");
+               // สั่ง Sleep เพื่อให้ Broker ส่งข้อมูลมาทันในรอบหน้า
+               Sleep(500);
                continue;
             }
             
@@ -101,7 +97,6 @@ void OnStart()
             int chunkSize = 1000;
             int totalChunks = (copied / chunkSize) + 1;
             
-            // Break down the symbol/timeframe data into JSON chunks
             for(int chunk = 0; chunk < totalChunks; chunk++) {
                 string jsonPayload = "[";
                 bool isFirst = true;
@@ -131,7 +126,6 @@ void OnStart()
                 }
                 jsonPayload += "]";
                 
-                // Send chunk securely over HTTP
                 SendToGateway(jsonPayload);
                 Sleep(200); 
             }

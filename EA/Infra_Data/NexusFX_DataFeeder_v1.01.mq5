@@ -2,10 +2,12 @@
 //|                                     NexusFX_DataFeeder_v0.0.1.mq5 |
 //|                                     Copyright 2026, NexusFX Co.  |
 //|                                             https://nexusfx.com  |
+//| Created: 2026-04-01                                              |
+//| Updated: 2026-04-08                                              |
 //+------------------------------------------------------------------+
 #property copyright   "Copyright 2026, NexusFX Co."
 #property link        "https://nexusfx.com"
-#property version   "0.0.1"
+#property version   "1.01"
 #property description "Data Feeder with Dashboard - v0.0.1"
 #property strict
 
@@ -13,7 +15,7 @@ input string   InpGatewayURL        = "http://127.0.0.1:3000/api/ingest";
 input string   InpBrokerName        = "EXNESS";                           
 
 string targetSymbols[] = {
-    "BTCUSD", "ETHUSD", "XRPUSD", "LTCUSD", "EURUSD", "GBPUSD", "XAUUSD", "AUDUSD", "USDJPY", "GBPJPY"
+    "AUDUSD", "BTCUSD", "EURUSD", "GBPUSD", "GBPJPY", "XAUUSD", "USDJPY", "NZDUSD", "USDCAD", "USDCHF"
 };
 
 // Global variables for dashboard
@@ -23,28 +25,37 @@ string dash_pulled_symbols = "";
 int    dash_payload_count = 0;
 int    dash_fail_count = 0;
 
+int g_PanelX = 20;
+int g_PanelY = 20;
+bool g_minimized = false;
+
 void DrawDashboard() {
-    int x = 20;
-    int y = 20;
+    RemoveDashboard();
+    int x = g_PanelX;
+    int y = g_PanelY;
     int y_gap = 25;
+    int width = 500;
+    int height = g_minimized ? 35 : 180;
     
     // Background
-    if(ObjectFind(0, "DF_BG") < 0) {
-        ObjectCreate(0, "DF_BG", OBJ_RECTANGLE_LABEL, 0, 0, 0);
-        ObjectSetInteger(0, "DF_BG", OBJPROP_XDISTANCE, x - 10);
-        ObjectSetInteger(0, "DF_BG", OBJPROP_YDISTANCE, y - 10);
-        ObjectSetInteger(0, "DF_BG", OBJPROP_XSIZE, 500);
-        ObjectSetInteger(0, "DF_BG", OBJPROP_YSIZE, 180);
-        ObjectSetInteger(0, "DF_BG", OBJPROP_BGCOLOR, clrBlack);
-        ObjectSetInteger(0, "DF_BG", OBJPROP_COLOR, clrDodgerBlue);
-        ObjectSetInteger(0, "DF_BG", OBJPROP_BORDER_TYPE, BORDER_FLAT);
-        ObjectSetInteger(0, "DF_BG", OBJPROP_CORNER, CORNER_LEFT_UPPER);
-    }
+    ObjectCreate(0, "DF_BG", OBJ_RECTANGLE_LABEL, 0, 0, 0);
+    ObjectSetInteger(0, "DF_BG", OBJPROP_XDISTANCE, x - 10);
+    ObjectSetInteger(0, "DF_BG", OBJPROP_YDISTANCE, y - 10);
+    ObjectSetInteger(0, "DF_BG", OBJPROP_XSIZE, width);
+    ObjectSetInteger(0, "DF_BG", OBJPROP_YSIZE, height);
+    ObjectSetInteger(0, "DF_BG", OBJPROP_BGCOLOR, clrBlack);
+    ObjectSetInteger(0, "DF_BG", OBJPROP_COLOR, clrDodgerBlue);
+    ObjectSetInteger(0, "DF_BG", OBJPROP_BORDER_TYPE, BORDER_FLAT);
+    ObjectSetInteger(0, "DF_BG", OBJPROP_CORNER, CORNER_LEFT_UPPER);
+    ObjectSetInteger(0, "DF_BG", OBJPROP_SELECTABLE, true);
     
     // Title
-    UpdateLabel("DF_Title", "🚀 NexusFX DataFeeder (v0.0.1)", x, y, clrCyan, 12, "Arial Bold");
-    y += y_gap;
+    UpdateLabel("DF_Title", "🚀 NexusFX DataFeeder (v1.01)", x, y, clrCyan, 12, "Arial Bold");
+    UpdateLabel("DF_Toggle", g_minimized ? "[+]" : "[-]", x + width - 40, y, clrOrange, 12, "Arial Bold");
     
+    if(g_minimized) return;
+
+    y += y_gap;
     UpdateLabel("DF_Lbl1", "Gateway URL:", x, y, clrLightGray);
     UpdateLabel("DF_Val1", InpGatewayURL, x + 120, y, clrWhite);
     y += y_gap;
@@ -84,7 +95,21 @@ void UpdateLabel(string name, string text, int x, int y, color clr, int fontsize
 
 void RemoveDashboard() {
     ObjectsDeleteAll(0, "DF_");
-    ChartRedraw(0);
+}
+
+void OnChartEvent(const int id, const long &lparam, const double &dparam, const string &sparam) {
+    if(id == CHARTEVENT_OBJECT_CLICK && sparam == "DF_Toggle") {
+        g_minimized = !g_minimized;
+        DrawDashboard();
+    }
+    if(id == CHARTEVENT_OBJECT_DRAG && sparam == "DF_BG") {
+        g_PanelX = (int)ObjectGetInteger(0, sparam, OBJPROP_XDISTANCE) + 10;
+        g_PanelY = (int)ObjectGetInteger(0, sparam, OBJPROP_YDISTANCE) + 10;
+        DrawDashboard();
+    }
+    if(id == CHARTEVENT_OBJECT_CLICK && sparam == "DF_BG") {
+        ObjectSetInteger(0, "DF_BG", OBJPROP_SELECTED, false); 
+    }
 }
 
 int OnInit() {

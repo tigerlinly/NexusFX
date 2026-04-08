@@ -1,6 +1,6 @@
 const WebSocket = require('ws');
 
-class BinanceFeed {
+class MarketPriceFeed {
   constructor(io) {
     this.io = io;
     this.ws = null;
@@ -27,11 +27,11 @@ class BinanceFeed {
       const streams = this.symbols.map(s => `${s}@miniTicker`).join('/');
       const wsUrl = `wss://stream.binance.com:9443/stream?streams=${streams}`;
       
-      console.log(`[BinanceFeed] Connecting to ${wsUrl}`);
+      console.log(`[MarketPriceFeed] Connecting to public ticker streams...`);
       this.ws = new WebSocket(wsUrl);
 
       this.ws.on('open', () => {
-        console.log('✅ [BinanceFeed] Connected to Binance Live Feed');
+        console.log('✅ [MarketPriceFeed] Connected to Public Live Feed');
         clearTimeout(this.reconnectTimeout);
       });
 
@@ -50,16 +50,16 @@ class BinanceFeed {
       });
 
       this.ws.on('close', () => {
-        console.log('❌ [BinanceFeed] Disconnected. Reconnecting in 5s...');
+        console.log('❌ [MarketPriceFeed] Disconnected. Reconnecting in 5s...');
         this.reconnect();
       });
 
       this.ws.on('error', (err) => {
-        console.error('❌ [BinanceFeed] Error:', err.message);
+        console.error('❌ [MarketPriceFeed] Error:', err.message);
         this.ws.close();
       });
     } catch (e) {
-        console.error('❌ [BinanceFeed] Connection Failed:', e.message);
+        console.error('❌ [MarketPriceFeed] Connection Failed:', e.message);
         this.reconnect();
     }
   }
@@ -72,4 +72,4 @@ class BinanceFeed {
   }
 }
 
-module.exports = BinanceFeed;
+module.exports = MarketPriceFeed;

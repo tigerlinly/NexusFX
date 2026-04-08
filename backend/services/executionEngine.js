@@ -32,8 +32,7 @@ class ExecutionEngine {
     try {
       // Find up to 50 pending orders
       const ordersResult = await pool.query(
-        `SELECT o.*, b.name as broker_name, a.user_id, a.metaapi_account_id, a.api_credentials, a.connection_type,
-                us.binance_api_key, us.binance_api_secret, us.metaapi_token
+        `SELECT o.*, b.name as broker_name, a.user_id, a.api_credentials, a.connection_type
          FROM orders o
          JOIN accounts a ON a.id = o.account_id
          JOIN brokers b ON b.id = a.broker_id
@@ -57,10 +56,8 @@ class ExecutionEngine {
           // Verify user has correctly stored their Binance API Keys
           // Use account-level API credentials if available (TYPE_2_API overrides global settings)
           const creds = order.api_credentials || {};
-          const userKey = creds.apiKey || order.binance_api_key || null;
-          const userSecret = creds.apiSecret || order.binance_api_secret || null;
-          const metaApiToken = order.metaapi_token || null;
-          const metaApiAccountId = order.metaapi_account_id;
+          const userKey = creds.apiKey || null;
+          const userSecret = creds.apiSecret || null;
 
           let executionResult = false;
           let executionPrice = order.price || null;

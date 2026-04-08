@@ -2,10 +2,12 @@
 //|                                              NexusAPI_Bridge.mq5 |
 //|                                      Copyright 2026, NexusFX Co. |
 //|                                             https://nexusfx.com  |
+//| Created: 2026-04-01                                              |
+//| Updated: 2026-04-08                                              |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2026, NexusFX Co."
 #property link      "https://nexusfx.com"
-#property version   "0.0.1"
+#property version   "1.01"
 
 #include <Trade\Trade.mqh>
 

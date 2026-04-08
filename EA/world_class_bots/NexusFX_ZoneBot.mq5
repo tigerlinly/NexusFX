@@ -1,6 +1,8 @@
 //+------------------------------------------------------------------+
 //|                                               NexusFX_ZoneBot.mq5|
 //|                                    Copyright 2026, NexusFX Corp. |
+//| Created: 2026-04-01                                              |
+//| Updated: 2026-04-08                                              |
 //+------------------------------------------------------------------+
 #property copyright "NexusFX"
 #property link      "https://nexusfx.biz"

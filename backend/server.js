@@ -10,7 +10,7 @@ const { initDatabase } = require('./config/database');
 // MT5Service removed
 const ProfitTracker = require('./services/profitTracker');
 const AggregationService = require('./services/aggregationService');
-const BinanceFeed = require('./services/binanceFeed');
+const MarketPriceFeed = require('./services/marketPriceFeed');
 const ExecutionEngine = require('./services/executionEngine');
 const trailingStopEngine = require('./services/trailingStopEngine');
 const RiskEngine = require('./services/riskEngine');
@@ -229,7 +229,7 @@ io.on('connection', (socket) => {
 const profitTracker = new ProfitTracker(io);
 const aggregationService = new AggregationService();
 const feeTracker = new FeeTracker();
-const binanceFeed = new BinanceFeed(io);
+const marketPriceFeed = new MarketPriceFeed(io);
 const executionEngine = new ExecutionEngine();
 const riskEngine = new RiskEngine(io);
 
@@ -254,7 +254,7 @@ async function start() {
     aggregationService.start();
     feeTracker.start();
     // MetaApi engines removed
-    binanceFeed.start();
+    marketPriceFeed.start();
     executionEngine.start();
     riskEngine.start();
     trailingStopEngine.setIo(io);

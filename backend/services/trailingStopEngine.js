@@ -54,8 +54,7 @@ class TrailingStopEngine {
     // ดึง FILLED orders ที่มี trailing_stop_enabled และมี SL หรือ TP
     const result = await pool.query(`
       SELECT o.*,
-             a.metaapi_account_id, a.broker_id,
-             us.metaapi_token, us.binance_api_key, us.binance_api_secret,
+             a.broker_id,
              b.name as broker_name,
              tb.strategy_type, tb.parameters as bot_parameters
       FROM orders o

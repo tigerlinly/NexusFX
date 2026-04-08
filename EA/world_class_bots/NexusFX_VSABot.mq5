@@ -1,6 +1,8 @@
 //+------------------------------------------------------------------+
 //|                                                NexusFX_VSABot.mq5|
 //|                                    Copyright 2026, NexusFX Corp. |
+//| Created: 2026-04-01                                              |
+//| Updated: 2026-04-08                                              |
 //+------------------------------------------------------------------+
 #property copyright "NexusFX"
 #property link      "https://nexusfx.biz"
@@ -38,11 +40,11 @@ void OnTick()
 
    // VSA Logic: Analyze High Volume on Narrow Spread
    double avgVol = 0;
-   for(int i=1; i<10; i++) avgVol += rates[i].tick_volume;
+   for(int i=1; i<10; i++) avgVol += (double)rates[i].tick_volume;
    avgVol /= 9;
 
    double spread0 = rates[0].high - rates[0].low;
-   double vol0 = rates[0].tick_volume;
+   double vol0 = (double)rates[0].tick_volume;
 
    if(vol0 > avgVol * VolThreshold && spread0 < SymbolInfoDouble(_Symbol, SYMBOL_POINT) * 100)
    {
