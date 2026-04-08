@@ -128,10 +128,12 @@ export default function Layout() {
             <Building2 size={18} className="nav-icon" />
             {showLabels && <span>จัดการบัญชี</span>}
           </NavLink>
-          <NavLink to="/brokers" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="โบรกเกอร์ (Brokers)">
-            <Globe size={18} className="nav-icon" />
-            {showLabels && <span>โบรกเกอร์แนะนำ</span>}
-          </NavLink>
+          {(isAdmin || isTeamLead) && (
+            <NavLink to="/brokers" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="โบรกเกอร์ (Brokers)">
+              <Globe size={18} className="nav-icon" />
+              {showLabels && <span>โบรกเกอร์แนะนำ</span>}
+            </NavLink>
+          )}
 
           {isTeamLead && (
             <>
