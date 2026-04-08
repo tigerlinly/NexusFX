@@ -25,9 +25,9 @@ router.post('/feed', async (req, res) => {
 
       for (const candle of candles) {
         await client.query(`
-          INSERT INTO market_candles (symbol, interval, open_time, open, high, low, close, volume)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-          ON CONFLICT (symbol, interval, open_time) 
+          INSERT INTO market_candles (broker, symbol, interval, open_time, open, high, low, close, volume)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          ON CONFLICT (broker, symbol, interval, open_time) 
           DO UPDATE SET 
             open = EXCLUDED.open,
             high = EXCLUDED.high,
@@ -35,6 +35,7 @@ router.post('/feed', async (req, res) => {
             close = EXCLUDED.close,
             volume = EXCLUDED.volume
         `, [
+          candle.broker || 'EXNESS',
           candle.symbol, 
           candle.interval, 
           candle.open_time, 

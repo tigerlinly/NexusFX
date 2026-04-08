@@ -1186,6 +1186,7 @@ async function initDatabase() {
       await client.query(`
         CREATE TABLE IF NOT EXISTS market_candles (
           id SERIAL PRIMARY KEY,
+          broker VARCHAR(50) NOT NULL DEFAULT 'EXNESS',
           symbol VARCHAR(20) NOT NULL,
           interval VARCHAR(10) NOT NULL,
           open_time BIGINT NOT NULL,
@@ -1195,9 +1196,15 @@ async function initDatabase() {
           close DECIMAL(18,6) NOT NULL,
           volume DECIMAL(18,6) DEFAULT 0,
           created_at TIMESTAMPTZ DEFAULT NOW(),
-          UNIQUE(symbol, interval, open_time)
+          UNIQUE(broker, symbol, interval, open_time)
         );
-        CREATE INDEX IF NOT EXISTS idx_market_candles_lookup ON market_candles(symbol, interval, open_time DESC);
+        -- Alter existing table to add broker support
+        ALTER TABLE market_candles ADD COLUMN IF NOT EXISTS broker VARCHAR(50) DEFAULT 'EXNESS';
+        ALTER TABLE market_candles DROP CONSTRAINT IF EXISTS market_candles_symbol_interval_open_time_key;
+        ALTER TABLE market_candles DROP CONSTRAINT IF EXISTS market_candles_broker_symbol_interval_open_time_key;
+        ALTER TABLE market_candles ADD CONSTRAINT market_candles_broker_symbol_interval_open_time_key UNIQUE(broker, symbol, interval, open_time);
+        
+        CREATE INDEX IF NOT EXISTS idx_market_candles_lookup ON market_candles(broker, symbol, interval, open_time DESC);
       `);
     } catch (e) { console.error('Migration error candles:', e); }
 
