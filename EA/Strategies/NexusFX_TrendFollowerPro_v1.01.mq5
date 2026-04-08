@@ -19,8 +19,9 @@ input int      SlowEMA     = 200;
 input ulong    MagicNumber = 88882;
 
 // --- การเข้าไม้ & สับไม้ (Pyramiding) ---
-input int      MaxPositions   = 100; // จำนวนไม้สูงสุด (สับไม้เต็มที่)
-input double   ScaleStepPips  = 20.0; // ระยะห่างสับไม้ (Pips)
+input int      MaxPositions     = 300;   // จำนวนไม้สูงสุด (สับไม้เต็มที่)
+input double   ScaleStepPips    = 10.0;  // ระยะห่างสับไม้ (Pips)
+input double   TestPullbackPips = 40.0;  // ระยะย่อออกไม้เทส (ก่อนชนแนวเทรนด์)
 
 // --- การจัดการความเสี่ยง (Risk Management) ---
 input double   InitialSLPips  = 200.0; // SL เริ่มต้น (Pips)
@@ -104,19 +105,31 @@ void OnTick() {
    bool isUptrend   = fastBuf[0] > slowBuf[0];
    bool isDowntrend = fastBuf[0] < slowBuf[0];
 
-   // ดึงข้อมูลแท่งเทียนก่อนหน้า (แท่ง [1])
+   // ดึงข้อมูลแท่งเทียนก่อนหน้า (แท่ง [1] และ [2])
    double open1  = iOpen(_Symbol, PERIOD_CURRENT, 1);
    double close1 = iClose(_Symbol, PERIOD_CURRENT, 1);
    double high1  = iHigh(_Symbol, PERIOD_CURRENT, 1);
    double low1   = iLow(_Symbol, PERIOD_CURRENT, 1);
    
+   double open2  = iOpen(_Symbol, PERIOD_CURRENT, 2);
+   double close2 = iClose(_Symbol, PERIOD_CURRENT, 2);
+   
+   // สัญญาณการกลับตัวของแท่งเทียน
+   bool isPullbackRedToGreen = (close2 < open2) && (close1 > open1);
+   bool isPullbackGreenToRed = (close2 > open2) && (close1 < open1);
+
    bool isBullishPA = (close1 > open1) && (low1 <= fastBuf[1] && close1 >= fastBuf[1]); // ชนแนวรับ EMA + เด้งกลับเขียว
    bool isBearishPA = (close1 < open1) && (high1 >= fastBuf[1] && close1 <= fastBuf[1]); // ชนแนวต้าน EMA + กดกลับแดง
 
+   // เงื่อนไข ไม้เทสหยั่งเชิง (Test Order) - ย่อลงมาแต่ไม่ถึง EMA
+   bool isBullishTest = isPullbackRedToGreen && (low1 > fastBuf[1]) && (low1 <= fastBuf[1] + (TestPullbackPips * pointUnit));
+   bool isBearishTest = isPullbackGreenToRed && (high1 < fastBuf[1]) && (high1 >= fastBuf[1] - (TestPullbackPips * pointUnit));
+
    // -------------------------------------------------------------
-   // 3. จังหวะเปิด Order ตะกร้าที่ 1 (ไม้แรก - อิง PA ที่แนวเทรนด์)
+   // 3. จังหวะเปิด Order ตะกร้าที่ 1 (ไม้แรก PA เต็ม หรือ ไม้เทส)
    // -------------------------------------------------------------
    if (totalPos == 0) {
+      // สัญญาณเข้าหลัก (PA เต็มรูปแบบ)
       if (isUptrend && isBullishPA) {
          double sl = curPriceBid - (InitialSLPips * pointUnit);
          trade.Buy(lot, _Symbol, 0, sl, 0, "PA Trend Buy");
@@ -125,6 +138,17 @@ void OnTick() {
       else if (isDowntrend && isBearishPA) {
          double sl = curPriceAsk + (InitialSLPips * pointUnit);
          trade.Sell(lot, _Symbol, 0, sl, 0, "PA Trend Sell");
+         return;
+      }
+      // สัญญาณไม้เทส (ย่อแล้วเด้งกลับ แต่ไม่โดนเทรนด์ไลน์)
+      else if (isUptrend && isBullishTest) {
+         double sl = curPriceBid - (InitialSLPips * pointUnit);
+         trade.Buy(lot, _Symbol, 0, sl, 0, "Test Order Buy");
+         return;
+      }
+      else if (isDowntrend && isBearishTest) {
+         double sl = curPriceAsk + (InitialSLPips * pointUnit);
+         trade.Sell(lot, _Symbol, 0, sl, 0, "Test Order Sell");
          return;
       }
    }
