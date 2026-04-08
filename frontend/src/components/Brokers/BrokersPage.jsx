@@ -92,6 +92,24 @@ export default function BrokersPage() {
     );
   };
 
+  const handleToggleActive = async (broker) => {
+    try {
+      const updated = await api.updateBroker(broker.id, { ...broker, is_active: !broker.is_active });
+      setBrokers(brokers.map(b => b.id === updated.id ? { ...b, is_active: updated.is_active } : b));
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleToggleAllowTeam = async (broker) => {
+    try {
+      await api.allowBrokerForTeam({ broker_id: broker.id, is_allowed: !broker.is_allowed_for_team });
+      setBrokers(brokers.map(b => b.id === broker.id ? { ...b, is_allowed_for_team: !broker.is_allowed_for_team } : b));
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -247,18 +265,46 @@ export default function BrokersPage() {
                       {renderStars(Number(broker.rating) || 0)}
                     </div>
                     
-                    {isAdmin && (
-                      <div style={{ display: 'flex', gap: 8, alignSelf: 'flex-start' }}>
-                        <button className="btn btn-ghost btn-icon" onClick={() => handleOpenEdit(broker)} title="แก้ไข">
-                          <Edit2 size={16} />
-                        </button>
-                        <button className="btn btn-ghost btn-icon" onClick={() => handleDelete(broker.id, broker.name)} style={{ color: 'var(--loss)' }} title="ลบ">
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    )}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignSelf: 'flex-start', alignItems: 'flex-end' }}>
+                      {isAdmin && (
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                          {broker.has_data ? (
+                             <span style={{ fontSize: 11, fontWeight: 700, color: '#10b981', background: 'rgba(16,185,129,0.1)', padding: '2px 6px', borderRadius: 4 }}>
+                               🟢 พร้อมเทรด
+                             </span>
+                          ) : (
+                             <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-muted)' }}>
+                               🟠 รอข้อมูล Data
+                             </span>
+                          )}
+                          <button onClick={() => handleToggleActive(broker)}
+                            className={`btn btn-sm ${broker.is_active ? 'btn-primary' : 'btn-outline'}`}
+                            style={{ fontSize: 11, padding: '2px 8px', height: 'auto', minHeight: 0 }}
+                          >
+                            {broker.is_active ? 'Active' : 'Inactive'}
+                          </button>
+                          <button className="btn btn-ghost btn-icon btn-sm" onClick={() => handleOpenEdit(broker)} title="แก้ไข">
+                            <Edit2 size={14} />
+                          </button>
+                          <button className="btn btn-ghost btn-icon btn-sm" onClick={() => handleDelete(broker.id, broker.name)} style={{ color: 'var(--loss)' }} title="ลบ">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      )}
+                      
+                      {broker.is_lead && (
+                        <div style={{ display: 'flex', gap: 8 }}>
+                           <button onClick={() => handleToggleAllowTeam(broker)}
+                             className={`btn btn-sm ${broker.is_allowed_for_team ? 'btn-primary' : 'btn-outline'}`}
+                             style={{ fontSize: 11, padding: '4px 12px', height: 'auto', minHeight: 0 }}
+                           >
+                             {broker.is_allowed_for_team ? '✅ อนุญาตสำหรับกลุ่ม' : '❌ ปิดกั้นสำหรับกลุ่ม'}
+                           </button>
+                        </div>
+                      )}
+                    </div>
                     
-                    {broker.rating >= 4.5 && !isAdmin && (
+                    {broker.rating >= 4.5 && !isAdmin && !broker.is_lead && (
                       <div style={{ position: 'absolute', top: 16, right: 16, background: 'rgba(255, 215, 0, 0.1)', color: '#FFD700', padding: '4px 8px', borderRadius: 8, fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
                         <Award size={12} /> TOP
                       </div>

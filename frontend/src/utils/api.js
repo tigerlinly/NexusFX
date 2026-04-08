@@ -241,6 +241,7 @@ export const api = {
   createBroker: (body) => request('/brokers', { method: 'POST', body: JSON.stringify(body) }),
   updateBroker: (id, body) => request(`/brokers/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   deleteBroker: (id) => request(`/brokers/${id}`, { method: 'DELETE' }),
+  allowBrokerForTeam: (body) => request('/brokers/allow-for-team', { method: 'PUT', body: JSON.stringify(body) }),
 
   // =============================================
   // Notifications (In-App)
