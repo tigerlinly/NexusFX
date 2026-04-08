@@ -52,8 +52,12 @@ void OnTick()
    if(totalTrades > 0 && netProfit >= TargetProfit)
    {
       trade.PositionClose(_Symbol);
+      ObjectDelete(0, "ZON_Max");
+      ObjectDelete(0, "ZON_Min");
       return;
    }
+
+   if(!g_DashIsRunning) return; // ถ้ากด Stop Bot ไว้ ไม่ให้เปิดไม้ใหม่
 
    if(totalTrades == 0)
    {
@@ -69,6 +73,28 @@ void OnTick()
 
    if(totalTrades > 0 && netProfit < 0)
    {
+      double zoneHi = 0, zoneLo = 0;
+      if(lastBuyPrice > 0 && lastSellPrice == 0) {
+         zoneHi = lastBuyPrice;
+         zoneLo = lastBuyPrice - (ZonePips * point);
+      } else if(lastSellPrice > 0 && lastBuyPrice == 0) {
+         zoneLo = lastSellPrice;
+         zoneHi = lastSellPrice + (ZonePips * point);
+      }
+      
+      // วาดกรอบตาข่าย
+      if(zoneHi > 0) {
+         if(ObjectFind(0, "ZON_Max") < 0) ObjectCreate(0, "ZON_Max", OBJ_HLINE, 0, 0, zoneHi);
+         ObjectSetDouble(0, "ZON_Max", OBJPROP_PRICE, zoneHi);
+         ObjectSetInteger(0, "ZON_Max", OBJPROP_COLOR, clrDodgerBlue);
+         ObjectSetInteger(0, "ZON_Max", OBJPROP_WIDTH, 2);
+         
+         if(ObjectFind(0, "ZON_Min") < 0) ObjectCreate(0, "ZON_Min", OBJ_HLINE, 0, 0, zoneLo);
+         ObjectSetDouble(0, "ZON_Min", OBJPROP_PRICE, zoneLo);
+         ObjectSetInteger(0, "ZON_Min", OBJPROP_COLOR, clrOrange);
+         ObjectSetInteger(0, "ZON_Min", OBJPROP_WIDTH, 2);
+      }
+
       if(lastBuyPrice > 0 && lastSellPrice == 0 && bid < lastBuyPrice - (ZonePips * point))
       {
          trade.Sell(nextLot, _Symbol, 0, 0, 0, "Zone Hedge Sell");

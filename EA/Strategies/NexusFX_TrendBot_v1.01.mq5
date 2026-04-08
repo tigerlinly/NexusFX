@@ -15,6 +15,7 @@ CTrade trade;
 input double   RiskPercent = 1.0;
 input int      FastEMA     = 50;
 input int      SlowEMA     = 200;
+input int      MaxPositions= 3;   // จำกัดจำนวนไม้สูงสุด (Pyramiding)
 input ulong    MagicNumber = 88882;
 
 int handleFast, handleSlow;
@@ -26,6 +27,10 @@ int OnInit() {
    handleSlow = iMA(_Symbol, PERIOD_CURRENT, SlowEMA, 0, MODE_EMA, PRICE_CLOSE);
    ArraySetAsSeries(fastBuf, true); 
    ArraySetAsSeries(slowBuf, true);
+   
+   // วาดเส้น EMA ลงบนกราฟแยกสีให้อัตโนมัติ
+   ChartIndicatorAdd(0, 0, handleFast);
+   ChartIndicatorAdd(0, 0, handleSlow);
    
    DASH_PREFIX = "NXTrd_";
    Dash_CreatePanel("NexusFX TrendBot", MagicNumber);
@@ -51,7 +56,9 @@ void OnTick() {
    string sigStatus = (pos > 0) ? "IN TRADE" : "SCAN EMA CROSS";
    Dash_UpdatePanel(sigStatus, (pos > 0) ? BuyColor : NeutralColor, pos, pnl);
 
-   if(pos > 0) return;
+   if(pos >= MaxPositions) return;
+   if(pos > 0 && pnl <= 0) return; // ออกไม้เพิ่มเฉพาะตอนกำไร (Scaling-In)
+   if(!g_DashIsRunning) return; // ถ้ากด Stop Bot ไว้ ไม่ให้เปิดไม้ใหม่
 
    if(CopyBuffer(handleFast, 0, 0, 2, fastBuf) < 2) return;
    if(CopyBuffer(handleSlow, 0, 0, 2, slowBuf) < 2) return;

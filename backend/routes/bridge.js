@@ -66,6 +66,9 @@ router.use(bridgeAuth);
 // EA sends a ping every 5-10 seconds to keep connection alive
 router.get('/ping', async (req, res) => {
   try {
+    const SystemConfig = require('../services/systemConfig');
+    const isKillSwitch = await SystemConfig.get('GLOBAL_KILL_SWITCH', false);
+
     const { balance, equity } = req.query; // EA can optionally send balance on ping
     
     let updateQuery = `UPDATE accounts SET is_connected = true, last_sync_at = NOW()`;
@@ -80,7 +83,12 @@ router.get('/ping', async (req, res) => {
     
     await pool.query(updateQuery, queryParams);
     
-    res.json({ success: true, message: 'Pong', account_id: req.account.id });
+    res.json({ 
+      success: true, 
+      message: 'Pong', 
+      account_id: req.account.id,
+      kill_switch: isKillSwitch
+    });
   } catch (err) {
     console.error('Bridge ping error:', err);
     res.status(500).json({ error: 'Internal bridge error' });
@@ -140,7 +148,23 @@ router.post('/sync', async (req, res) => {
         ]);
       }
     }
-    
+
+    // 2.5 Close Missing Trades (If they are no longer in the Open positions payload, they have been closed)
+    const activeTickets = (trades && Array.isArray(trades)) ? trades.map(t => String(t.ticket)) : [];
+    if (activeTickets.length > 0) {
+      await client.query(`
+        UPDATE trades
+        SET status = 'CLOSED', closed_at = NOW(), exit_price = current_price
+        WHERE account_id = $1 AND status = 'OPEN' AND ticket != ALL($2)
+      `, [req.account.id, activeTickets]);
+    } else {
+      await client.query(`
+        UPDATE trades
+        SET status = 'CLOSED', closed_at = NOW(), exit_price = current_price
+        WHERE account_id = $1 AND status = 'OPEN'
+      `, [req.account.id]);
+    }
+
     await client.query('COMMIT');
     
     // Broadcast via socketio so frontend sees the update instantly
@@ -166,10 +190,14 @@ router.post('/sync', async (req, res) => {
 
     const pendingCommands = pendingOrdersResult.rows;
 
+    const SystemConfig = require('../services/systemConfig');
+    const isKillSwitch = await SystemConfig.get('GLOBAL_KILL_SWITCH', false);
+
     res.json({ 
       success: true, 
       synced_trades: trades ? trades.length : 0,
-      pending_commands: pendingCommands
+      pending_commands: pendingCommands,
+      kill_switch: isKillSwitch
     });
   } catch (err) {
     await client.query('ROLLBACK');

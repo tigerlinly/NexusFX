@@ -332,19 +332,22 @@ export default function AccountsPage() {
                 <div>
                   {acc.is_connected ? (
                     <span style={{ color: 'var(--profit)', fontSize: 11, display: 'flex', alignItems: 'center', gap: 3 }}>
-                      <Link2 size={11} /> เชื่อมต่อแล้ว
+                      <CheckCircle2 size={11} /> เชื่อมต่อแล้ว
                     </span>
                   ) : (
-                    <span style={{ color: 'var(--text-muted)', fontSize: 11, display: 'flex', alignItems: 'center', gap: 3 }}>
-                      <Link2Off size={11} /> ยังไม่เชื่อมต่อ
-                    </span>
+                    <button 
+                      onClick={() => fetchAccounts()}
+                      className="btn btn-ghost btn-sm"
+                      style={{ color: 'var(--accent-primary)', fontSize: 11, padding: '2px 6px', display: 'flex', alignItems: 'center', gap: 4, height: 'auto', minHeight: 0, border: '1px solid rgba(59, 130, 246, 0.3)' }}
+                    >
+                      <RefreshCw size={11} /> ซิงค์สถานะ
+                    </button>
                   )}
                   <div style={{ fontSize: 9, color: 'var(--text-muted)' }}>
                     {acc.last_sync_at ? `Sync: ${new Date(acc.last_sync_at).toLocaleTimeString('th-TH')}` : ''}
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end', flexShrink: 0 }}>
-                  {/* MetaApi Sync button removed */}
                   <button className="btn btn-ghost btn-icon btn-sm" onClick={() => handleEdit(acc)}
                     style={{ color: 'var(--text-secondary)', padding: '4px' }} title="แก้ไขบัญชี">
                     <Pencil size={13} />

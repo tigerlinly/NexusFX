@@ -15,6 +15,7 @@ CTrade trade;
 input double   RiskPercent = 1.0;
 input ENUM_TIMEFRAMES BreakoutTF = PERIOD_H1;
 input int      Lookback    = 20;
+input int      MaxPositions= 3;   // จำกัดจำนวนไม้สูงสุด (Pyramiding)
 input ulong    MagicNumber = 88883;
 
 int OnInit() {
@@ -39,7 +40,9 @@ void OnTick() {
    string sigStatus = (pos > 0) ? "IN TRADE" : "WAITING BREAKOUT";
    Dash_UpdatePanel(sigStatus, (pos > 0) ? BuyColor : NeutralColor, pos, pnl);
 
-   if(pos > 0) return;
+   if(pos >= MaxPositions) return;
+   if(pos > 0 && pnl <= 0) return; // ออกไม้เพิ่มเฉพาะตอนกำไรเท่านั้น (Scaling-In)
+   if(!g_DashIsRunning) return; // ถ้ากด Stop Bot ไว้ ไม่ให้เปิดไม้ใหม่
 
    double highData[], lowData[];
    ArraySetAsSeries(highData, true);
@@ -54,6 +57,19 @@ void OnTick() {
    double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
    double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
    double lot = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
+
+   // --- วาดเส้น Zone กรอบ Breakout ลงบนกราฟ (สี Cyan และ Magenta) ---
+   if(ObjectFind(0, "Brk_Max") < 0) ObjectCreate(0, "Brk_Max", OBJ_HLINE, 0, 0, H1_Max);
+   ObjectSetDouble(0, "Brk_Max", OBJPROP_PRICE, H1_Max);
+   ObjectSetInteger(0, "Brk_Max", OBJPROP_COLOR, clrCyan);
+   ObjectSetInteger(0, "Brk_Max", OBJPROP_STYLE, STYLE_DASH);
+   
+   if(ObjectFind(0, "Brk_Min") < 0) ObjectCreate(0, "Brk_Min", OBJ_HLINE, 0, 0, H1_Min);
+   ObjectSetDouble(0, "Brk_Min", OBJPROP_PRICE, H1_Min);
+   ObjectSetInteger(0, "Brk_Min", OBJPROP_COLOR, clrMagenta);
+   ObjectSetInteger(0, "Brk_Min", OBJPROP_STYLE, STYLE_DASH);
+   ChartRedraw();
+   // -------------------------------------------------------------
 
    // ทะลุกรอบ High รอสวน
    if(ask > H1_Max)

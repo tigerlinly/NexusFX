@@ -11,7 +11,8 @@
 #property description "Data Feeder with Dashboard - v0.0.1"
 #property strict
 
-input string   InpGatewayURL        = "http://127.0.0.1:3000/api/ingest"; 
+input string   InpGatewayURL        = "http://203.151.66.51:4000/api/bridge/feed"; 
+input string   InpFeedToken         = "NEXUS_FEED_SECRET_123";
 input string   InpBrokerName        = "EXNESS";                           
 
 string targetSymbols[] = {
@@ -137,7 +138,7 @@ string TimeframeToString(ENUM_TIMEFRAMES tf) {
 
 void OnTimer() {
     int totalSymbols = ArraySize(targetSymbols);
-    string jsonPayload = "[";
+    string jsonPayload = "{\"candles\":[";
     bool isFirst = true;
     int payloadCount = 0;
     int failCount = 0;
@@ -170,8 +171,8 @@ void OnTimer() {
             jsonPayload += "{";
             jsonPayload += "\"broker\":\"" + InpBrokerName + "\",";
             jsonPayload += "\"symbol\":\"" + sym + "\",";
-            jsonPayload += "\"timeframe\":\"" + TimeframeToString(tfs[i]) + "\",";
-            jsonPayload += "\"timestamp\":" + IntegerToString(rates[0].time) + ",";
+            jsonPayload += "\"interval\":\"" + TimeframeToString(tfs[i]) + "\",";
+            jsonPayload += "\"open_time\":" + IntegerToString(rates[0].time) + ",";
             jsonPayload += "\"open\":" + DoubleToString(rates[0].open, digits) + ",";
             jsonPayload += "\"high\":" + DoubleToString(rates[0].high, digits) + ",";
             jsonPayload += "\"low\":" + DoubleToString(rates[0].low, digits) + ",";
@@ -189,7 +190,7 @@ void OnTimer() {
             activeSymCount++;
         }
     }
-    jsonPayload += "]";
+    jsonPayload += "]}";
     
     dash_payload_count = payloadCount;
     dash_fail_count = failCount;
@@ -203,6 +204,7 @@ void OnTimer() {
     if(payloadCount > 0) {
         char post[], result[];
         string headers = "Content-Type: application/json\r\n";
+        headers += "x-feed-token: " + InpFeedToken + "\r\n";
         StringToCharArray(jsonPayload, post, 0, WHOLE_ARRAY, CP_UTF8);
         ArrayResize(post, ArraySize(post) - 1); 
         

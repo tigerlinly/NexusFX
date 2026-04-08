@@ -15,6 +15,7 @@ CTrade trade;
 input int    DonchianPeriod = 20;
 input int    ATRPeriod      = 14;
 input double RiskPercent    = 1.0;
+input int    MaxPositions   = 3; // จำกัดจำนวนไม้
 input ulong  MagicNumber    = 22222;
 
 int handleATR;
@@ -43,7 +44,9 @@ void OnTick()
    string sigStatus = (pos > 0) ? "IN TRADE" : "WAITING BREAKOUT";
    Dash_UpdatePanel(sigStatus, (pos > 0) ? BuyColor : NeutralColor, pos, pnl);
 
-   if(pos > 0) return;
+   if(pos >= MaxPositions) return;
+   if(pos > 0 && pnl <= 0) return;
+   if(!g_DashIsRunning) return; // ถ้ากด Stop Bot ไว้ ไม่ให้เปิดไม้ใหม่
 
    double high20[], low20[];
    if(CopyHigh(_Symbol, PERIOD_CURRENT, 1, DonchianPeriod, high20) < DonchianPeriod) return;
@@ -57,6 +60,16 @@ void OnTick()
    double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
    double lot = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN); // Replace with ATR math
    double atr = atrBuf[0];
+
+   // วาดเส้น Donchian
+   if(ObjectFind(0, "Tur_Max") < 0) ObjectCreate(0, "Tur_Max", OBJ_HLINE, 0, 0, maxH);
+   ObjectSetDouble(0, "Tur_Max", OBJPROP_PRICE, maxH);
+   ObjectSetInteger(0, "Tur_Max", OBJPROP_COLOR, clrLime);
+   
+   if(ObjectFind(0, "Tur_Min") < 0) ObjectCreate(0, "Tur_Min", OBJ_HLINE, 0, 0, minL);
+   ObjectSetDouble(0, "Tur_Min", OBJPROP_PRICE, minL);
+   ObjectSetInteger(0, "Tur_Min", OBJPROP_COLOR, clrOrangeRed);
+   ChartRedraw();
 
    if(ask > maxH) 
    {

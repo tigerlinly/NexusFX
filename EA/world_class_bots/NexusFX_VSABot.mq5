@@ -13,7 +13,8 @@
 CTrade trade;
 
 input ulong  MagicNumber = 55555;
-input double VolThreshold = 2.0;
+input double VolThreshold= 2.0;
+input int    MaxPositions= 3; // จำกัดจำนวนไม้
 
 int OnInit() { 
    trade.SetExpertMagicNumber(MagicNumber); 
@@ -32,7 +33,9 @@ void OnTick()
    string sigStatus = (pos > 0) ? "IN TRADE" : "SCAN VOLUME";
    Dash_UpdatePanel(sigStatus, (pos > 0) ? BuyColor : NeutralColor, pos, pnl);
 
-   if(pos > 0) return;
+   if(pos >= MaxPositions) return;
+   if(pos > 0 && pnl <= 0) return;
+   if(!g_DashIsRunning) return; // ถ้ากด Stop Bot ไว้ ไม่ให้เปิดไม้ใหม่
 
    MqlRates rates[];
    ArraySetAsSeries(rates, true);
@@ -52,10 +55,22 @@ void OnTick()
       
       if(rates[0].close > rates[0].low + (spread0 * 0.7))
       {
+         string arName = "VSA_Arr_" + IntegerToString(rates[0].time);
+         if(ObjectFind(0, arName) < 0) {
+             ObjectCreate(0, arName, OBJ_ARROW_UP, 0, rates[0].time, rates[0].low);
+             ObjectSetInteger(0, arName, OBJPROP_COLOR, clrDodgerBlue);
+             ObjectSetInteger(0, arName, OBJPROP_WIDTH, 3);
+         }
          trade.Buy(lot, _Symbol, 0, rates[0].low, 0, "VSA Accumulation");
       }
       else if(rates[0].close < rates[0].low + (spread0 * 0.3))
       {
+         string arName = "VSA_Arr_" + IntegerToString(rates[0].time);
+         if(ObjectFind(0, arName) < 0) {
+             ObjectCreate(0, arName, OBJ_ARROW_DOWN, 0, rates[0].time, rates[0].high);
+             ObjectSetInteger(0, arName, OBJPROP_COLOR, clrCrimson);
+             ObjectSetInteger(0, arName, OBJPROP_WIDTH, 3);
+         }
          trade.Sell(lot, _Symbol, 0, rates[0].high, 0, "VSA Distribution");
       }
    }

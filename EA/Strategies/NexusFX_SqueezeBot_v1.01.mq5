@@ -16,6 +16,7 @@ input double   RiskPercent = 1.0;
 input int      BB_Period   = 20;
 input double   BB_Dev      = 2.0;
 input double   SqueezePips = 100.0; // Distance max for sideway box
+input int      MaxPositions= 3;     // จำกัดจำนวนไม้ (Pyramiding)
 input ulong    MagicNumber = 88881;
 
 int handleBB;
@@ -28,6 +29,7 @@ int OnInit() {
    ArraySetAsSeries(bbLowBuf, true);
    DASH_PREFIX = "NXSqz_";
    Dash_CreatePanel("NexusFX SqueezeBot", MagicNumber);
+   ChartIndicatorAdd(0, 0, handleBB); // วาด BB ลงกราฟ
    return INIT_SUCCEEDED;
 }
 void OnDeinit(const int reason) { IndicatorRelease(handleBB); Dash_DeletePanel(); }
@@ -46,7 +48,9 @@ void OnTick() {
    string sigStatus = (pos > 0) ? "IN TRADE" : "SCAN BB SQUEEZE";
    Dash_UpdatePanel(sigStatus, (pos > 0) ? BuyColor : NeutralColor, pos, pnl);
 
-   if(pos > 0) return; // One trade at a time
+   if(pos >= MaxPositions) return;
+   if(pos > 0 && pnl <= 0) return;
+   if(!g_DashIsRunning) return; // ถ้ากด Stop Bot ไว้ ไม่ให้เปิดไม้ใหม่
 
    if(CopyBuffer(handleBB, 1, 0, 2, bbUpBuf) < 2) return;
    if(CopyBuffer(handleBB, 2, 0, 2, bbLowBuf) < 2) return;

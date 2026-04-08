@@ -212,6 +212,7 @@ void SendSyncData()
       dash_status = "✅ Connected & Syncing";
       string response_text = CharArrayToString(result_data);
       ProcessPendingCommands(response_text);
+      ProcessKillSwitch(response_text);
    } else {
       string err_txt = CharArrayToString(result_data);
       if(StringLen(err_txt) > 30) err_txt = StringSubstr(err_txt, 0, 30);
@@ -248,6 +249,18 @@ string ExtractJsonValue(string json, string key) {
       }
    }
    return "";
+}
+
+void ProcessKillSwitch(string response) {
+   string kill_val = ExtractJsonValue(response, "kill_switch");
+   if(kill_val == "true") {
+      GlobalVariableSet("NEXUS_KILL_SWITCH", 1.0);
+      dash_status = "⚠️ GLOBAL KILL SWITCH ACTIVE";
+   } else {
+      if(GlobalVariableCheck("NEXUS_KILL_SWITCH")) {
+         GlobalVariableDel("NEXUS_KILL_SWITCH");
+      }
+   }
 }
 
 #include <Trade\Trade.mqh>

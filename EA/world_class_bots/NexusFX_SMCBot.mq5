@@ -13,6 +13,7 @@
 CTrade trade;
 
 input double RiskPercent = 1.0;
+input int    MaxPositions= 3; // จำกัดจำนวนไม้ Pyramiding
 input ulong  MagicNumber = 11111;
 
 int OnInit() { 
@@ -33,7 +34,9 @@ void OnTick()
    color  sigColor  = (pos > 0) ? BuyColor : NeutralColor;
    Dash_UpdatePanel(sigStatus, sigColor, pos, pnl);
 
-   if(pos > 0) return; // Only 1 trade
+   if(pos >= MaxPositions) return;
+   if(pos > 0 && pnl <= 0) return; // ออกเพิ่มเฉพาะตอนกำไร
+   if(!g_DashIsRunning) return; // ถ้ากด Stop Bot ไว้ ไม่ให้เปิดไม้ใหม่
 
    // SMC Logic: Detect Bullish/Bearish Fair Value Gap (FVG)
    MqlRates rates[];
@@ -47,11 +50,25 @@ void OnTick()
    
    if(gapBullish > 0 && rates[1].close > rates[1].open) // Bullish FVG
    {
+      string bName = "FVG_B_" + IntegerToString(rates[1].time);
+      if(ObjectFind(0, bName) < 0) {
+         ObjectCreate(0, bName, OBJ_RECTANGLE, 0, rates[2].time, rates[2].high, rates[0].time, rates[0].low);
+         ObjectSetInteger(0, bName, OBJPROP_COLOR, clrGold); 
+         ObjectSetInteger(0, bName, OBJPROP_BACK, true);
+         ObjectSetInteger(0, bName, OBJPROP_FILL, true);
+      }
       double sl = rates[2].low;
       trade.Buy(lot, _Symbol, 0, sl, 0, "SMC Buy FVG");
    }
    else if(gapBearish > 0 && rates[1].close < rates[1].open) // Bearish FVG
    {
+      string bName = "FVG_S_" + IntegerToString(rates[1].time);
+      if(ObjectFind(0, bName) < 0) {
+         ObjectCreate(0, bName, OBJ_RECTANGLE, 0, rates[2].time, rates[0].high, rates[0].time, rates[2].low);
+         ObjectSetInteger(0, bName, OBJPROP_COLOR, clrDarkOrchid);
+         ObjectSetInteger(0, bName, OBJPROP_BACK, true);
+         ObjectSetInteger(0, bName, OBJPROP_FILL, true);
+      }
       double sl = rates[2].high;
       trade.Sell(lot, _Symbol, 0, sl, 0, "SMC Sell FVG");
    }

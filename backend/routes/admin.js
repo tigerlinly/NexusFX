@@ -496,7 +496,15 @@ router.post('/kill-switch', async (req, res) => {
        RETURNING id`
     );
 
-    // 3. Log the crisis action
+    // 3. Mark kill switch active in system config
+    await pool.query(
+      `INSERT INTO system_config (key, value, category, description)
+       VALUES ('GLOBAL_KILL_SWITCH', 'true', 'general', 'Emergency trading halt')
+       ON CONFLICT (key) DO UPDATE SET value = 'true'`
+    );
+    require('../services/systemConfig').refresh();
+
+    // 4. Log the crisis action
     await pool.query(
       `INSERT INTO audit_logs (user_id, action, entity_type, details, ip_address)
        VALUES ($1, 'admin.kill_switch_activated', 'system', $2, $3)`,
@@ -587,6 +595,7 @@ router.put('/system-config', async (req, res) => {
       [req.user.id, JSON.stringify({ key }), req.ip]
     );
 
+    require('../services/systemConfig').refresh();
     res.json({ success: true });
   } catch (err) {
     console.error('System config update error:', err);
@@ -620,6 +629,7 @@ router.put('/system-config/bulk', async (req, res) => {
       [req.user.id, JSON.stringify({ updated_count: updated }), req.ip]
     );
     await client.query('COMMIT');
+    require('../services/systemConfig').refresh();
     res.json({ success: true, updated });
   } catch (err) {
     await client.query('ROLLBACK');

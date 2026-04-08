@@ -15,6 +15,7 @@ CTrade trade;
 input string SymbolA = "EURUSD";
 input string SymbolB = "GBPUSD";
 input double SpreadThreshold = 0.0050; // Divergence condition
+input double TargetProfit  = 5.0;      // Profit to close pair
 input ulong  MagicNumber = 33333;
 
 int OnInit() { 
@@ -34,7 +35,17 @@ void OnTick()
    string sigStatus = (pos > 0) ? "HEDGING PAIRS" : "SCANNING SPREAD";
    Dash_UpdatePanel(sigStatus, (pos > 0) ? BuyColor : NeutralColor, pos, pnl);
 
-   if(pos > 0) return; // Wait for positions to clear
+   if(pos > 0) {
+      if(pnl >= TargetProfit) {
+         for(int i = PositionsTotal() - 1; i >= 0; i--) {
+            string sym = PositionGetSymbol(i);
+            if(sym == SymbolA || sym == SymbolB) {
+               trade.PositionClose(PositionGetTicket(i));
+            }
+         }
+      }
+      return; // Wait for positions to clear or hit profit
+   }
 
    double priceA = SymbolInfoDouble(SymbolA, SYMBOL_BID);
    double priceB = SymbolInfoDouble(SymbolB, SYMBOL_BID);

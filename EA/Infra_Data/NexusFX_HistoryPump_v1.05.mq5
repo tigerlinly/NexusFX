@@ -10,7 +10,8 @@
 #property version   "1.05"
 // ถูกปรับเปลี่ยนจาก Script เป็น Expert Advisor (EA) เพื่อให้ทำงานตลอดเวลา
 
-input string   InpGatewayURL        = "http://127.0.0.1:4000/api/ingest"; 
+input string   InpGatewayURL        = "http://203.151.66.51:4000/api/bridge/feed"; 
+input string   InpFeedToken         = "NEXUS_FEED_SECRET_123";
 input string   InpBrokerName        = "EXNESS";                       
 input int      InpMaxYearsIfNoData  = 2; // ย้อนหลังสูงสุดกี่ปี (หากไม่มีประวัติ)
 
@@ -58,6 +59,7 @@ int GetTFIndex(string tf_str) {
 bool SendToGateway(string json) {
     char post[], result[];
     string headers = "Content-Type: application/json\r\n";
+    headers += "x-feed-token: " + InpFeedToken + "\r\n";
     
     StringToCharArray(json, post, 0, WHOLE_ARRAY, CP_UTF8);
     ArrayResize(post, ArraySize(post) - 1); 
@@ -123,7 +125,7 @@ void PerformPump(bool createSummaryCSV) {
                     int totalChunks = (copied / chunkSize) + 1;
                     
                     for(int chunk = 0; chunk < totalChunks; chunk++) {
-                        string jsonPayload = "[";
+                        string jsonPayload = "{\"candles\":[";
                         bool isFirst = true;
                         int startIdx = chunk * chunkSize;
                         int endIdx = startIdx + chunkSize;
@@ -135,8 +137,8 @@ void PerformPump(bool createSummaryCSV) {
                             jsonPayload += "{";
                             jsonPayload += "\"broker\":\"" + InpBrokerName + "\",";
                             jsonPayload += "\"symbol\":\"" + currentSymbol + "\",";
-                            jsonPayload += "\"timeframe\":\"" + tf_str + "\",";
-                            jsonPayload += "\"timestamp\":" + IntegerToString(rates[k].time) + ",";
+                            jsonPayload += "\"interval\":\"" + tf_str + "\",";
+                            jsonPayload += "\"open_time\":" + IntegerToString(rates[k].time) + ",";
                             jsonPayload += "\"open\":" + DoubleToString(rates[k].open, currentDigits) + ",";
                             jsonPayload += "\"high\":" + DoubleToString(rates[k].high, currentDigits) + ",";
                             jsonPayload += "\"low\":" + DoubleToString(rates[k].low, currentDigits) + ",";
@@ -145,7 +147,7 @@ void PerformPump(bool createSummaryCSV) {
                             jsonPayload += "}";
                             isFirst = false;
                         }
-                        jsonPayload += "]";
+                        jsonPayload += "]}";
                         if(!SendToGateway(jsonPayload)) all_success = false;
                         Sleep(50); 
                     }
