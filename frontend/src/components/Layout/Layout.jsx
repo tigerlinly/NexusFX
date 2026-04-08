@@ -158,6 +158,10 @@ export default function Layout() {
           {isAdmin && (
             <>
               {showLabels && <div className="sidebar-section-title">ผู้ดูแล</div>}
+              <NavLink to="/admin/dashboard" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="Admin Dashboard">
+                <BarChart3 size={18} className="nav-icon" />
+                {showLabels && <span>Admin Dashboard</span>}
+              </NavLink>
               <NavLink to="/admin" className={({ isActive }) => `nav-item ${isActive && window.location.pathname === '/admin' ? 'active' : ''}`} title="แผงควบคุม" end>
                 <Shield size={18} className="nav-icon" />
                 {showLabels && <span>แผงควบคุม</span>}
