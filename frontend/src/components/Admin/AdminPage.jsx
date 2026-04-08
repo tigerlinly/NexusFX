@@ -8,6 +8,7 @@ import {
   Building, UserPlus, Percent, X, Zap, CheckCircle, Calculator, RefreshCw, Trash2
 } from 'lucide-react';
 import DockerNodes from './DockerNodes';
+import AdminUsageDashboard from './AdminUsageDashboard';
 
 export default function AdminPage() {
   const { user } = useAuth();
@@ -385,74 +386,7 @@ export default function AdminPage() {
           <div style={{ padding: 'var(--space-xl)' }}>
             {/* Overview Tab */}
             {activeTab === 'overview' && overview && (
-              <div>
-                <div className="stat-grid" style={{ marginBottom: 24 }}>
-                  <div className="card" style={{ background: 'var(--bg-tertiary)' }}>
-                    <div className="card-header">
-                      <span className="card-title">ผู้ใช้ทั้งหมด</span>
-                      <Users size={16} style={{ color: 'var(--accent-primary)' }} />
-                    </div>
-                    <div className="card-value">{overview.total_users}</div>
-                    <div className="card-sub">{overview.active_traders} คนมีบัญชีเทรด</div>
-                  </div>
-                  <div className="card" style={{ background: 'var(--bg-tertiary)' }}>
-                    <div className="card-header">
-                      <span className="card-title">เทรดทั้งหมด</span>
-                      <BarChart3 size={16} style={{ color: 'var(--accent-secondary)' }} />
-                    </div>
-                    <div className="card-value">{overview.total_trades.toLocaleString()}</div>
-                  </div>
-                  <div className="card" style={{ background: 'var(--bg-tertiary)' }}>
-                    <div className="card-header">
-                      <span className="card-title">กลุ่มทั้งหมด</span>
-                      <Users size={16} style={{ color: 'var(--accent-tertiary)' }} />
-                    </div>
-                    <div className="card-value">{overview.total_groups}</div>
-                  </div>
-                  <div className="card" style={{ background: 'var(--bg-tertiary)' }}>
-                    <div className="card-header">
-                      <span className="card-title">กำไรรวมระบบ</span>
-                      <DollarSign size={16} style={{ color: overview.total_pnl >= 0 ? 'var(--profit)' : 'var(--loss)' }} />
-                    </div>
-                    <div className={`card-value ${overview.total_pnl >= 0 ? 'profit' : 'loss'}`}>
-                      {formatCurrency(overview.total_pnl)}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Revenue */}
-                <h4 style={{ fontSize: 15, fontWeight: 600, marginBottom: 16 }}>💰 ข้อมูลรายได้</h4>
-                <div className="stat-grid">
-                  <div className="card" style={{ background: 'var(--bg-tertiary)' }}>
-                    <div className="card-title" style={{ marginBottom: 8 }}>ฝากเงินรวม</div>
-                    <div className="card-value profit" style={{ fontSize: 20 }}>{formatCurrency(overview.revenue?.total_deposits)}</div>
-                  </div>
-                  <div className="card" style={{ background: 'var(--bg-tertiary)' }}>
-                    <div className="card-title" style={{ marginBottom: 8 }}>ถอนเงินรวม</div>
-                    <div className="card-value loss" style={{ fontSize: 20 }}>{formatCurrency(overview.revenue?.total_withdrawals)}</div>
-                  </div>
-                  <div className="card" style={{ background: 'var(--bg-tertiary)' }}>
-                    <div className="card-title" style={{ marginBottom: 8 }}>ค่าธรรมเนียมรวม</div>
-                    <div className="card-value" style={{ fontSize: 20, color: 'var(--warning)' }}>{formatCurrency(overview.revenue?.total_fees)}</div>
-                  </div>
-                </div>
-
-                {/* Roles */}
-                {roles.length > 0 && (
-                  <div style={{ marginTop: 24 }}>
-                    <h4 style={{ fontSize: 15, fontWeight: 600, marginBottom: 16 }}>🔑 บทบาทในระบบ</h4>
-                    <div style={{ display: 'flex', gap: 12 }}>
-                      {roles.map(r => (
-                        <div key={r.id} className="card" style={{ background: 'var(--bg-tertiary)', flex: 1 }}>
-                          <div style={{ fontWeight: 600, textTransform: 'capitalize', marginBottom: 4 }}>{r.role_name}</div>
-                          <div style={{ fontSize: 24, fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{r.user_count}</div>
-                          <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{r.description}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
+              <AdminUsageDashboard overview={overview} roles={roles} />
             )}
 
             {/* Users Tab */}
