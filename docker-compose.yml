@@ -4,6 +4,27 @@ services:
   # =============================================
   # NexusFX Backend API
   # =============================================
+  # =============================================
+  # NexusFX Database (PostgreSQL)
+  # =============================================
+  db:
+    image: postgres:15-alpine
+    container_name: nexusfx-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: nexusfx_secure_password
+      POSTGRES_DB: nexusfx
+    ports:
+      - "5433:5432"
+    volumes:
+      - nexusfx_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d nexusfx"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   api:
     build:
       context: ./backend
@@ -26,6 +47,9 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+    depends_on:
+      db:
+        condition: service_healthy
 
   # =============================================
   # NexusFX Frontend Web Server (Nginx)
@@ -85,3 +109,5 @@ volumes:
   certbot-var:
     driver: local
   mt5-data-1:
+  nexusfx_pgdata:
+    external: true
