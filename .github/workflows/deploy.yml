@@ -21,7 +21,7 @@ jobs:
       - name: Rebuild & restart containers
         run: |
           cd /var/www/nexusfx
-          docker compose up -d --build api web mt5-node-1
+          docker compose up -d --build --force-recreate api web
 
       - name: Wait for health check
         run: sleep 5
