@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NexusFX EA vs Marketplace — Trading Technique Matrix</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:         #0d1117;
+    --surface:    #161b22;
+    --surface2:   #21262d;
+    --border:     #30363d;
+    --accent:     #58a6ff;
+    --accent2:    #1f6feb;
+    --green:      #3fb950;
+    --green-dim:  #1a3a22;
+    --yellow:     #d29922;
+    --yellow-dim: #2f2100;
+    --red:        #ff7b72;
+    --red-dim:    #3d1c1c;
+    --purple:     #bc8cff;
+    --purple-dim: #2d1f4a;
+    --teal:       #39d353;
+    --text:       #e6edf3;
+    --text-muted: #8b949e;
+    --header-h:   54px;
+    --row-h:      40px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    min-height: 100vh;
+    padding: 24px;
+  }
+
+  /* ===== PAGE TITLE ===== */
+  .page-title {
+    text-align: center;
+    margin-bottom: 28px;
+  }
+  .page-title h1 {
+    font-size: 26px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #58a6ff, #bc8cff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -0.5px;
+    margin-bottom: 6px;
+  }
+  .page-title p {
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+
+  /* ===== LEGEND ===== */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .legend-dot {
+    width: 12px; height: 12px;
+    border-radius: 3px;
+  }
+
+  /* ===== WRAPPER ===== */
+  .table-wrap {
+    overflow-x: auto;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  }
+
+  /* ===== TABLE ===== */
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 1400px;
+  }
+
+  /* ===== HEADER ===== */
+  thead tr.market-header th {
+    background: var(--surface);
+    height: var(--header-h);
+    padding: 0 14px;
+    font-weight: 700;
+    font-size: 12px;
+    text-align: center;
+    letter-spacing: 0.3px;
+    border-bottom: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    white-space: nowrap;
+  }
+  thead tr.market-header th:first-child {
+    text-align: left;
+    min-width: 240px;
+    background: var(--surface2);
+    border-right: 2px solid var(--accent2);
+    color: var(--text-muted);
+    font-size: 11px;
+  }
+  .th-market {
+    color: var(--accent);
+  }
+  .th-market span.flag {
+    font-size: 16px;
+    margin-right: 4px;
+  }
+
+  /* ===== CATEGORY ROWS ===== */
+  tr.cat-row td {
+    background: linear-gradient(90deg, var(--surface2) 0%, #1a1f26 100%);
+    padding: 6px 14px 6px 16px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+    border-top: 2px solid var(--border);
+  }
+
+  /* ===== DATA ROWS ===== */
+  tbody tr.data-row {
+    transition: background 0.15s;
+  }
+  tbody tr.data-row:hover {
+    background: rgba(88,166,255,0.04);
+  }
+  tbody tr.data-row td {
+    border-bottom: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    height: var(--row-h);
+  }
+
+  /* EA Name cell */
+  td.ea-name {
+    padding: 0 14px;
+    min-width: 240px;
+    background: var(--surface2);
+    border-right: 2px solid var(--accent2) !important;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  td.ea-name .ea-label {
+    font-size: 12px;
+    color: var(--text);
+  }
+  td.ea-name .ea-sub {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+  td.ea-name .magic {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px;
+    color: var(--text-muted);
+    opacity: 0.7;
+  }
+
+  /* Data cell */
+  td.cell {
+    padding: 0 10px;
+    text-align: center;
+    vertical-align: middle;
+    min-width: 130px;
+  }
+
+  /* ===== TAGS ===== */
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 10.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    line-height: 1.5;
+  }
+  .tag-green   { background: var(--green-dim);  color: var(--green);  border: 1px solid rgba(63,185,80,0.3); }
+  .tag-blue    { background: rgba(31,111,235,0.2); color: var(--accent); border: 1px solid rgba(88,166,255,0.3); }
+  .tag-purple  { background: var(--purple-dim); color: var(--purple); border: 1px solid rgba(188,140,255,0.3); }
+  .tag-yellow  { background: var(--yellow-dim); color: var(--yellow); border: 1px solid rgba(210,153,34,0.3); }
+  .tag-red     { background: var(--red-dim);    color: var(--red);    border: 1px solid rgba(255,123,114,0.3); }
+  .tag-teal    { background: rgba(20,60,40,0.6); color: #3dd68c;     border: 1px solid rgba(61,214,140,0.3); }
+  .tag-gray    { background: rgba(48,54,61,0.8); color: var(--text-muted); border: 1px solid var(--border); }
+
+  /* stack multiple tags */
+  .tag-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 4px 0;
+  }
+
+  /* N/A cell */
+  .na {
+    color: var(--border);
+    font-size: 18px;
+    font-weight: 300;
+    user-select: none;
+  }
+
+  /* ===== SCORE BADGE ===== */
+  .score-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .score-pill {
+    width: 34px;
+    height: 18px;
+    border-radius: 9px;
+    font-size: 9px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .s-high   { background: var(--green-dim); color: var(--green); border: 1px solid rgba(63,185,80,0.5); }
+  .s-medium { background: var(--yellow-dim); color: var(--yellow); border: 1px solid rgba(210,153,34,0.5); }
+  .s-low    { background: rgba(48,54,61,0.8); color: var(--text-muted); border: 1px solid var(--border); }
+
+  /* ===== FOOTER ===== */
+  .footer {
+    margin-top: 24px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 11px;
+    line-height: 1.7;
+  }
+
+  /* ===== SUMMARY CARDS ===== */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    text-align: center;
+  }
+  .card .num {
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1.1;
+  }
+  .card .lbl {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+  .card-accent { border-color: var(--accent2); }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { height: 6px; width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--surface); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+</style>
+</head>
+<body>
+
+<div class="page-title">
+  <h1>🤖 NexusFX EA × Marketplace — Trading Technique Matrix</h1>
+  <p>เปรียบเทียบกลยุทธ์การเทรดของ EA แต่ละตัว ข้ามหลาย Marketplace | Updated: April 2026</p>
+</div>
+
+<!-- Summary Cards -->
+<div class="cards">
+  <div class="card card-accent">
+    <div class="num" style="color:var(--accent)">10</div>
+    <div class="lbl">EA ทั้งหมด</div>
+  </div>
+  <div class="card">
+    <div class="num" style="color:var(--green)">4</div>
+    <div class="lbl">Marketplace ที่ Cover</div>
+  </div>
+  <div class="card">
+    <div class="num" style="color:var(--purple)">5</div>
+    <div class="lbl">กลยุทธ์ Strategy EA</div>
+  </div>
+  <div class="card">
+    <div class="num" style="color:var(--yellow)">1</div>
+    <div class="lbl">Master Bot (All-in-One)</div>
+  </div>
+  <div class="card">
+    <div class="num" style="color:var(--red)">2</div>
+    <div class="lbl">Infra / Bridge EA</div>
+  </div>
+  <div class="card">
+    <div class="num" style="color:var(--teal)">2</div>
+    <div class="lbl">Data Utility EA</div>
+  </div>
+</div>
+
+<!-- Legend -->
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#1a3a22;border:1px solid rgba(63,185,80,0.4)"></div> ✅ รองรับ / ใช้งานได้</div>
+  <div class="legend-item"><div class="legend-dot" style="background:rgba(31,111,235,0.2);border:1px solid rgba(88,166,255,0.3)"></div> 🔵 ได้เปรียบ / เน้นใช้</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--purple-dim);border:1px solid rgba(188,140,255,0.3)"></div> 💜 เฉพาะทาง / ขั้นสูง</div>
+  <div class="legend-item"><div class="legend-dot" style="background:rgba(210,153,34,0.15);border:1px solid rgba(210,153,34,0.3)"></div> ⚠️ ต้องระวัง / ความเสี่ยงสูง</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--red-dim);border:1px solid rgba(255,123,114,0.3)"></div> ❌ ไม่รองรับ / ไม่เกี่ยวข้อง</div>
+  <div class="legend-item"><div class="legend-dot" style="background:rgba(48,54,61,0.8);border:1px solid var(--border)"></div> ➖ Infrastructure / ไม่ใช่ Trading EA</div>
+</div>
+
+<!-- MAIN TABLE -->
+<div class="table-wrap">
+<table>
+<thead>
+  <tr class="market-header">
+    <th style="text-align:left">
+      <div style="color:var(--text-muted);font-size:10px;letter-spacing:1px;text-transform:uppercase">EA Name</div>
+      <div style="color:var(--text-muted);font-size:10px">↓ EA &nbsp; | &nbsp; Market →</div>
+    </th>
+    <th class="th-market"><span class="flag">🌐</span>MQL5 Market</th>
+    <th class="th-market"><span class="flag">🛒</span>Fxblue / FXJunction</th>
+    <th class="th-market"><span class="flag">💎</span>Ctrader Store</th>
+    <th class="th-market"><span class="flag">🏦</span>Own Marketplace<br><small style="font-weight:400;color:var(--text-muted)">(NexusFX Platform)</small></th>
+    <th style="color:var(--text-muted);min-width:160px">กลยุทธ์หลัก</th>
+    <th style="color:var(--text-muted);min-width:100px">ความเสี่ยง</th>
+    <th style="color:var(--text-muted);min-width:120px">Timeframe</th>
+  </tr>
+</thead>
+<tbody>
+
+  <!-- ─── CATEGORY: MASTER BOT ─── -->
+  <tr class="cat-row">
+    <td colspan="8">⚡ MASTER BOT — All-in-One AI Trading Engine</td>
+  </tr>
+
+  <!-- AutoBot -->
+  <tr class="data-row">
+    <td class="ea-name">
+      <div class="ea-label">🤖 NexusFX_AutoBot</div>
+      <div class="ea-sub">Multi-Strategy AI ทุกรูปแบบ</div>
+      <div class="magic">Magic: 999911 · v1.01</div>
+    </td>
+    <!-- MQL5 Market -->
+    <td class="cell">
+      <div class="tag-stack">
+        <span class="tag tag-green">✅ Confidence Score</span>
+        <span class="tag tag-green">✅ EMA Cross</span>
+        <span class="tag tag-green">✅ RSI Reversal</span>
+        <span class="tag tag-green">✅ MACD Signal</span>
+        <span class="tag tag-blue">🔵 Breakout H1</span>
+        <span class="tag tag-purple">💜 Candlestick Pattern</span>
+        <span class="tag tag-purple">💜 Multi-Timeframe</span>
+        <span class="tag tag-teal">🧠 Auto Dynamic AI</span>
+      </div>
+    </td>
+    <!-- Fxblue -->
+    <td class="cell">
+      <div class="tag-stack">
+        <span class="tag tag-green">✅ Signal Follow</span>
+        <span class="tag tag-blue">🔵 Score-Based Entry</span>
+        <span class="tag tag-purple">💜 Session Filter</span>
+      </div>
+    </td>
+    <!-- Ctrader -->
+    <td class="cell">
+      <div class="tag-stack">
+        <span class="tag tag-gray">➖ MQL5 Only</span>
+        <span class="tag tag-gray">➖ ไม่รองรับ cBots</span>
+      </div>
+    </td>
+    <!-- NexusFX Own -->
+    <td class="cell">
+      <div class="tag-stack">
+        <span class="tag tag-green">✅ Sniper Burst Mode</span>
+        <span class="tag tag-blue">🔵 Risk% Auto Lot</span>
+        <span class="tag tag-green">✅ Breakeven + Trail</span>
+        <span class="tag tag-purple">💜 Dashboard Panel</span>
+      </div>
+    </td>
+    <td class="cell"><span class="tag tag-purple">💜 AI Multi-Strategy</span></td>
+    <td class="cell">
+      <div class="score-bar">
+        <span class="score-pill s-medium">MED</span>
+        <span style="font-size:10px;color:var(--text-muted)">ปรับได้</span>
+      </div>
+    </td>
+    <td class="cell"><span class="tag tag-blue">Any TF</span></td>
+  </tr>
+
+  <!-- ─── CATEGORY: STRATEGIES ─── -->
+  <tr class="cat-row">
+    <td colspan="8">📈 STRATEGIES — Single-Technique Expert Advisors</td>
+  </tr>
+
+  <!-- BreakoutBot -->
+  <tr class="data-row">
+    <td class="ea-name">
+      <div class="ea-label">💥 NexusFX_BreakoutBot</div>
+      <div class="ea-sub">Breakout + Pyramiding Scale-In</div>
+      <div class="magic">Magic: 88883 · v1.02</div>
+    </td>
+    <!-- MQL5 Market -->
+    <td class="cell">
+      <div class="tag-stack">
+        <span class="tag tag-green">✅ Donchian Channel Breakout</span>
+        <span class="tag tag-blue">🔵 H1 High/Low Range</span>
+        <span class="tag tag-green">✅ Pyramiding (Scale-In)</span>
+        <span class="tag tag-purple">💜 Trail by Bar (SL)</span>
+      </div>
+    </td>
+    <td class="cell">
+      <div class="tag-stack">
+        <span class="tag tag-green">✅ Compatible</span>
+        <span class="tag tag-blue">🔵 Channel Breakout</span>
+      </div>
+    </td>
+    <td class="cell"><span class="na">—</span></td>
+    <td class="cell">
+      <div class="tag-stack">
+        <span class="tag tag-green">✅ Visual Zone Lines</span>
+        <span class="tag tag-blue">🔵 Breakeven Lock</span>
+      </div>
+    </td>
+    <td class="cell"><span class="tag tag-blue">📦 Breakout + Scale-In</span></td>
+    <td class="cell">
+      <div class="score-bar">
+        <span class="score-pill s-high">HIGH</span>
+        <span style="font-size:10px;color:var(--text-muted)">Max 300 pos</span>
+      </div>
+    </td>
+    <td class="cell"><span class="tag tag-blue">H1 (Signal)</span></td>
+  </tr>
+
+  <!-- SqueezeBot -->
+  <tr class="data-row">
+    <td class="ea-name">
+      <div class="ea-label">🗜️ NexusFX_SqueezeBot</div>
+      <div class="ea-sub">Bollinger Band Squeeze Breakout</div>
+      <div class="magic">Magic: 88881 · v1.02</div>
+    </td>
+    <!-- MQL5 Market -->
+    <td class="cell">
+      <div class="tag-stack">
+        <span class="tag tag-green">✅ Bollinger Bands Squeeze</span>
+        <span class="tag tag-blue">🔵 BB Width Filter</span>
+        <span class="tag tag-green">✅ Pyramiding (Scale-In)</span>
+        <span class="tag tag-purple">💜 Trail by Bar</span>
+      </div>
+    </td>
+    <td class="cell">
+      <div class="tag-stack">
+        <span class="tag tag-green">✅ Volatility Breakout</span>
+        <span class="tag tag-blue">🔵 BB Indicator Based</span>
+      </div>
+    </td>
+    <td class="cell"><span class="na">—</span></td>
+    <td class="cell">
+      <div class="tag-stack">
+        <span class="tag tag-green">✅ Auto Draw BB</span>
+        <span class="tag tag-blue">🔵 Breakeven Lock</span>
+      </div>
+    </td>
+    <td class="cell"><span class="tag tag-purple">💜 Volatility Squeeze</span></td>
+    <td class="cell">
+      <div class="score-bar">
+        <span class="score-pill s-high">HIGH</span>
+        <span style="font-size:10px;color:var(--text-muted)">Max 300 pos</span>
+      </div>
+    </td>
+    <td class="cell"><span class="tag tag-blue">Any TF</span></td>
+  </tr>
+
+  <!-- TrendFollowerPro -->
+  <tr class="data-row">
+    <td class="ea-name">
+      <div class="ea-label">📊 NexusFX_TrendFollowerPro</div>
+      <div class="ea-sub">EMA Trend + Price Action Pullback</div>
+      <div class="magic">Magic: 88882 · v1.02</div>
+    </td>
+    <!-- MQL5 Market -->
+    <td class="cell">
+      <div class="tag-stack">
+        <span class="tag tag-green">✅ EMA 50/200 Cross</span>
+        <span class="tag tag-blue">🔵 Price Action Pullback</span>
+        <span class="tag tag-green">✅ EMA Bounce Entry</span>
+        <span class="tag tag-green">✅ Test Order (Probe)</span>
+        <span class="tag tag-purple">💜 Pyramiding Scale-In</span>
+        <span class="tag tag-purple">💜 Breakeven + Trail</span>
+      </div>
+    </td>
+    <td class="cell">
+      <div class="tag-stack">
+        <span class="tag tag-green">✅ Trend Following</span>
+        <span class="tag tag-blue">🔵 EMA + PA combo</span>
+      </div>
+    </td>
+    <td class="cell"><span class="na">—</span></td>
+    <td class="cell">
+      <div class="tag-stack">
+        <span class="tag tag-green">✅ Dashboard Panel</span>
+        <span class="tag tag-blue">🔵 Visual EMA Lines</span>
+        <span class="tag tag-green">✅ Breakeven Lock</span>
+      </div>
+    </td>
+    <td class="cell"><span class="tag tag-green">📈 Trend + PA Pullback</span></td>
+    <td class="cell">
+      <div class="score-bar">
+        <span class="score-pill s-high">HIGH</span>
+        <span style="font-size:10px;color:var(--text-muted)">Max 300 pos</span>
+      </div>
+    </td>
+    <td class="cell"><span class="tag tag-blue">Any TF</span></td>
+  </tr>
+
+  <!-- ─── CATEGORY: WORLD CLASS BOTS ─── -->
+  <tr class="cat-row">
+    <td colspan="8">🏆 WORLD CLASS BOTS — Advanced / Institutional-Grade Strategies</td>
+  </tr>
+
+  <!-- SMCBot -->
+  <tr class="data-row">
+    <td class="ea-name">
+      <div class="ea-label">🏦 NexusFX_SMCBot</div>
+      <div class="ea-sub">Smart Money Concept — Fair Value Gap</div>
+      <div class="magic">Magic: 11111 · v1.00</div>
+    </td>
+    <!-- MQL5 Market -->
+    <td class="cell">
+      <div class="tag-stack">
+        <span class="tag tag-purple">💜 Fair Value Gap (FVG)</span>
+        <span class="tag tag-purple">💜 Bullish/Bearish FVG Detection</span>
+        <span class="tag tag-blue">🔵 Order Block Logic</span>
+        <span class="tag tag-green">✅ Auto FVG Rectangle Draw</span>
+      </div>
+    </td>
+    <td class="cell">
+      <div class="tag-stack">
+        <span class="tag tag-purple">💜 SMC / ICT Strategy</span>
+        <span class="tag tag-blue">🔵 Institutional Flow</span>
+      </div>
+    </td>
+    <td class="cell">
+      <div class="tag-stack">
+        <span class="tag tag-gray">➖ MQL5 Only</span>
+      </div>
+    </td>
+    <td class="cell">
+      <div class="tag-stack">
+        <span class="tag tag-green">✅ Visual FVG Zones</span>
+        <span class="tag tag-purple">💜 3-Pos Pyramid Limit</span>
+      </div>
+    </td>
+    <td class="cell"><span class="tag tag-purple">💜 SMC / ICT FVG</span></td>
+    <td class="cell">
+      <div class="score-bar">
+        <span class="score-pill s-low">LOW</span>
+        <span style="font-size:10px;color:var(--text-muted)">Max 3 pos</span>
+      </div>
+    </td>
+    <td class="cell"><span class="tag tag-blue">Any TF</span></td>
+  </tr>
+
+  <!-- TurtleBot -->
+  <tr class="data-row">
+    <td class="ea-name">
+      <div class="ea-label">🐢 NexusFX_TurtleBot</div>
+      <div class="ea-sub">Donchian Breakout + ATR Sizing (Turtle System)</div>
+      <div class="magic">Magic: 22222 · v1.00</div>
+    </td>
+    <!-- MQL5 Market -->
+    <td class="cell">
+      <div class="tag-stack">
+        <span class="tag tag-green">✅ Donchian Channel (20-bar)</span>
+        <span class="tag tag-blue">🔵 ATR-Based SL/TP (2N/6N)</span>
+        <span class="tag tag-green">✅ Classic Turtle Trading System</span>
+        <span class="tag tag-purple">💜 Breakout Confirmation</span>
+      </div>
+    </td>
+    <td class="cell">
+      <div class="tag-stack">
+        <span class="tag tag-green">✅ Time-Tested System</span>
+        <span class="tag tag-blue">🔵 R-Multiple Risk</span>
+      </div>
+    </td>
+    <td class="cell">
+      <div class="tag-stack">
+        <span class="tag tag-gray">➖ MQL5 Only</span>
+      </div>
+    </td>
+    <td class="cell">
+      <div class="tag-stack">
+        <span class="tag tag-green">✅ Donchian Lines Draw</span>
+        <span class="tag tag-blue">🔵 ATR Dynamic SL</span>
+      </div>
+    </td>
+    <td class="cell"><span class="tag tag-teal">🐢 Turtle Trading System</span></td>
+    <td class="cell">
+      <div class="score-bar">
+        <span class="score-pill s-low">LOW</span>
+        <span style="font-size:10px;color:var(--text-muted)">Max 3 pos</span>
+      </div>
+    </td>
+    <td class="cell"><span class="tag tag-blue">D1/H4</span></td>
+  </tr>
+
+  <!-- VSABot -->
+  <tr class="data-row">
+    <td class="ea-name">
+      <div class="ea-label">📊 NexusFX_VSABot</div>
+      <div class="ea-sub">Wyckoff Volume Spread Analysis</div>
+      <div class="magic">Magic: 55555 · v1.00</div>
+    </td>
+    <!-- MQL5 Market -->
+    <td class="cell">
+      <div class="tag-stack">
+        <span class="tag tag-purple">💜 Volume Spread Analysis (VSA)</span>
+        <span class="tag tag-purple">💜 Wyckoff Accumulation/Distribution</span>
+        <span class="tag tag-blue">🔵 High Vol + Narrow Spread</span>
+        <span class="tag tag-green">✅ Auto Arrow Signals</span>
+      </div>
+    </td>
+    <td class="cell">
+      <div class="tag-stack">
+        <span class="tag tag-purple">💜 VSA / Wyckoff Method</span>
+        <span class="tag tag-blue">🔵 Volume Analysis</span>
+      </div>
+    </td>
+    <td class="cell">
+      <div class="tag-stack">
+        <span class="tag tag-gray">➖ Tick Vol Only</span>
+      </div>
+    </td>
+    <td class="cell">
+      <div class="tag-stack">
+        <span class="tag tag-green">✅ Visual Arrow Chart</span>
+        <span class="tag tag-yellow">⚠️ Tick Volume (ไม่ใช่ Real Vol)</span>
+      </div>
+    </td>
+    <td class="cell"><span class="tag tag-purple">💜 Wyckoff VSA</span></td>
+    <td class="cell">
+      <div class="score-bar">
+        <span class="score-pill s-low">LOW</span>
+        <span style="font-size:10px;color:var(--text-muted)">Max 3 pos</span>
+      </div>
+    </td>
+    <td class="cell"><span class="tag tag-blue">Any TF</span></td>
+  </tr>
+
+  <!-- ZoneBot -->
+  <tr class="data-row">
+    <td class="ea-name">
+      <div class="ea-label">🔄 NexusFX_ZoneBot</div>
+      <div class="ea-sub">Zone Recovery Grid + Hedging</div>
+      <div class="magic">Magic: 44444 · v1.00</div>
+    </td>
+    <!-- MQL5 Market -->
+    <td class="cell">
+      <div class="tag-stack">
+        <span class="tag tag-yellow">⚠️ Zone Recovery Strategy</span>
+        <span class="tag tag-yellow">⚠️ Grid + Hedge ทั้งสองทาง</span>
+        <span class="tag tag-red">❌ ไม่มี SL ป้องกัน</span>
+        <span class="tag tag-blue">🔵 Lot Multiplier Scale</span>
+        <span class="tag tag-green">✅ Target Profit Close</span>
+      </div>
+    </td>
+    <td class="cell">
+      <div class="tag-stack">
+        <span class="tag tag-yellow">⚠️ Grid EA Category</span>
+        <span class="tag tag-red">❌ Banned บาง Broker</span>
+      </div>
+    </td>
+    <td class="cell">
+      <div class="tag-stack">
+        <span class="tag tag-gray">➖ MQL5 Only</span>
+      </div>
+    </td>
+    <td class="cell">
+      <div class="tag-stack">
+        <span class="tag tag-yellow">⚠️ High Risk Grid</span>
+        <span class="tag tag-blue">🔵 Visual Zone Lines</span>
+        <span class="tag tag-green">✅ Auto Close on Target</span>
+      </div>
+    </td>
+    <td class="cell"><span class="tag tag-yellow">⚠️ Zone Recovery Grid</span></td>
+    <td class="cell">
+      <div class="score-bar">
+        <span class="score-pill" style="background:var(--red-dim);color:var(--red);border:1px solid rgba(255,123,114,0.4)">VERY</span>
+        <span style="font-size:10px;color:var(--red)">Unlimited Grid</span>
+      </div>
+    </td>
+    <td class="cell"><span class="tag tag-yellow">Any (24/7)</span></td>
+  </tr>
+
+  <!-- PairsBot -->
+  <tr class="data-row">
+    <td class="ea-name">
+      <div class="ea-label">🔗 NexusFX_PairsBot</div>
+      <div class="ea-sub">Statistical Arbitrage Pairs Trading</div>
+      <div class="magic">Magic: 33333 · v1.00</div>
+    </td>
+    <!-- MQL5 Market -->
+    <td class="cell">
+      <div class="tag-stack">
+        <span class="tag tag-purple">💜 Statistical Arbitrage</span>
+        <span class="tag tag-purple">💜 Mean Reversion (Price Ratio)</span>
+        <span class="tag tag-blue">🔵 Correlated Pairs (EUR/GBP)</span>
+        <span class="tag tag-green">✅ Auto Hedge Opposite Pair</span>
+        <span class="tag tag-green">✅ Profit Target Close</span>
+      </div>
+    </td>
+    <td class="cell">
+      <div class="tag-stack">
+        <span class="tag tag-purple">💜 Stat-Arb / Pairs Trade</span>
+        <span class="tag tag-blue">🔵 Correlated Instruments</span>
+      </div>
+    </td>
+    <td class="cell">
+      <div class="tag-stack">
+        <span class="tag tag-gray">➖ MQL5 Only</span>
+      </div>
+    </td>
+    <td class="cell">
+      <div class="tag-stack">
+        <span class="tag tag-green">✅ Dual Symbol Track</span>
+        <span class="tag tag-blue">🔵 Spread Divergence Signal</span>
+      </div>
+    </td>
+    <td class="cell"><span class="tag tag-purple">💜 Stat-Arb / Mean Rev</span></td>
+    <td class="cell">
+      <div class="score-bar">
+        <span class="score-pill s-medium">MED</span>
+        <span style="font-size:10px;color:var(--text-muted)">Hedged</span>
+      </div>
+    </td>
+    <td class="cell"><span class="tag tag-blue">Any TF</span></td>
+  </tr>
+
+  <!-- ─── CATEGORY: INFRASTRUCTURE ─── -->
+  <tr class="cat-row">
+    <td colspan="8">🔧 INFRASTRUCTURE — Bridge & Data Utility (ไม่ใช่ Trading EA)</td>
+  </tr>
+
+  <!-- NexusFX Bridge -->
+  <tr class="data-row">
+    <td class="ea-name">
+      <div class="ea-label">🌉 NexusFX_Bridge</div>
+      <div class="ea-sub">MT5 → NexusFX Platform Bridge</div>
+      <div class="magic">Infra_Bridge · v1.01</div>
+    </td>
+    <td class="cell"><span class="na">—</span></td>
+    <td class="cell"><span class="na">—</span></td>
+    <td class="cell"><span class="na">—</span></td>
+    <td class="cell">
+      <div class="tag-stack">
+        <span class="tag tag-teal">🟢 Copy Trade Receiver</span>
+        <span class="tag tag-blue">🔵 Signal Socket (WS)</span>
+        <span class="tag tag-green">✅ Execute Remote Orders</span>
+        <span class="tag tag-purple">💜 JWT Auth Integration</span>
+      </div>
+    </td>
+    <td class="cell"><span class="tag tag-gray">➖ Infrastructure Only</span></td>
+    <td class="cell"><span class="tag tag-gray">➖ N/A</span></td>
+    <td class="cell"><span class="tag tag-gray">➖ Always On</span></td>
+  </tr>
+
+  <!-- NexusAPI Bridge -->
+  <tr class="data-row">
+    <td class="ea-name">
+      <div class="ea-label">🔌 NexusAPI_Bridge</div>
+      <div class="ea-sub">REST API Order Execution Bridge</div>
+      <div class="magic">Infra_Bridge · v1.01</div>
+    </td>
+    <td class="cell"><span class="na">—</span></td>
+    <td class="cell"><span class="na">—</span></td>
+    <td class="cell"><span class="na">—</span></td>
+    <td class="cell">
+      <div class="tag-stack">
+        <span class="tag tag-teal">🟢 HTTP REST API Bridge</span>
+        <span class="tag tag-blue">🔵 Place/Modify/Close Orders</span>
+        <span class="tag tag-green">✅ NexusFX Backend API</span>
+      </div>
+    </td>
+    <td class="cell"><span class="tag tag-gray">➖ Infrastructure Only</span></td>
+    <td class="cell"><span class="tag tag-gray">➖ N/A</span></td>
+    <td class="cell"><span class="tag tag-gray">➖ Always On</span></td>
+  </tr>
+
+  <!-- DataFeeder -->
+  <tr class="data-row">
+    <td class="ea-name">
+      <div class="ea-label">📡 NexusFX_DataFeeder</div>
+      <div class="ea-sub">Live Market Data → Backend Feed</div>
+      <div class="magic">Infra_Data · v1.01</div>
+    </td>
+    <td class="cell"><span class="na">—</span></td>
+    <td class="cell"><span class="na">—</span></td>
+    <td class="cell"><span class="na">—</span></td>
+    <td class="cell">
+      <div class="tag-stack">
+        <span class="tag tag-teal">🟢 Real-time Price Feed</span>
+        <span class="tag tag-blue">🔵 Multi-Broker Aggregation</span>
+        <span class="tag tag-green">✅ WebSocket Push</span>
+      </div>
+    </td>
+    <td class="cell"><span class="tag tag-gray">➖ Data Feed Only</span></td>
+    <td class="cell"><span class="tag tag-gray">➖ N/A</span></td>
+    <td class="cell"><span class="tag tag-gray">➖ All TF</span></td>
+  </tr>
+
+  <!-- HistoryPump -->
+  <tr class="data-row">
+    <td class="ea-name">
+      <div class="ea-label">🗃️ NexusFX_HistoryPump</div>
+      <div class="ea-sub">Historical OHLCV Data Uploader</div>
+      <div class="magic">Infra_Data · v1.05</div>
+    </td>
+    <td class="cell"><span class="na">—</span></td>
+    <td class="cell"><span class="na">—</span></td>
+    <td class="cell"><span class="na">—</span></td>
+    <td class="cell">
+      <div class="tag-stack">
+        <span class="tag tag-teal">🟢 Bulk History Upload</span>
+        <span class="tag tag-blue">🔵 OHLCV Candle Data</span>
+        <span class="tag tag-green">✅ Multi-Symbol Pump</span>
+      </div>
+    </td>
+    <td class="cell"><span class="tag tag-gray">➖ Data Utility Only</span></td>
+    <td class="cell"><span class="tag tag-gray">➖ N/A</span></td>
+    <td class="cell"><span class="tag tag-gray">➖ All TF</span></td>
+  </tr>
+
+</tbody>
+</table>
+</div>
+
+<!-- Detailed Technique Breakdown -->
+<div style="margin-top:32px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px">
+
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px">
+    <div style="font-weight:700;font-size:12px;color:var(--accent);margin-bottom:10px;letter-spacing:0.5px">📦 กลยุทธ์ Breakout</div>
+    <div style="font-size:11px;color:var(--text-muted);line-height:1.9">
+      <b style="color:var(--text)">BreakoutBot</b> — สแกน High/Low 20 แท่ง H1 แล้วเปิดไม้เมื่อราคาทะลุ เพิ่มไม้ (Pyramiding) ทุก 10 Pips พร้อม Breakeven + Trailing Bar<br>
+      <b style="color:var(--text)">TurtleBot</b> — Donchian 20 bar + ATR SL=2N TP=6N (Classic Turtle Rules)<br>
+      <b style="color:var(--text)">AutoBot (Mode 5/6)</b> — H1 Breakout เดี่ยว หรือ ร่วมกับ Candlestick Pattern
+    </div>
+  </div>
+
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px">
+    <div style="font-weight:700;font-size:12px;color:var(--green);margin-bottom:10px;letter-spacing:0.5px">📈 กลยุทธ์ Trend Following</div>
+    <div style="font-size:11px;color:var(--text-muted);line-height:1.9">
+      <b style="color:var(--text)">TrendFollowerPro</b> — EMA 50/200 กรองทิศทาง + Price Action Bounce ที่ EMA พร้อม Test Order และ Pyramiding<br>
+      <b style="color:var(--text)">AutoBot (Mode 1/7)</b> — EMA Cross 9/21 + MACD Cross ยืนยันแนวโน้ม<br>
+      <b style="color:var(--text)">SqueezeBot</b> — รอ BB Squeeze แคบก่อน แล้วเข้าเมื่อราคาทะลุ Band
+    </div>
+  </div>
+
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px">
+    <div style="font-weight:700;font-size:12px;color:var(--purple);margin-bottom:10px;letter-spacing:0.5px">💜 กลยุทธ์ Institutional / Smart Money</div>
+    <div style="font-size:11px;color:var(--text-muted);line-height:1.9">
+      <b style="color:var(--text)">SMCBot</b> — ตรวจ Fair Value Gap (FVG) 3-candle pattern วาด Zone สี จาก Bullish/Bearish FVG แล้วเปิดไม้ทันที<br>
+      <b style="color:var(--text)">VSABot</b> — หา Volume สูง + Spread แคบ (Wyckoff Absorption) แล้วประเมินทิศทาง Accumulation/Distribution
+    </div>
+  </div>
+
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px">
+    <div style="font-weight:700;font-size:12px;color:var(--yellow);margin-bottom:10px;letter-spacing:0.5px">⚠️ กลยุทธ์ Recovery / Arbitrage</div>
+    <div style="font-size:11px;color:var(--text-muted);line-height:1.9">
+      <b style="color:var(--text)">ZoneBot</b> — เปิด Buy เริ่มต้น ถ้าขาดทุน 300 pips เปิด Sell ขนาดใหญ่ขึ้น (x1.5) สลับไปเรื่อยๆ จนได้กำไรเป้าหมาย ⚠️ ความเสี่ยงสูงมาก<br>
+      <b style="color:var(--text)">PairsBot</b> — หาค่าเฉลี่ยราคา EURUSD/GBPUSD ถ้า diverge เกิน threshold จะ Sell คู่แพงและ Buy คู่ถูก (Mean Reversion Hedge)
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  <div style="margin-top:20px;padding:12px 0;border-top:1px solid var(--border)">
+    <b>NexusFX Corp.</b> · EA Marketplace Comparison Matrix · Version 2026-04 · Magic Numbers are unique per EA for multi-EA management<br>
+    <span style="color:var(--red)">⚠️ หมายเหตุ:</span> ZoneBot ใช้กลยุทธ์ Grid/Recovery ที่ไม่มี Hard SL — ห้ามใช้บน Live Account โดยไม่เข้าใจความเสี่ยง
+  </div>
+</div>
+
+</body>
+</html>

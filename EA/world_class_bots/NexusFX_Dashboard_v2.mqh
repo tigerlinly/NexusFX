@@ -34,8 +34,8 @@ void Dash_CreateRect(string name, int x, int y, int w, int h, color bg, color bo
    ObjectSetInteger(0,name,OBJPROP_COLOR,border);
    ObjectSetInteger(0,name,OBJPROP_BORDER_TYPE,BORDER_FLAT);
    ObjectSetInteger(0,name,OBJPROP_WIDTH,1);
-   ObjectSetInteger(0,name,OBJPROP_BACK,false);
-   ObjectSetInteger(0,name,OBJPROP_ZORDER,100);
+   ObjectSetInteger(0,name,OBJPROP_BACK,false); // ให้อยู่หน้าสุด
+   ObjectSetInteger(0,name,OBJPROP_ZORDER,10000); // ให้อยู่หน้าสุด
    ObjectSetInteger(0,name,OBJPROP_SELECTABLE,draggable);
    ObjectSetInteger(0,name,OBJPROP_SELECTED,false);
 }
@@ -51,8 +51,8 @@ void Dash_CreateLbl(string name, int x, int y, string text, color clr, int sz, b
    ObjectSetInteger(0,name,OBJPROP_COLOR,clr);
    ObjectSetInteger(0,name,OBJPROP_FONTSIZE,sz);
    ObjectSetString(0,name,OBJPROP_FONT,bold?"Arial Bold":"Arial");
-   ObjectSetInteger(0,name,OBJPROP_BACK,false);
-   ObjectSetInteger(0,name,OBJPROP_ZORDER,101);
+   ObjectSetInteger(0,name,OBJPROP_BACK,false); // ให้อยู่หน้าสุด
+   ObjectSetInteger(0,name,OBJPROP_ZORDER,10010); // ให้อยู่หน้าสุด
    ObjectSetInteger(0,name,OBJPROP_SELECTABLE,false);
 }
 
@@ -72,54 +72,76 @@ void Dash_CreateBtn(string name, int x, int y, int w, int h, string text, color 
    ObjectSetInteger(0,name,OBJPROP_FONTSIZE,8);
    ObjectSetString(0,name,OBJPROP_FONT,"Arial");
    ObjectSetInteger(0,name,OBJPROP_STATE,false);
-   ObjectSetInteger(0,name,OBJPROP_ZORDER,101);
-   ObjectSetInteger(0,name,OBJPROP_BACK,false);
+   ObjectSetInteger(0,name,OBJPROP_ZORDER,10010); // ให้อยู่หน้าสุด
+   ObjectSetInteger(0,name,OBJPROP_BACK,false); // ให้อยู่หน้าสุด
 }
 
 void Dash_CreatePanel(string botName, ulong magicNumber)
 {
    dash_magic = magicNumber;
    g_botName = botName;
-   int pw = 280;
-   int ph = 275; // ขยายความสูงเพิ่มสำหรับปุ่ม Start/Stop
+   
+   // ปรับ Layout ให้กว้างขึ้น และปุ่มไปอยู่ด้านขวา
+   int pw = 420;
+   int ph = 195;
    
    Dash_CreateRect(DASH_PREFIX+"BG", g_PanelX, g_PanelY, pw, ph, PanelBgColor, PanelBorderColor, true);
    Dash_CreateRect(DASH_PREFIX+"TBG", g_PanelX, g_PanelY, pw, 26, C'25,32,48', PanelBorderColor, false);
    
    Dash_CreateLbl(DASH_PREFIX+"Title", g_PanelX+10, g_PanelY+5, "⚡ " + botName + (g_DashIsRunning ? "" : " [HALTED]"), TextColor, 10, true);
-   
+   Dash_CreateLbl(DASH_PREFIX+"DragTip", g_PanelX+pw-110, g_PanelY+6, "(Double-Click to move)", NeutralColor, 7, false);
+
    int h = 18;
    int y = g_PanelY + 34;
    int lx = g_PanelX + 12;
-   int vx = g_PanelX + 100;
+   int vx = g_PanelX + 80;
+   int rx = g_PanelX + 220; // คอลัมน์ขวาสำหรับ ACTIONS
    
-   Dash_CreateLbl(DASH_PREFIX+"S1", lx, y, "── ACCOUNT ────────────────", C'60,70,100', 8, true); y+=h+4;
+   // --- Row 1 Headers ---
+   Dash_CreateLbl(DASH_PREFIX+"S1", lx, y, "── ACCOUNT ──", C'60,70,100', 8, true); 
+   Dash_CreateLbl(DASH_PREFIX+"S3", rx, y, "── ACTIONS ──", C'60,70,100', 8, true); 
+   y+=h+4;
+   
+   // --- Row 2 ---
    Dash_CreateLbl(DASH_PREFIX+"LBal", lx, y, "Balance:", NeutralColor, 9, false);
-   Dash_CreateLbl(DASH_PREFIX+"VBal", vx, y, "-", TextColor, 9, true); y+=h;
+   Dash_CreateLbl(DASH_PREFIX+"VBal", vx, y, "-", TextColor, 9, true); 
+   Dash_CreateBtn(DASH_PREFIX+"BtnStart",  rx,      y-2, 90, 22, "▶ START",  C'40,110,60');
+   Dash_CreateBtn(DASH_PREFIX+"BtnStop",   rx+96,   y-2, 90, 22, "⏸ STOP",   C'120,50,30');
+   y+=h;
+   
+   // --- Row 3 ---
    Dash_CreateLbl(DASH_PREFIX+"LEq", lx, y, "Equity:", NeutralColor, 9, false);
-   Dash_CreateLbl(DASH_PREFIX+"VEq", vx, y, "-", TextColor, 9, true); y+=h;
+   Dash_CreateLbl(DASH_PREFIX+"VEq", vx, y, "-", TextColor, 9, true); 
+   y+=h;
+   
+   // --- Row 4 ---
    Dash_CreateLbl(DASH_PREFIX+"LMgn", lx, y, "Margin:", NeutralColor, 8, false);
-   Dash_CreateLbl(DASH_PREFIX+"VMgn", vx, y, "-", TextColor, 8, true); y+=h+4;
+   Dash_CreateLbl(DASH_PREFIX+"VMgn", vx, y, "-", TextColor, 8, true); 
+   Dash_CreateBtn(DASH_PREFIX+"BtnCloseWin",  rx,      y-10, 90, 22, "Close Win",  C'0,150,100');
+   Dash_CreateBtn(DASH_PREFIX+"BtnCloseLoss", rx+96,   y-10, 90, 22, "Close Loss", C'180,50,70');
+   y+=h+4;
    
-   Dash_CreateLbl(DASH_PREFIX+"S2", lx, y, "── STATUS ─────────────────", C'60,70,100', 8, true); y+=h+4;
+   // --- Row 5 Headers ---
+   Dash_CreateLbl(DASH_PREFIX+"S2", lx, y, "── STATUS ──", C'60,70,100', 8, true); 
+   y+=h+4;
    
+   // --- Row 6 ---
    Dash_CreateLbl(DASH_PREFIX+"LMag", lx, y, "Magic No.:", NeutralColor, 9, false);
-   Dash_CreateLbl(DASH_PREFIX+"VMag", vx, y, IntegerToString(magicNumber), clrYellow, 9, true); y+=h;
+   Dash_CreateLbl(DASH_PREFIX+"VMag", vx, y, IntegerToString(magicNumber), clrYellow, 9, true); 
+   Dash_CreateBtn(DASH_PREFIX+"BtnCloseAll",  rx, y, 186, 22, "Close All Positions",  C'150,30,30');
+   y+=h;
 
+   // --- Row 7 ---
    Dash_CreateLbl(DASH_PREFIX+"LSig", lx, y, "Status:", NeutralColor, 9, false);
    Dash_CreateLbl(DASH_PREFIX+"VSig", vx, y, "SCANNING", NeutralColor, 9, true); y+=h;
+   
+   // --- Row 8 ---
    Dash_CreateLbl(DASH_PREFIX+"LPos", lx, y, "Positions:", NeutralColor, 9, false);
    Dash_CreateLbl(DASH_PREFIX+"VPos", vx, y, "0", TextColor, 9, true); y+=h;
+   
+   // --- Row 9 ---
    Dash_CreateLbl(DASH_PREFIX+"LPnl", lx, y, "Float PnL:", NeutralColor, 9, false);
    Dash_CreateLbl(DASH_PREFIX+"VPnl", vx, y, "$0.00", TextColor, 9, true); y+=h+4;
-   
-   Dash_CreateLbl(DASH_PREFIX+"S3", lx, y, "── ACTIONS ────────────────", C'60,70,100', 8, true); y+=h+4;
-   Dash_CreateBtn(DASH_PREFIX+"BtnStart",  lx,      y, 120, 22, "▶ START BOT",  C'40,110,60');
-   Dash_CreateBtn(DASH_PREFIX+"BtnStop",   lx+126,  y, 120, 22, "⏸ STOP BOT",   C'120,50,30');
-   y += 28;
-   Dash_CreateBtn(DASH_PREFIX+"BtnCloseWin",  lx,      y, 78, 22, "Close Win",  C'0,150,100');
-   Dash_CreateBtn(DASH_PREFIX+"BtnCloseLoss", lx+84,  y, 78, 22, "Close Loss", C'180,50,70');
-   Dash_CreateBtn(DASH_PREFIX+"BtnCloseAll",  lx+168, y, 78, 22, "Close All",  C'150,30,30');
 
    ChartRedraw();
 }
@@ -196,15 +218,17 @@ void OnChartEvent(const int id, const long &lparam, const double &dparam, const 
                 }
             }
         }
-        else if (sparam == DASH_PREFIX+"BG") {
-            ObjectSetInteger(0, sparam, OBJPROP_SELECTED, false); 
-        }
     }
+    // Handle Window Dragging
     else if (id == CHARTEVENT_OBJECT_DRAG && sparam == DASH_PREFIX+"BG") {
         g_PanelX = (int)ObjectGetInteger(0, sparam, OBJPROP_XDISTANCE);
         g_PanelY = (int)ObjectGetInteger(0, sparam, OBJPROP_YDISTANCE);
+        
         // Re-align all components based on new X,Y
         Dash_CreatePanel(g_botName, dash_magic);
+        // Automatically deselect the background so they don't have to keep double-clicking to interact
+        ObjectSetInteger(0, sparam, OBJPROP_SELECTED, false);
+        ChartRedraw();
     }
 }
 //+------------------------------------------------------------------+
