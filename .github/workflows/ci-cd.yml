@@ -80,50 +80,20 @@ jobs:
           ls -lh dist/assets/
 
   # =============================================
-  # Job 3: Deploy (main branch only)
+  # Job 3: Deploy notification (actual deploy via deploy.yml self-hosted runner)
   # =============================================
   deploy:
-    name: 🚀 Deploy to Production
+    name: ✅ Deploy Status
     runs-on: ubuntu-latest
     needs: [backend-check, frontend-build]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    
-    steps:
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USERNAME }}
-          password: ${{ secrets.PASSWORD }}
-          port: 14321
-          command_timeout: 10m
-          script: |
-            echo "🔄 Starting NexusFX deployment..."
-            cd /var/www/nexusfx
-            
-            # Reset local changes & pull latest
-            git checkout -- .
-            git pull origin main
-            
-            # Rebuild containers
-            docker-compose up -d --build api web
-            
-            # Wait for health
-            sleep 5
-            
-            # Verify
-            echo "📦 Container Status:"
-            docker ps --format 'table {{.Names}}\t{{.Status}}'
-            
-            echo "🏥 API Health:"
-            curl -sf http://localhost:4000/api/health && echo " OK" || echo " FAIL"
-            
-            echo "✅ NexusFX deployed: $(date)"
 
+    steps:
       - name: Summary
         run: |
-          echo "### 🚀 Deployment Complete" >> $GITHUB_STEP_SUMMARY
+          echo "### 🚀 Build & Deploy Triggered" >> $GITHUB_STEP_SUMMARY
           echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Actor:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Server:** nexusfx.biz" >> $GITHUB_STEP_SUMMARY
+          echo "- **Deploy:** Handled by Self-hosted Runner (deploy.yml)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Server:** nexusfx.biz (INET)" >> $GITHUB_STEP_SUMMARY

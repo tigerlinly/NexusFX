@@ -18,21 +18,23 @@ jobs:
           git checkout -- .
           git pull origin main
 
-      - name: Rebuild & restart containers
+      - name: Rebuild & restart api and web only (keep DB running)
         run: |
           cd /var/www/nexusfx
-          docker compose down --remove-orphans
-          docker compose up -d --build api web
+          docker compose build api web
+          docker compose stop api web
+          docker compose rm -f api web
+          docker compose up -d api web
 
       - name: Wait for health check
-        run: sleep 5
+        run: sleep 8
 
       - name: Verify deployment
         run: |
           echo "📦 Container Status:"
           docker ps --format 'table {{.Names}}\t{{.Status}}'
-          
+
           echo "🏥 API Health Check:"
           curl -sf http://localhost:4000/api/health && echo " OK" || echo " FAIL"
-          
+
           echo "✅ NexusFX deployment complete! $(date)"
