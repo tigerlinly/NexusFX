@@ -7,7 +7,7 @@
 #property version   "3.00" // Institutional Grade Edition
 
 #include <Trade\Trade.mqh>
-#include "NexusFX_Dashboard_v2.mqh"
+#include "NexusFX_Dashboard.mqh"
 CTrade trade;
 
 input string   RunMagic = "AlphaScalper";      // "AlphaScalper" for Bot, "AlphaScalper" for App Auto

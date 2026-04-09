@@ -9,7 +9,7 @@
 #property version   "1.00"
 
 #include <Trade\Trade.mqh>
-#include "NexusFX_Dashboard_v2.mqh"
+#include "NexusFX_Dashboard.mqh"
 CTrade trade;
 
 // ============================================================

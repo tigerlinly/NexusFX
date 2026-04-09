@@ -1,5 +1,5 @@
 //+------------------------------------------------------------------+
-//|                                     NexusFX_TrendFollowerPro.mq5 |
+//|                                                NexusFX_SMCBot.mq5|
 //|                                    Copyright 2026, NexusFX Corp. |
 //+------------------------------------------------------------------+
 #property copyright "NexusFX"
@@ -7,36 +7,31 @@
 #property version   "3.00" // Institutional Grade Edition
 
 #include <Trade\Trade.mqh>
-#include "..\world_class_bots\NexusFX_Dashboard_v2.mqh"
+#include "NexusFX_Dashboard.mqh"
 CTrade trade;
 
 // ============================================================
 // INPUT PARAMETERS
 // ============================================================
-input string   RunMagic = "TrendFollowerPro";        // TrendFollowerPro for Bot, TrendFollower for App Auto
-input ulong    MagicNumber = 103;
+input string   RunMagic = "SMCBot";      // SMCBot for Bot, SMC for App Auto
+input ulong    MagicNumber = 905;
 
 // --- Timeframe Settings ---
-input ENUM_TIMEFRAMES EntryTF = PERIOD_M15;    // TF ที่ใช้หาจุดเข้าและ Fast EMA
-input ENUM_TIMEFRAMES TrendTF = PERIOD_H1;     // TF ที่ใช้ดู Trend (Slow EMA)
-
-// --- กลยุทธ์ (Strategy Settings) ---
-input int      FastEMA     = 50;
-input int      SlowEMA     = 200;
+input ENUM_TIMEFRAMES EntryTF = PERIOD_M15;    // TF ที่ใช้หา FVG (Fair Value Gap)
+input ENUM_TIMEFRAMES TrendTF = PERIOD_H1;     // TF ที่ใช้ดู Trend (SMA Filter)
+input int      Trend_MA_Period = 200;
 
 // --- Pyramiding (การสับไม้) ---
-input int      MaxPositions       = 50;   
+input int      MaxPositions       = 5;         // SMC ไม้น้อย ปรับไว้ที่ 5 ไม้ เต็มที่
 input double   ScaleStepPips      = 20.0;  
 input double   ScaleLotMultiplier = 0.5;       // ยิ่งสับยิ่งเล็กลง ลดความผันผวนเวลาโดนลาก
-input double   TestPullbackPips   = 40.0;      // ระยะย่อออกไม้เทส (ก่อนชนแนวเทรนด์)
 
 // --- Risk Management & Target ---
 input double   RiskPercent          = 1.0;     // คำนวณ Lot จากทุน
 input double   DailyProfitTargetPct = 3.0;     // หยุดเมื่อกำไรชนเป้า/วัน
 input double   DailyDrawdownPct     = 5.0;     // ตัดขาดทุนถ้าลบเกินเป้า/วัน
 input int      MaxSpreadPoints      = 30;      // 30 points = 3 pips
-input double   InitialSLPips        = 200.0; 
-input double   InitialTPPips        = 1000.0;
+input double   InitialTPPips        = 500.0;   // รันกำไร SMC มักจะยาว
 
 // --- Session Filter ---
 input bool     UseSessionFilter = false;       // หากมีสัญญาณแต่ไม่ใช่เวลา จะเข้าหรือไม่ (false = เข้าชัวร์)
@@ -51,30 +46,27 @@ input int      TrailingBars    = 2;
 // ============================================================
 // GLOBAL STATE
 // ============================================================
-int handleFast, handleSlow;
+int    handleTrendMA;
 double pointUnit;
 bool   haltForToday = false;
 int    currentDayCheck = 0;
 
-int OnInit() {
-   trade.SetExpertMagicNumber(MagicNumber);
-   
-   handleFast = iMA(_Symbol, EntryTF, FastEMA, 0, MODE_EMA, PRICE_CLOSE);
-   handleSlow = iMA(_Symbol, TrendTF, SlowEMA, 0, MODE_EMA, PRICE_CLOSE);
+int OnInit() { 
+   trade.SetExpertMagicNumber(MagicNumber); 
    
    pointUnit = SymbolInfoDouble(_Symbol, SYMBOL_POINT);
    if(SymbolInfoInteger(_Symbol, SYMBOL_DIGITS) == 5 || SymbolInfoInteger(_Symbol, SYMBOL_DIGITS) == 3) {
        pointUnit *= 10;
    }
    
-   DASH_PREFIX = "NXTrd_";
-   Dash_CreatePanel("Trend Follower Pro", MagicNumber, EnumToString(EntryTF), EnumToString(TrendTF));
-   return INIT_SUCCEEDED;
+   handleTrendMA = iMA(_Symbol, TrendTF, Trend_MA_Period, 0, MODE_SMA, PRICE_CLOSE);
+   
+   DASH_PREFIX = "NXSMC_";
+   Dash_CreatePanel("NexusFX SMCBot (Pro)", MagicNumber, EnumToString(EntryTF), EnumToString(TrendTF));
+   return(INIT_SUCCEEDED); 
 }
-
 void OnDeinit(const int reason) { 
-   IndicatorRelease(handleFast); 
-   IndicatorRelease(handleSlow); 
+   IndicatorRelease(handleTrendMA);
    Dash_DeletePanel(); 
 }
 
@@ -129,12 +121,12 @@ void CheckDailyTargetAndDrawdown() {
    if(DailyDrawdownPct > 0 && pPct <= -DailyDrawdownPct) haltForToday = true;
 }
 
-double CalculateDynamicLot(double riskPct) {
+double CalculateDynamicLot(double slRiskPips, double riskPct) {
    if(riskPct <= 0) return SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
    double moneyRisk = AccountInfoDouble(ACCOUNT_BALANCE) * (riskPct / 100.0);
    double tpv = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE);
    double ts = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE);
-   double slPts = InitialSLPips * (pointUnit / SymbolInfoDouble(_Symbol, SYMBOL_POINT));
+   double slPts = slRiskPips * (pointUnit / SymbolInfoDouble(_Symbol, SYMBOL_POINT));
    if(slPts == 0) return SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
    
    double lossPerLot = (slPts / ts) * tpv;
@@ -149,16 +141,26 @@ double CalculateScaleLot(double lastLot) {
    return MathMax(SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN), MathFloor(newLot / vStep) * vStep);
 }
 
+int GetTrendDirection() {
+   double maVal[]; ArraySetAsSeries(maVal, true);
+   if(CopyBuffer(handleTrendMA, 0, 0, 1, maVal) < 1) return 0;
+   double price = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+   if(price > maVal[0]) return  1; // Uptrend
+   if(price < maVal[0]) return -1; // Downtrend
+   return 0;
+}
+
 string GetOrderComment(string actionParams) {
    string entryTfStr = EnumToString(EntryTF); string trendTfStr = EnumToString(TrendTF);
    StringReplace(entryTfStr, "PERIOD_", ""); StringReplace(trendTfStr, "PERIOD_", "");
-   return StringFormat("%s TrendFollower (%s/%s) %s", RunMagic, entryTfStr, trendTfStr, actionParams);
+   return StringFormat("%s (%s/%s) %s", RunMagic, entryTfStr, trendTfStr, actionParams);
 }
 
 //+------------------------------------------------------------------+
 // ON TICK LOGIC
 //+------------------------------------------------------------------+
-void OnTick() {
+void OnTick()
+{
    CheckDailyTargetAndDrawdown();
 
    int posBuy = 0, posSell = 0;
@@ -181,83 +183,77 @@ void OnTick() {
    }
    
    int totalPos = posBuy + posSell;
-   string sigStatus = haltForToday ? "HALT (Daily Limit Reached)" : ((totalPos > 0) ? "IN TRADE (Scaling)" : "SCAN PA @ TREND");
+   string sigStatus = haltForToday ? "HALT (Daily Limit Reached)" : ((totalPos > 0) ? "IN TRADE (Scaling)" : "SCANNING (FVG)");
    Dash_UpdatePanel(sigStatus, haltForToday ? clrRed : ((totalPos > 0) ? BuyColor : NeutralColor), totalPos, pnl);
 
-   if(!g_DashIsRunning || haltForToday) return; 
-
-   double fastBuf[], slowBuf[];
-   ArraySetAsSeries(fastBuf, true); ArraySetAsSeries(slowBuf, true);
-   if(CopyBuffer(handleFast, 0, 0, 2, fastBuf) < 2) return;
-   if(CopyBuffer(handleSlow, 0, 0, 2, slowBuf) < 2) return;
+   if(!g_DashIsRunning || haltForToday) return;
 
    double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
    double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
-   
-   bool isUptrend   = fastBuf[0] > slowBuf[0];
-   bool isDowntrend = fastBuf[0] < slowBuf[0];
-
-   double open1  = iOpen(_Symbol, EntryTF, 1);
-   double close1 = iClose(_Symbol, EntryTF, 1);
-   double high1  = iHigh(_Symbol, EntryTF, 1);
-   double low1   = iLow(_Symbol, EntryTF, 1);
-   
-   double open2  = iOpen(_Symbol, EntryTF, 2);
-   double close2 = iClose(_Symbol, EntryTF, 2);
-   
-   bool isPullbackRedToGreen = (close2 < open2) && (close1 > open1);
-   bool isPullbackGreenToRed = (close2 > open2) && (close1 < open1);
-
-   bool isBullishPA = (close1 > open1) && (low1 <= fastBuf[1] && close1 >= fastBuf[1]); 
-   bool isBearishPA = (close1 < open1) && (high1 >= fastBuf[1] && close1 <= fastBuf[1]); 
-
-   bool isBullishTest = isPullbackRedToGreen && (low1 > fastBuf[1]) && (low1 <= fastBuf[1] + (TestPullbackPips * pointUnit));
-   bool isBearishTest = isPullbackGreenToRed && (high1 < fastBuf[1]) && (high1 >= fastBuf[1] - (TestPullbackPips * pointUnit));
 
    // ============================================================
-   // 1. Entry Order (With Spread & Session)
+   // 1. Entry Order (FVG Detection + Session & Spread filter)
    // ============================================================
-   if (totalPos == 0 && IsInSession() && IsSpreadOK()) {
-      double lotToOpen = CalculateDynamicLot(RiskPercent);
-      
-      if (isUptrend && isBullishPA) {
-         double sl = bid - (InitialSLPips * pointUnit);
-         double tp = ask + (InitialTPPips * pointUnit);
-         trade.Buy(lotToOpen, _Symbol, 0, sl, tp, GetOrderComment("PA Trend Buy"));
-         return;
-      }
-      else if (isDowntrend && isBearishPA) {
-         double sl = ask + (InitialSLPips * pointUnit);
-         double tp = bid - (InitialTPPips * pointUnit);
-         trade.Sell(lotToOpen, _Symbol, 0, sl, tp, GetOrderComment("PA Trend Sell"));
-         return;
-      }
-      else if (isUptrend && isBullishTest) {
-         double sl = bid - (InitialSLPips * pointUnit);
-         double tp = ask + (InitialTPPips * pointUnit);
-         trade.Buy(lotToOpen, _Symbol, 0, sl, tp, GetOrderComment("Test Order Buy"));
-         return;
-      }
-      else if (isDowntrend && isBearishTest) {
-         double sl = ask + (InitialSLPips * pointUnit);
-         double tp = bid - (InitialTPPips * pointUnit);
-         trade.Sell(lotToOpen, _Symbol, 0, sl, tp, GetOrderComment("Test Order Sell"));
-         return;
+   if (totalPos == 0 && IsInSession() && IsSpreadOK() && IsNewBar()) { 
+      MqlRates rates[];
+      ArraySetAsSeries(rates, true);
+      // อ่านข้อมูล 3 แท่งก่อนหน้า (ดึงจาก index 1 ถึง 3 ของ History)
+      if(CopyRates(_Symbol, EntryTF, 1, 3, rates) == 3) {
+         double gapBullish = rates[0].low - rates[2].high; // Candle 1 Low > Candle 3 High
+         double gapBearish = rates[2].low - rates[0].high; // Candle 3 Low > Candle 1 High
+         
+         int trend = GetTrendDirection();
+
+         if(gapBullish > 0 && rates[1].close > rates[1].open && trend >= 0) // Bullish FVG
+         {
+            string bName = "FVG_B_" + IntegerToString((int)rates[1].time);
+            if(ObjectFind(0, bName) < 0) {
+               ObjectCreate(0, bName, OBJ_RECTANGLE, 0, rates[2].time, rates[2].high, rates[0].time, rates[0].low);
+               ObjectSetInteger(0, bName, OBJPROP_COLOR, clrGold); 
+               ObjectSetInteger(0, bName, OBJPROP_BACK, true);
+               ObjectSetInteger(0, bName, OBJPROP_FILL, true);
+            }
+            
+            double sl = rates[2].low; // Swing Low of the starting candle
+            double slPips = (ask - sl) / pointUnit;
+            double lotToOpen = CalculateDynamicLot(slPips, RiskPercent);
+            double tp = ask + (InitialTPPips * pointUnit);
+            
+            trade.Buy(lotToOpen, _Symbol, ask, sl, tp, GetOrderComment("FVG Buy"));
+         }
+         else if(gapBearish > 0 && rates[1].close < rates[1].open && trend <= 0) // Bearish FVG
+         {
+            string bName = "FVG_S_" + IntegerToString((int)rates[1].time);
+            if(ObjectFind(0, bName) < 0) {
+               ObjectCreate(0, bName, OBJ_RECTANGLE, 0, rates[2].time, rates[0].high, rates[0].time, rates[2].low);
+               ObjectSetInteger(0, bName, OBJPROP_COLOR, clrDarkOrchid);
+               ObjectSetInteger(0, bName, OBJPROP_BACK, true);
+               ObjectSetInteger(0, bName, OBJPROP_FILL, true);
+            }
+            
+            double sl = rates[2].high; // Swing High of the starting candle
+            double slPips = (sl - bid) / pointUnit;
+            double lotToOpen = CalculateDynamicLot(slPips, RiskPercent);
+            double tp = bid - (InitialTPPips * pointUnit);
+            
+            trade.Sell(lotToOpen, _Symbol, bid, sl, tp, GetOrderComment("FVG Sell"));
+         }
       }
    }
-   
+
    // ============================================================
    // 2. Pyramiding Dynamic Lot (Anti-Martingale)
    // ============================================================
    if (totalPos > 0 && totalPos < MaxPositions && IsInSession() && IsSpreadOK()) {
       if (posBuy > 0 && ask >= lastBuyPrice + (ScaleStepPips * pointUnit)) {
-          double sl = bid - (InitialSLPips * pointUnit);
+          // ใช้ SL ที่กว้างพอประมาณสำหรับการ Scale In SMC
+          double sl = bid - ((ScaleStepPips*2) * pointUnit);
           double tp = ask + (InitialTPPips * pointUnit);
           double scaleLot = CalculateScaleLot(lastBuyLot);
           trade.Buy(scaleLot, _Symbol, 0, sl, tp, GetOrderComment(StringFormat("Scale BUY #%d", totalPos+1)));
       }
       else if (posSell > 0 && bid <= lastSellPrice - (ScaleStepPips * pointUnit)) {
-          double sl = ask + (InitialSLPips * pointUnit);
+          double sl = ask + ((ScaleStepPips*2) * pointUnit);
           double tp = bid - (InitialTPPips * pointUnit);
           double scaleLot = CalculateScaleLot(lastSellLot);
           trade.Sell(scaleLot, _Symbol, 0, sl, tp, GetOrderComment(StringFormat("Scale SELL #%d", totalPos+1)));

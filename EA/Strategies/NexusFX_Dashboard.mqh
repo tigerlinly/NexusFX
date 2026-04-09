@@ -1,5 +1,5 @@
 //+------------------------------------------------------------------+
-//|                                         NexusFX_Dashboard_v2.mqh |
+//|                                         NexusFX_Dashboard.mqh |
 //|                                    Copyright 2026, NexusFX Corp. |
 //+------------------------------------------------------------------+
 #property copyright "NexusFX"
@@ -35,7 +35,7 @@ void Dash_CreateRect(string name, int x, int y, int w, int h, color bg, color bo
    ObjectSetInteger(0,name,OBJPROP_BORDER_TYPE,BORDER_FLAT);
    ObjectSetInteger(0,name,OBJPROP_WIDTH,1);
    ObjectSetInteger(0,name,OBJPROP_BACK,false); // ให้อยู่หน้าสุด
-   ObjectSetInteger(0,name,OBJPROP_ZORDER,10000); // ให้อยู่หน้าสุด
+   ObjectSetInteger(0,name,OBJPROP_ZORDER,30000); // ให้อยู่หน้าสุด
    ObjectSetInteger(0,name,OBJPROP_SELECTABLE,draggable);
    ObjectSetInteger(0,name,OBJPROP_SELECTED,false);
 }
@@ -52,7 +52,7 @@ void Dash_CreateLbl(string name, int x, int y, string text, color clr, int sz, b
    ObjectSetInteger(0,name,OBJPROP_FONTSIZE,sz);
    ObjectSetString(0,name,OBJPROP_FONT,bold?"Arial Bold":"Arial");
    ObjectSetInteger(0,name,OBJPROP_BACK,false); // ให้อยู่หน้าสุด
-   ObjectSetInteger(0,name,OBJPROP_ZORDER,10010); // ให้อยู่หน้าสุด
+   ObjectSetInteger(0,name,OBJPROP_ZORDER,30010); // ให้อยู่หน้าสุด
    ObjectSetInteger(0,name,OBJPROP_SELECTABLE,false);
 }
 
@@ -72,7 +72,7 @@ void Dash_CreateBtn(string name, int x, int y, int w, int h, string text, color 
    ObjectSetInteger(0,name,OBJPROP_FONTSIZE,8);
    ObjectSetString(0,name,OBJPROP_FONT,"Arial");
    ObjectSetInteger(0,name,OBJPROP_STATE,false);
-   ObjectSetInteger(0,name,OBJPROP_ZORDER,10010); // ให้อยู่หน้าสุด
+   ObjectSetInteger(0,name,OBJPROP_ZORDER,30010); // ให้อยู่หน้าสุด
    ObjectSetInteger(0,name,OBJPROP_BACK,false); // ให้อยู่หน้าสุด
 }
 
@@ -92,7 +92,7 @@ void Dash_CreateEdit(string name, int x, int y, int w, int h, string text, color
    ObjectSetInteger(0,name,OBJPROP_FONTSIZE,9);
    ObjectSetString(0,name,OBJPROP_FONT,"Arial");
    ObjectSetInteger(0,name,OBJPROP_ALIGN,ALIGN_CENTER);
-   ObjectSetInteger(0,name,OBJPROP_ZORDER,10010); 
+   ObjectSetInteger(0,name,OBJPROP_ZORDER,30010); 
    ObjectSetInteger(0,name,OBJPROP_BACK,false); 
    ObjectSetInteger(0,name,OBJPROP_SELECTABLE,false);
 }
@@ -102,9 +102,8 @@ void Dash_CreatePanel(string botName, ulong magicNumber, string entryTF="Auto", 
    dash_magic = magicNumber;
    g_botName = botName;
    
-   // ปรับ Layout ให้กว้างขึ้น และปุ่มไปอยู่ด้านขวา
-   int pw = 460;
-   int ph = 215;
+   int pw = 430;
+   int ph = 185;
    
    Dash_CreateRect(DASH_PREFIX+"BG", g_PanelX, g_PanelY, pw, ph, PanelBgColor, PanelBorderColor, true);
    Dash_CreateRect(DASH_PREFIX+"TBG", g_PanelX, g_PanelY, pw, 26, C'25,32,48', PanelBorderColor, false);
@@ -112,70 +111,66 @@ void Dash_CreatePanel(string botName, ulong magicNumber, string entryTF="Auto", 
    Dash_CreateLbl(DASH_PREFIX+"Title", g_PanelX+10, g_PanelY+5, "⚡ " + botName + (g_DashIsRunning ? "" : " [HALTED]"), TextColor, 10, true);
    Dash_CreateLbl(DASH_PREFIX+"DragTip", g_PanelX+pw-110, g_PanelY+6, "(Double-Click to move)", NeutralColor, 7, false);
 
-   int h = 18;
    int y = g_PanelY + 34;
+   int h = 18;
+   
    int lx = g_PanelX + 12;
-   int vx = g_PanelX + 80;
-   int rx = g_PanelX + 220; // คอลัมน์ขวาสำหรับ ACTIONS
+   int vx = g_PanelX + 70;
+   
+   int rx = g_PanelX + 220;
+   int vx2 = g_PanelX + 285;
    
    // --- Row 1 Headers ---
    Dash_CreateLbl(DASH_PREFIX+"S1", lx, y, "── ACCOUNT ──", C'60,70,100', 8, true); 
-   Dash_CreateLbl(DASH_PREFIX+"S3", rx, y, "── ACTIONS ──", C'60,70,100', 8, true); 
-   y+=h+4;
+   Dash_CreateLbl(DASH_PREFIX+"S2", rx, y, "── STATUS ──", C'60,70,100', 8, true); 
+   y+=h;
    
    // --- Row 2 ---
    Dash_CreateLbl(DASH_PREFIX+"LBal", lx, y, "Balance:", NeutralColor, 9, false);
    Dash_CreateLbl(DASH_PREFIX+"VBal", vx, y, "-", TextColor, 9, true); 
-   Dash_CreateBtn(DASH_PREFIX+"BtnStart",  rx,      y-2, 90, 22, "▶ START",  C'40,110,60');
-   Dash_CreateBtn(DASH_PREFIX+"BtnStop",   rx+96,   y-2, 90, 22, "⏸ STOP",   C'120,50,30');
+   Dash_CreateLbl(DASH_PREFIX+"LMag", rx, y, "Magic No.:", NeutralColor, 9, false);
+   Dash_CreateLbl(DASH_PREFIX+"VMag", vx2, y, IntegerToString(magicNumber), clrYellow, 9, true); 
    y+=h;
    
    // --- Row 3 ---
    Dash_CreateLbl(DASH_PREFIX+"LEq", lx, y, "Equity:", NeutralColor, 9, false);
    Dash_CreateLbl(DASH_PREFIX+"VEq", vx, y, "-", TextColor, 9, true); 
+   Dash_CreateLbl(DASH_PREFIX+"LSig", rx, y, "Status:", NeutralColor, 9, false);
+   Dash_CreateLbl(DASH_PREFIX+"VSig", vx2, y, "SCANNING", NeutralColor, 9, true); 
    y+=h;
    
    // --- Row 4 ---
    Dash_CreateLbl(DASH_PREFIX+"LMgn", lx, y, "Margin:", NeutralColor, 8, false);
    Dash_CreateLbl(DASH_PREFIX+"VMgn", vx, y, "-", TextColor, 8, true); 
-   Dash_CreateBtn(DASH_PREFIX+"BtnCloseWin",  rx,      y-10, 90, 22, "Close Win",  C'0,150,100');
-   Dash_CreateBtn(DASH_PREFIX+"BtnCloseLoss", rx+96,   y-10, 90, 22, "Close Loss", C'180,50,70');
-   y+=h+6;
-   
-   // --- Row Manual Trade ---
-   Dash_CreateLbl(DASH_PREFIX+"LMan", rx, y+3, "Lot | Cnt:", NeutralColor, 8, false);
-   Dash_CreateEdit(DASH_PREFIX+"ELots", rx+45, y, 35, 20, "0.01", C'25,32,48', TextColor);
-   Dash_CreateEdit(DASH_PREFIX+"ECnt",  rx+82, y, 25, 20, "1",    C'25,32,48', TextColor);
-   Dash_CreateBtn(DASH_PREFIX+"BtnBuy", rx+110,y, 40, 20, "BUY",  BuyColor);
-   Dash_CreateBtn(DASH_PREFIX+"BtnSell",rx+152,y, 40, 20, "SELL", SellColor);
-   y+=h+2;
-   
-   // --- Row 5 Headers ---
-   Dash_CreateLbl(DASH_PREFIX+"S2", lx, y, "── STATUS ──", C'60,70,100', 8, true); 
-   y+=h+6;
-   
-   // --- Row 6 ---
-   Dash_CreateLbl(DASH_PREFIX+"LMag", lx, y, "Magic No.:", NeutralColor, 9, false);
-   Dash_CreateLbl(DASH_PREFIX+"VMag", vx, y, IntegerToString(magicNumber), clrYellow, 9, true); 
-   Dash_CreateBtn(DASH_PREFIX+"BtnCloseAll",  rx, y, 90, 22, "Close All",  C'150,30,30');
-   Dash_CreateBtn(DASH_PREFIX+"BtnSync",      rx+96, y, 90, 22, "♽ SYNC",     C'50,100,180');
-   y+=h;
-
-   // --- Row 7 ---
-   Dash_CreateLbl(DASH_PREFIX+"LSig", lx, y, "Status:", NeutralColor, 9, false);
-   Dash_CreateLbl(DASH_PREFIX+"VSig", vx, y, "SCANNING", NeutralColor, 9, true); y+=h;
-   
-   // --- Row 8 ---
-   Dash_CreateLbl(DASH_PREFIX+"LPos", lx, y, "Pos / PnL:", NeutralColor, 9, false);
-   Dash_CreateLbl(DASH_PREFIX+"VPos", vx, y, "0", TextColor, 9, true);
-   Dash_CreateLbl(DASH_PREFIX+"VPnl", vx+25, y, " | $0.00", TextColor, 9, true); 
+   Dash_CreateLbl(DASH_PREFIX+"LPos", rx, y, "Pos / PnL:", NeutralColor, 9, false);
+   Dash_CreateLbl(DASH_PREFIX+"VPos", vx2, y, "0", TextColor, 9, true);
+   Dash_CreateLbl(DASH_PREFIX+"VPnl", vx2+20, y, " | $0.00", TextColor, 9, true); 
    y+=h;
    
-   // --- Row 9 ---
-   Dash_CreateLbl(DASH_PREFIX+"LTFs", lx, y, "TFs (E|T):", NeutralColor, 9, false);
-   Dash_CreateLbl(DASH_PREFIX+"VTFs", vx, y, entryTF + " | " + trendTF, clrCyan, 9, true);
-   y+=h+4;
-
+   // --- Row 5 ---
+   Dash_CreateLbl(DASH_PREFIX+"S3", lx, y, "── ACTIONS ──", C'60,70,100', 8, true); 
+   Dash_CreateLbl(DASH_PREFIX+"LTFs", rx, y, "TFs (E|T):", NeutralColor, 9, false);
+   Dash_CreateLbl(DASH_PREFIX+"VTFs", vx2, y, entryTF + " | " + trendTF, clrCyan, 9, true);
+   y+=h+6; // Extra padding before buttons
+   
+   // --- Row 6 (Buttons) ---
+   Dash_CreateBtn(DASH_PREFIX+"BtnStart",  lx,      y, 90, 22, "▶ START",  C'40,110,60');
+   Dash_CreateBtn(DASH_PREFIX+"BtnStop",   lx+96,   y, 90, 22, "⏸ STOP",   C'120,50,30');
+   
+   Dash_CreateLbl(DASH_PREFIX+"LMan", rx, y+4, "Lot|Cnt:", NeutralColor, 8, false);
+   Dash_CreateEdit(DASH_PREFIX+"ELots", rx+40, y+2, 32, 18, "0.01", C'25,32,48', TextColor);
+   Dash_CreateEdit(DASH_PREFIX+"ECnt",  rx+76, y+2, 22, 18, "1",    C'25,32,48', TextColor);
+   Dash_CreateBtn(DASH_PREFIX+"BtnBuy", rx+102, y+1, 40, 20, "BUY",  BuyColor);
+   Dash_CreateBtn(DASH_PREFIX+"BtnSell",rx+145, y+1, 40, 20, "SELL", SellColor);
+   y+=26;
+   
+   // --- Row 7 (Buttons) ---
+   Dash_CreateBtn(DASH_PREFIX+"BtnCloseWin",  lx,      y, 90, 22, "Close Win",  C'0,150,100');
+   Dash_CreateBtn(DASH_PREFIX+"BtnCloseLoss", lx+96,   y, 90, 22, "Close Loss", C'180,50,70');
+   
+   Dash_CreateBtn(DASH_PREFIX+"BtnCloseAll",  rx, y, 85, 22, "Close All",  C'150,30,30');
+   Dash_CreateBtn(DASH_PREFIX+"BtnSync",      rx+90, y, 95, 22, "♽ SYNC",     C'50,100,180');
+   
    ChartRedraw();
 }
 

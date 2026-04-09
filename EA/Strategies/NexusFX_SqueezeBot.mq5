@@ -7,7 +7,7 @@
 #property version   "3.01" // Institutional Grade Edition
 
 #include <Trade\Trade.mqh>
-#include "..\world_class_bots\NexusFX_Dashboard_v2.mqh"
+#include "NexusFX_Dashboard.mqh"
 CTrade trade;
 
 // ============================================================
