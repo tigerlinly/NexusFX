@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { api } from '../../utils/api';
 import ConfirmDialog from '../Layout/ConfirmDialog';
 import {
-  Shield, Users, BarChart3, DollarSign, Activity, Search, Server,
+  Shield, Users, BarChart3, DollarSign, Activity, Search,
   Edit2, UserCheck, UserX, Eye, AlertTriangle, Clock, ChevronDown,
   Building, UserPlus, Percent, X, Zap, CheckCircle, Calculator, RefreshCw, Trash2
 } from 'lucide-react';
@@ -265,7 +265,6 @@ export default function AdminPage() {
     { id: 'users', label: 'จัดการผู้ใช้', icon: Users },
     { id: 'adjustments', label: 'รออนุมัติเงิน', icon: DollarSign },
     { id: 'agents', label: 'จัดการตัวแทน', icon: Building },
-    { id: 'terminals', label: 'Terminal Server', icon: Server },
     { id: 'audit', label: 'Audit Logs', icon: Eye },
   ];
 
