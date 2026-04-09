@@ -52,7 +52,7 @@ int OnInit() {
    }
    
    DASH_PREFIX = "NXZON_";
-   Dash_CreatePanel("NexusFX Zone Recovery", MagicNumber);
+   Dash_CreatePanel("NexusFX Zone Recovery", MagicNumber, EnumToString(EntryTF), EnumToString(TrendTF));
    return(INIT_SUCCEEDED); 
 }
 

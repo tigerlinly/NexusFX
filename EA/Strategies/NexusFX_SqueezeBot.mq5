@@ -68,7 +68,7 @@ int OnInit() {
    handleTrend_MA = iMA(_Symbol, TrendTF, Trend_MA_Period, 0, MODE_SMA, PRICE_CLOSE);
 
    DASH_PREFIX = "NXSqz_";
-   Dash_CreatePanel("Nexus Squeeze Bot", MagicNumber);
+   Dash_CreatePanel("Nexus Squeeze Bot", MagicNumber, EnumToString(EntryTF), EnumToString(TrendTF));
 
    pointUnit = SymbolInfoDouble(_Symbol, SYMBOL_POINT);
    if(SymbolInfoInteger(_Symbol, SYMBOL_DIGITS) == 5 || SymbolInfoInteger(_Symbol, SYMBOL_DIGITS) == 3)

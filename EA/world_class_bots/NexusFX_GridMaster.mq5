@@ -37,7 +37,7 @@ int OnInit() {
    trade.SetExpertMagicNumber(MagicNumber);
    handleATR = iATR(_Symbol, EntryTF, ATR_Period);
    pointUnit = (SymbolInfoInteger(_Symbol, SYMBOL_DIGITS) == 5 || SymbolInfoInteger(_Symbol, SYMBOL_DIGITS) == 3) ? SymbolInfoDouble(_Symbol, SYMBOL_POINT) * 10 : SymbolInfoDouble(_Symbol, SYMBOL_POINT);
-   DASH_PREFIX = "NXGRD_"; Dash_CreatePanel("NexusFX Grid Master", MagicNumber);
+   DASH_PREFIX = "NXGRD_"; Dash_CreatePanel("NexusFX Grid Master", MagicNumber, EnumToString(EntryTF), EnumToString(TrendTF));
    return(INIT_SUCCEEDED);
 }
 

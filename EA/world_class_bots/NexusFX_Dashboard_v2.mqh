@@ -76,14 +76,35 @@ void Dash_CreateBtn(string name, int x, int y, int w, int h, string text, color 
    ObjectSetInteger(0,name,OBJPROP_BACK,false); // ให้อยู่หน้าสุด
 }
 
-void Dash_CreatePanel(string botName, ulong magicNumber)
+void Dash_CreateEdit(string name, int x, int y, int w, int h, string text, color bg, color clr)
+{
+   if(ObjectFind(0,name)>=0) ObjectDelete(0,name);
+   ObjectCreate(0,name,OBJ_EDIT,0,0,0);
+   ObjectSetInteger(0,name,OBJPROP_CORNER,CORNER_LEFT_UPPER);
+   ObjectSetInteger(0,name,OBJPROP_XDISTANCE,x);
+   ObjectSetInteger(0,name,OBJPROP_YDISTANCE,y);
+   ObjectSetInteger(0,name,OBJPROP_XSIZE,w);
+   ObjectSetInteger(0,name,OBJPROP_YSIZE,h);
+   ObjectSetString(0,name,OBJPROP_TEXT,text);
+   ObjectSetInteger(0,name,OBJPROP_BGCOLOR,bg);
+   ObjectSetInteger(0,name,OBJPROP_COLOR,clr);
+   ObjectSetInteger(0,name,OBJPROP_BORDER_COLOR,PanelBorderColor);
+   ObjectSetInteger(0,name,OBJPROP_FONTSIZE,9);
+   ObjectSetString(0,name,OBJPROP_FONT,"Arial");
+   ObjectSetInteger(0,name,OBJPROP_ALIGN,ALIGN_CENTER);
+   ObjectSetInteger(0,name,OBJPROP_ZORDER,10010); 
+   ObjectSetInteger(0,name,OBJPROP_BACK,false); 
+   ObjectSetInteger(0,name,OBJPROP_SELECTABLE,false);
+}
+
+void Dash_CreatePanel(string botName, ulong magicNumber, string entryTF="Auto", string trendTF="Auto")
 {
    dash_magic = magicNumber;
    g_botName = botName;
    
    // ปรับ Layout ให้กว้างขึ้น และปุ่มไปอยู่ด้านขวา
-   int pw = 420;
-   int ph = 195;
+   int pw = 460;
+   int ph = 215;
    
    Dash_CreateRect(DASH_PREFIX+"BG", g_PanelX, g_PanelY, pw, ph, PanelBgColor, PanelBorderColor, true);
    Dash_CreateRect(DASH_PREFIX+"TBG", g_PanelX, g_PanelY, pw, 26, C'25,32,48', PanelBorderColor, false);
@@ -119,16 +140,25 @@ void Dash_CreatePanel(string botName, ulong magicNumber)
    Dash_CreateLbl(DASH_PREFIX+"VMgn", vx, y, "-", TextColor, 8, true); 
    Dash_CreateBtn(DASH_PREFIX+"BtnCloseWin",  rx,      y-10, 90, 22, "Close Win",  C'0,150,100');
    Dash_CreateBtn(DASH_PREFIX+"BtnCloseLoss", rx+96,   y-10, 90, 22, "Close Loss", C'180,50,70');
-   y+=h+4;
+   y+=h+6;
+   
+   // --- Row Manual Trade ---
+   Dash_CreateLbl(DASH_PREFIX+"LMan", rx, y+3, "Lot | Cnt:", NeutralColor, 8, false);
+   Dash_CreateEdit(DASH_PREFIX+"ELots", rx+45, y, 35, 20, "0.01", C'25,32,48', TextColor);
+   Dash_CreateEdit(DASH_PREFIX+"ECnt",  rx+82, y, 25, 20, "1",    C'25,32,48', TextColor);
+   Dash_CreateBtn(DASH_PREFIX+"BtnBuy", rx+110,y, 40, 20, "BUY",  BuyColor);
+   Dash_CreateBtn(DASH_PREFIX+"BtnSell",rx+152,y, 40, 20, "SELL", SellColor);
+   y+=h+2;
    
    // --- Row 5 Headers ---
    Dash_CreateLbl(DASH_PREFIX+"S2", lx, y, "── STATUS ──", C'60,70,100', 8, true); 
-   y+=h+4;
+   y+=h+6;
    
    // --- Row 6 ---
    Dash_CreateLbl(DASH_PREFIX+"LMag", lx, y, "Magic No.:", NeutralColor, 9, false);
    Dash_CreateLbl(DASH_PREFIX+"VMag", vx, y, IntegerToString(magicNumber), clrYellow, 9, true); 
-   Dash_CreateBtn(DASH_PREFIX+"BtnCloseAll",  rx, y, 186, 22, "Close All Positions",  C'150,30,30');
+   Dash_CreateBtn(DASH_PREFIX+"BtnCloseAll",  rx, y, 90, 22, "Close All",  C'150,30,30');
+   Dash_CreateBtn(DASH_PREFIX+"BtnSync",      rx+96, y, 90, 22, "♽ SYNC",     C'50,100,180');
    y+=h;
 
    // --- Row 7 ---
@@ -136,12 +166,15 @@ void Dash_CreatePanel(string botName, ulong magicNumber)
    Dash_CreateLbl(DASH_PREFIX+"VSig", vx, y, "SCANNING", NeutralColor, 9, true); y+=h;
    
    // --- Row 8 ---
-   Dash_CreateLbl(DASH_PREFIX+"LPos", lx, y, "Positions:", NeutralColor, 9, false);
-   Dash_CreateLbl(DASH_PREFIX+"VPos", vx, y, "0", TextColor, 9, true); y+=h;
+   Dash_CreateLbl(DASH_PREFIX+"LPos", lx, y, "Pos / PnL:", NeutralColor, 9, false);
+   Dash_CreateLbl(DASH_PREFIX+"VPos", vx, y, "0", TextColor, 9, true);
+   Dash_CreateLbl(DASH_PREFIX+"VPnl", vx+25, y, " | $0.00", TextColor, 9, true); 
+   y+=h;
    
    // --- Row 9 ---
-   Dash_CreateLbl(DASH_PREFIX+"LPnl", lx, y, "Float PnL:", NeutralColor, 9, false);
-   Dash_CreateLbl(DASH_PREFIX+"VPnl", vx, y, "$0.00", TextColor, 9, true); y+=h+4;
+   Dash_CreateLbl(DASH_PREFIX+"LTFs", lx, y, "TFs (E|T):", NeutralColor, 9, false);
+   Dash_CreateLbl(DASH_PREFIX+"VTFs", vx, y, entryTF + " | " + trendTF, clrCyan, 9, true);
+   y+=h+4;
 
    ChartRedraw();
 }
@@ -169,7 +202,7 @@ void Dash_UpdatePanel(string signalStatus, color signalColor, int positions, dou
    ObjectSetString(0, DASH_PREFIX+"VPos", OBJPROP_TEXT, IntegerToString(positions));
    ObjectSetInteger(0, DASH_PREFIX+"VPos", OBJPROP_COLOR, positions > 0 ? BuyColor : NeutralColor);
    
-   ObjectSetString(0, DASH_PREFIX+"VPnl", OBJPROP_TEXT, StringFormat("$%.2f", pnl));
+   ObjectSetString(0, DASH_PREFIX+"VPnl", OBJPROP_TEXT, StringFormat(" | $%.2f", pnl));
    ObjectSetInteger(0, DASH_PREFIX+"VPnl", OBJPROP_COLOR, pnl > 0 ? BuyColor : (pnl < 0 ? SellColor : NeutralColor));
    
    ChartRedraw();
@@ -215,6 +248,34 @@ void OnChartEvent(const int id, const long &lparam, const double &dparam, const 
                     if(sparam == DASH_PREFIX+"BtnCloseWin" && prof > 0.0) dashTrade.PositionClose(tk);
                     if(sparam == DASH_PREFIX+"BtnCloseLoss" && prof < 0.0) dashTrade.PositionClose(tk);
                     if(sparam == DASH_PREFIX+"BtnCloseAll") dashTrade.PositionClose(tk);
+                }
+            }
+            
+            if(sparam == DASH_PREFIX+"BtnSync") {
+                Alert("NexusFX: Manual Sync Requested for " + g_botName);
+                if(GlobalVariableCheck("NX_SYNC_REQUEST_" + IntegerToString(dash_magic))) {
+                    GlobalVariableSet("NX_SYNC_REQUEST_" + IntegerToString(dash_magic), 1.0);
+                } else {
+                    GlobalVariableTemp("NX_SYNC_REQUEST_" + IntegerToString(dash_magic));
+                    GlobalVariableSet("NX_SYNC_REQUEST_" + IntegerToString(dash_magic), 1.0);
+                }
+            }
+            
+            if(sparam == DASH_PREFIX+"BtnBuy" || sparam == DASH_PREFIX+"BtnSell") {
+                double lots = StringToDouble(ObjectGetString(0, DASH_PREFIX+"ELots", OBJPROP_TEXT));
+                int cnt = (int)StringToInteger(ObjectGetString(0, DASH_PREFIX+"ECnt", OBJPROP_TEXT));
+                if(lots > 0 && cnt > 0) {
+                    CTrade dashTrade;
+                    dashTrade.SetExpertMagicNumber(dash_magic);
+                    for(int i=0; i<cnt; i++) {
+                        if(sparam == DASH_PREFIX+"BtnBuy") {
+                            double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+                            dashTrade.Buy(lots, _Symbol, ask, 0, 0, "Manual Buy " + g_botName);
+                        } else {
+                            double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+                            dashTrade.Sell(lots, _Symbol, bid, 0, 0, "Manual Sell " + g_botName);
+                        }
+                    }
                 }
             }
         }

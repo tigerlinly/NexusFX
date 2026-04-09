@@ -68,7 +68,7 @@ int OnInit() {
    }
    
    DASH_PREFIX = "NXTrd_";
-   Dash_CreatePanel("Trend Follower Pro", MagicNumber);
+   Dash_CreatePanel("Trend Follower Pro", MagicNumber, EnumToString(EntryTF), EnumToString(TrendTF));
    return INIT_SUCCEEDED;
 }
 

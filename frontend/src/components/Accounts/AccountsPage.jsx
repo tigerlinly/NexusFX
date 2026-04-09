@@ -82,7 +82,14 @@ export default function AccountsPage() {
     fetchAccounts();
   };
 
-  // Removed the handleSync block since MetaApi is disabled
+  const handleSync = async (id) => {
+    try {
+      await api.syncAccount(id);
+      fetchAccounts();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
 
   // Group by broker (with logo)
   const grouped = accounts.reduce((acc, a) => {
@@ -336,7 +343,7 @@ export default function AccountsPage() {
                     </span>
                   ) : (
                     <button 
-                      onClick={() => fetchAccounts()}
+                      onClick={() => handleSync(acc.id)}
                       className="btn btn-ghost btn-sm"
                       style={{ color: 'var(--accent-primary)', fontSize: 11, padding: '2px 6px', display: 'flex', alignItems: 'center', gap: 4, height: 'auto', minHeight: 0, border: '1px solid rgba(59, 130, 246, 0.3)' }}
                     >

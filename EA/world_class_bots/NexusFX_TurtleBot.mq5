@@ -60,7 +60,7 @@ int OnInit()
    }
    
    DASH_PREFIX = "NXTUR_";
-   Dash_CreatePanel("NexusFX TurtleBot", MagicNumber);
+   Dash_CreatePanel("NexusFX TurtleBot", MagicNumber, EnumToString(EntryTF), EnumToString(TrendTF));
    return(INIT_SUCCEEDED); 
 }
 

@@ -56,7 +56,7 @@ int    currentDayCheck = 0;
 int OnInit() {
    trade.SetExpertMagicNumber(MagicNumber);
    DASH_PREFIX = "NXBrk_";
-   Dash_CreatePanel("Nexus Breakout Bot", MagicNumber);
+   Dash_CreatePanel("Nexus Breakout Bot", MagicNumber, EnumToString(BreakoutTF), EnumToString(TrendTF));
    
    pointUnit = SymbolInfoDouble(_Symbol, SYMBOL_POINT);
    if(SymbolInfoInteger(_Symbol, SYMBOL_DIGITS) == 5 || SymbolInfoInteger(_Symbol, SYMBOL_DIGITS) == 3) {

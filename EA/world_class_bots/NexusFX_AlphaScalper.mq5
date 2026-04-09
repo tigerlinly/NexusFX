@@ -46,7 +46,7 @@ int OnInit() {
    if(SymbolInfoInteger(_Symbol, SYMBOL_DIGITS) == 5 || SymbolInfoInteger(_Symbol, SYMBOL_DIGITS) == 3) pointUnit *= 10;
 
    DASH_PREFIX = "NXALP_";
-   Dash_CreatePanel("NexusFX Alpha Scalper", MagicNumber);
+   Dash_CreatePanel("NexusFX Alpha Scalper", MagicNumber, EnumToString(EntryTF), EnumToString(TrendTF));
    return(INIT_SUCCEEDED);
 }
 

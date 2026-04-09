@@ -39,7 +39,7 @@ int OnInit() {
    trade.SetExpertMagicNumber(MagicNumber);
    handleBands = iBands(_Symbol, EntryTF, BandsPeriod, 0, BandsShift, PRICE_CLOSE);
    pointUnit = (SymbolInfoInteger(_Symbol, SYMBOL_DIGITS) == 5 || SymbolInfoInteger(_Symbol, SYMBOL_DIGITS) == 3) ? SymbolInfoDouble(_Symbol, SYMBOL_POINT) * 10 : SymbolInfoDouble(_Symbol, SYMBOL_POINT);
-   DASH_PREFIX = "NXMB_"; Dash_CreatePanel("NexusFX M-Bouncer", MagicNumber);
+   DASH_PREFIX = "NXMB_"; Dash_CreatePanel("NexusFX M-Bouncer", MagicNumber, EnumToString(EntryTF), EnumToString(TrendTF));
    return(INIT_SUCCEEDED);
 }
 

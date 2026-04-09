@@ -45,7 +45,7 @@ datetime lastHaltDay = 0;
 int OnInit() { 
    trade.SetExpertMagicNumber(MagicNumber); 
    DASH_PREFIX = "NXVSA_";
-   Dash_CreatePanel("NexusFX VSABot", MagicNumber);
+   Dash_CreatePanel("NexusFX VSABot", MagicNumber, EnumToString(EntryTF), EnumToString(TrendTF));
    
    startBalanceOfDay = AccountInfoDouble(ACCOUNT_BALANCE);
    return(INIT_SUCCEEDED); 

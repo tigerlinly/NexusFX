@@ -56,7 +56,7 @@ int OnInit() {
    if(SymbolInfoInteger(SymbolB, SYMBOL_DIGITS) == 5 || SymbolInfoInteger(SymbolB, SYMBOL_DIGITS) == 3) pointUnitB *= 10;
    
    DASH_PREFIX = "NXP_";
-   Dash_CreatePanel("NexusFX Stat-Arb Pairs", MagicNumber);
+   Dash_CreatePanel("NexusFX Stat-Arb Pairs", MagicNumber, EnumToString(EntryTF), EnumToString(TrendTF));
    return(INIT_SUCCEEDED); 
 }
 

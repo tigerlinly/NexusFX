@@ -62,7 +62,7 @@ int OnInit() {
    handleTrendMA = iMA(_Symbol, TrendTF, Trend_MA_Period, 0, MODE_SMA, PRICE_CLOSE);
    
    DASH_PREFIX = "NXSMC_";
-   Dash_CreatePanel("NexusFX SMCBot (Pro)", MagicNumber);
+   Dash_CreatePanel("NexusFX SMCBot (Pro)", MagicNumber, EnumToString(EntryTF), EnumToString(TrendTF));
    return(INIT_SUCCEEDED); 
 }
 void OnDeinit(const int reason) { 
