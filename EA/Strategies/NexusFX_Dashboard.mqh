@@ -103,7 +103,7 @@ void Dash_CreatePanel(string botName, ulong magicNumber, string entryTF="Auto", 
    g_botName = botName;
    
    int pw = 420;
-   int ph = 175;
+   int ph = 205;
    
    Dash_CreateRect(DASH_PREFIX+"BG", g_PanelX, g_PanelY, pw, ph, PanelBgColor, PanelBorderColor, true);
    Dash_CreateRect(DASH_PREFIX+"TBG", g_PanelX, g_PanelY, pw, 26, C'25,32,48', PanelBorderColor, false);
@@ -153,7 +153,19 @@ void Dash_CreatePanel(string botName, ulong magicNumber, string entryTF="Auto", 
    Dash_CreateBtn(DASH_PREFIX+"BtnSell",rx+160, y-1, 40, 20, "SELL", SellColor);
    y+=h+10;
    
-   // --- Row 5 ---
+   // --- Row 5 (TP / SL Tools) ---
+   Dash_CreateLbl(DASH_PREFIX+"LTP", lx, y+2, "TP:", NeutralColor, 8, false);
+   Dash_CreateEdit(DASH_PREFIX+"ETP", lx+20, y, 35, 18, "0", C'25,32,48', TextColor);
+   Dash_CreateBtn(DASH_PREFIX+"BtnTPBuy", lx+58, y-1, 55, 20, "TP BUY", BuyColor);
+   Dash_CreateBtn(DASH_PREFIX+"BtnTPSell", lx+116, y-1, 55, 20, "TP SELL", SellColor);
+
+   Dash_CreateLbl(DASH_PREFIX+"LSL", rx, y+2, "SL:", NeutralColor, 8, false);
+   Dash_CreateEdit(DASH_PREFIX+"ESL", rx+20, y, 35, 18, "0", C'25,32,48', TextColor);
+   Dash_CreateBtn(DASH_PREFIX+"BtnSLBuy", rx+58, y-1, 55, 20, "SL BUY", BuyColor);
+   Dash_CreateBtn(DASH_PREFIX+"BtnSLSell", rx+116, y-1, 55, 20, "SL SELL", SellColor);
+   y+=h+10;
+   
+   // --- Row 6 ---
    Dash_CreateBtn(DASH_PREFIX+"BtnCloseBuy",  lx,      y, 82, 22, "Close BUY",  C'0,150,100');
    Dash_CreateBtn(DASH_PREFIX+"BtnCloseSell", lx+86,   y, 82, 22, "Close SELL", C'0,150,100');
    Dash_CreateBtn(DASH_PREFIX+"BtnStart",     rx,      y, 96, 22, "▶ START",  C'40,110,60');
@@ -246,12 +258,23 @@ void OnChartEvent(const int id, const long &lparam, const double &dparam, const 
             
             if(sparam == DASH_PREFIX+"BtnSync") {
                 Alert("NexusFX: Manual Sync Requested for " + g_botName);
+                
+                // --- Visual Feedback ---
+                ObjectSetString(0, DASH_PREFIX+"BtnSync", OBJPROP_TEXT, "⏳ SYNCING");
+                ObjectSetInteger(0, DASH_PREFIX+"BtnSync", OBJPROP_BGCOLOR, C'200,100,0'); // Orange
+                ChartRedraw();
+                
                 if(GlobalVariableCheck("NX_SYNC_REQUEST_" + IntegerToString(dash_magic))) {
                     GlobalVariableSet("NX_SYNC_REQUEST_" + IntegerToString(dash_magic), 1.0);
                 } else {
                     GlobalVariableTemp("NX_SYNC_REQUEST_" + IntegerToString(dash_magic));
                     GlobalVariableSet("NX_SYNC_REQUEST_" + IntegerToString(dash_magic), 1.0);
                 }
+                
+                Sleep(800);
+                ObjectSetString(0, DASH_PREFIX+"BtnSync", OBJPROP_TEXT, "♽ SYNC");
+                ObjectSetInteger(0, DASH_PREFIX+"BtnSync", OBJPROP_BGCOLOR, C'50,100,180'); // Original blue
+                ChartRedraw();
             }
             
             if(sparam == DASH_PREFIX+"BtnBuy" || sparam == DASH_PREFIX+"BtnSell") {
@@ -268,6 +291,77 @@ void OnChartEvent(const int id, const long &lparam, const double &dparam, const 
                             double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
                             dashTrade.Sell(lots, _Symbol, bid, 0, 0, "Manual Sell " + g_botName);
                         }
+                    }
+                }
+            }
+            
+            if(sparam == DASH_PREFIX+"BtnTPBuy" || sparam == DASH_PREFIX+"BtnTPSell" || 
+               sparam == DASH_PREFIX+"BtnSLBuy" || sparam == DASH_PREFIX+"BtnSLSell") {
+                
+                double tpPips = StringToDouble(ObjectGetString(0, DASH_PREFIX+"ETP", OBJPROP_TEXT));
+                double slPips = StringToDouble(ObjectGetString(0, DASH_PREFIX+"ESL", OBJPROP_TEXT));
+                
+                CTrade dashTrade;
+                dashTrade.SetExpertMagicNumber(dash_magic);
+                double pointUnit = SymbolInfoDouble(_Symbol, SYMBOL_POINT);
+                if(SymbolInfoInteger(_Symbol, SYMBOL_DIGITS) == 5 || SymbolInfoInteger(_Symbol, SYMBOL_DIGITS) == 3) {
+                    pointUnit *= 10; // Convert to Pips
+                }
+                
+                // Calculate Average Open Price (Volume Weighted)
+                double totalVolBuy = 0, totalVolSell = 0;
+                double weightedPriceBuy = 0, weightedPriceSell = 0;
+                for(int i = PositionsTotal() - 1; i >= 0; i--) {
+                    ulong tk = PositionGetTicket(i);
+                    if(PositionGetInteger(POSITION_MAGIC) != dash_magic) continue;
+                    long type = PositionGetInteger(POSITION_TYPE);
+                    double vol = PositionGetDouble(POSITION_VOLUME);
+                    double price = PositionGetDouble(POSITION_PRICE_OPEN);
+                    
+                    if(type == POSITION_TYPE_BUY) {
+                        totalVolBuy += vol;
+                        weightedPriceBuy += price * vol;
+                    } else if(type == POSITION_TYPE_SELL) {
+                        totalVolSell += vol;
+                        weightedPriceSell += price * vol;
+                    }
+                }
+                double avgBuy = totalVolBuy > 0 ? weightedPriceBuy / totalVolBuy : 0;
+                double avgSell = totalVolSell > 0 ? weightedPriceSell / totalVolSell : 0;
+                
+                for(int i = PositionsTotal() - 1; i >= 0; i--) {
+                    ulong magic = PositionGetInteger(POSITION_MAGIC);
+                    if(magic != dash_magic) continue;
+                    
+                    ulong tk = PositionGetTicket(i);
+                    long type = PositionGetInteger(POSITION_TYPE);
+                    double currentSL = PositionGetDouble(POSITION_SL);
+                    double currentTP = PositionGetDouble(POSITION_TP);
+                    
+                    double newSL = currentSL;
+                    double newTP = currentTP;
+                    bool modify = false;
+                    
+                    if(sparam == DASH_PREFIX+"BtnTPBuy" && type == POSITION_TYPE_BUY && tpPips > 0 && avgBuy > 0) {
+                         newTP = NormalizeDouble(avgBuy + (tpPips * pointUnit), (int)SymbolInfoInteger(_Symbol, SYMBOL_DIGITS));
+                         if(newTP != currentTP) modify = true;
+                    }
+                    if(sparam == DASH_PREFIX+"BtnTPSell" && type == POSITION_TYPE_SELL && tpPips > 0 && avgSell > 0) {
+                         newTP = NormalizeDouble(avgSell - (tpPips * pointUnit), (int)SymbolInfoInteger(_Symbol, SYMBOL_DIGITS));
+                         if(newTP != currentTP) modify = true;
+                    }
+                    
+                    if(sparam == DASH_PREFIX+"BtnSLBuy" && type == POSITION_TYPE_BUY && slPips > 0 && avgBuy > 0) {
+                         newSL = NormalizeDouble(avgBuy - (slPips * pointUnit), (int)SymbolInfoInteger(_Symbol, SYMBOL_DIGITS));
+                         if(newSL != currentSL) modify = true;
+                    }
+                    if(sparam == DASH_PREFIX+"BtnSLSell" && type == POSITION_TYPE_SELL && slPips > 0 && avgSell > 0) {
+                         newSL = NormalizeDouble(avgSell + (slPips * pointUnit), (int)SymbolInfoInteger(_Symbol, SYMBOL_DIGITS));
+                         if(newSL != currentSL) modify = true;
+                    }
+                    
+                    if(modify) {
+                         dashTrade.PositionModify(tk, newSL, newTP);
                     }
                 }
             }

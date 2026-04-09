@@ -1513,3 +1513,12 @@ input:-webkit-autofill:active{
 @media (max-width: 768px) { 
   .modal-grid-3, .modal-grid-2 { grid-template-columns: 1fr; } 
 }
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}

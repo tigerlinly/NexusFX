@@ -9,6 +9,7 @@ export default function AccountsPage() {
   const { accounts, brokers, fetchAccounts } = useAccounts();
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState(null);
+  const [syncingId, setSyncingId] = useState(null);
   const [formData, setFormData] = useState({
     broker_id: '', account_number: '', account_name: '', account_type: 'Real',
     currency: 'USD', server: '', metaapi_account_id: '', connection_type: 'TYPE_1_EA',
@@ -83,11 +84,15 @@ export default function AccountsPage() {
   };
 
   const handleSync = async (id) => {
+    if (syncingId === id) return;
+    setSyncingId(id);
     try {
       await api.syncAccount(id);
-      fetchAccounts();
+      await fetchAccounts();
     } catch (err) {
       alert(err.message);
+    } finally {
+      setSyncingId(null);
     }
   };
 
@@ -344,10 +349,12 @@ export default function AccountsPage() {
                   ) : (
                     <button 
                       onClick={() => handleSync(acc.id)}
+                      disabled={syncingId === acc.id}
                       className="btn btn-ghost btn-sm"
-                      style={{ color: 'var(--accent-primary)', fontSize: 11, padding: '2px 6px', display: 'flex', alignItems: 'center', gap: 4, height: 'auto', minHeight: 0, border: '1px solid rgba(59, 130, 246, 0.3)' }}
+                      style={{ color: 'var(--accent-primary)', fontSize: 11, padding: '2px 6px', display: 'flex', alignItems: 'center', gap: 4, height: 'auto', minHeight: 0, border: '1px solid rgba(59, 130, 246, 0.3)', opacity: syncingId === acc.id ? 0.7 : 1, cursor: syncingId === acc.id ? 'not-allowed' : 'pointer' }}
                     >
-                      <RefreshCw size={11} /> ซิงค์สถานะ
+                      <RefreshCw size={11} className={syncingId === acc.id ? "animate-spin" : ""} />
+                      {syncingId === acc.id ? 'กำลังซิงค์...' : 'ซิงค์สถานะ'}
                     </button>
                   )}
                   <div style={{ fontSize: 9, color: 'var(--text-muted)' }}>
