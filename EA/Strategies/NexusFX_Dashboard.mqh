@@ -102,8 +102,8 @@ void Dash_CreatePanel(string botName, ulong magicNumber, string entryTF="Auto", 
    dash_magic = magicNumber;
    g_botName = botName;
    
-   int pw = 430;
-   int ph = 185;
+   int pw = 420;
+   int ph = 175;
    
    Dash_CreateRect(DASH_PREFIX+"BG", g_PanelX, g_PanelY, pw, ph, PanelBgColor, PanelBorderColor, true);
    Dash_CreateRect(DASH_PREFIX+"TBG", g_PanelX, g_PanelY, pw, 26, C'25,32,48', PanelBorderColor, false);
@@ -111,65 +111,60 @@ void Dash_CreatePanel(string botName, ulong magicNumber, string entryTF="Auto", 
    Dash_CreateLbl(DASH_PREFIX+"Title", g_PanelX+10, g_PanelY+5, "⚡ " + botName + (g_DashIsRunning ? "" : " [HALTED]"), TextColor, 10, true);
    Dash_CreateLbl(DASH_PREFIX+"DragTip", g_PanelX+pw-110, g_PanelY+6, "(Double-Click to move)", NeutralColor, 7, false);
 
-   int y = g_PanelY + 34;
+   int y = g_PanelY + 32;
    int h = 18;
    
    int lx = g_PanelX + 12;
-   int vx = g_PanelX + 70;
+   int vx = g_PanelX + 75;
    
-   int rx = g_PanelX + 220;
-   int vx2 = g_PanelX + 285;
+   int rx = g_PanelX + 195;
+   int vx2 = g_PanelX + 260;
    
-   // --- Row 1 Headers ---
-   Dash_CreateLbl(DASH_PREFIX+"S1", lx, y, "── ACCOUNT ──", C'60,70,100', 8, true); 
-   Dash_CreateLbl(DASH_PREFIX+"S2", rx, y, "── STATUS ──", C'60,70,100', 8, true); 
+   // --- Row 1 ---
+   Dash_CreateLbl(DASH_PREFIX+"LMag", lx, y, "Magic No.:", NeutralColor, 9, false);
+   Dash_CreateLbl(DASH_PREFIX+"VMag", vx, y, IntegerToString(magicNumber), clrYellow, 9, true); 
+   Dash_CreateLbl(DASH_PREFIX+"LSig", rx, y, "Status:", NeutralColor, 9, false);
+   Dash_CreateLbl(DASH_PREFIX+"VSig", vx2, y, "SCANNING", NeutralColor, 9, true); 
    y+=h;
    
    // --- Row 2 ---
    Dash_CreateLbl(DASH_PREFIX+"LBal", lx, y, "Balance:", NeutralColor, 9, false);
    Dash_CreateLbl(DASH_PREFIX+"VBal", vx, y, "-", TextColor, 9, true); 
-   Dash_CreateLbl(DASH_PREFIX+"LMag", rx, y, "Magic No.:", NeutralColor, 9, false);
-   Dash_CreateLbl(DASH_PREFIX+"VMag", vx2, y, IntegerToString(magicNumber), clrYellow, 9, true); 
-   y+=h;
-   
-   // --- Row 3 ---
-   Dash_CreateLbl(DASH_PREFIX+"LEq", lx, y, "Equity:", NeutralColor, 9, false);
-   Dash_CreateLbl(DASH_PREFIX+"VEq", vx, y, "-", TextColor, 9, true); 
-   Dash_CreateLbl(DASH_PREFIX+"LSig", rx, y, "Status:", NeutralColor, 9, false);
-   Dash_CreateLbl(DASH_PREFIX+"VSig", vx2, y, "SCANNING", NeutralColor, 9, true); 
-   y+=h;
-   
-   // --- Row 4 ---
-   Dash_CreateLbl(DASH_PREFIX+"LMgn", lx, y, "Margin:", NeutralColor, 8, false);
-   Dash_CreateLbl(DASH_PREFIX+"VMgn", vx, y, "-", TextColor, 8, true); 
    Dash_CreateLbl(DASH_PREFIX+"LPos", rx, y, "Pos / PnL:", NeutralColor, 9, false);
    Dash_CreateLbl(DASH_PREFIX+"VPos", vx2, y, "0", TextColor, 9, true);
    Dash_CreateLbl(DASH_PREFIX+"VPnl", vx2+20, y, " | $0.00", TextColor, 9, true); 
    y+=h;
    
-   // --- Row 5 ---
-   Dash_CreateLbl(DASH_PREFIX+"S3", lx, y, "── ACTIONS ──", C'60,70,100', 8, true); 
+   // --- Row 3 ---
+   Dash_CreateLbl(DASH_PREFIX+"LEq", lx, y, "Equity:", NeutralColor, 9, false);
+   Dash_CreateLbl(DASH_PREFIX+"VEq", vx, y, "-", TextColor, 9, true); 
    Dash_CreateLbl(DASH_PREFIX+"LTFs", rx, y, "TFs (E|T):", NeutralColor, 9, false);
    Dash_CreateLbl(DASH_PREFIX+"VTFs", vx2, y, entryTF + " | " + trendTF, clrCyan, 9, true);
-   y+=h+6; // Extra padding before buttons
+   y+=h;
    
-   // --- Row 6 (Buttons) ---
-   Dash_CreateBtn(DASH_PREFIX+"BtnStart",  lx,      y, 90, 22, "▶ START",  C'40,110,60');
-   Dash_CreateBtn(DASH_PREFIX+"BtnStop",   lx+96,   y, 90, 22, "⏸ STOP",   C'120,50,30');
+   // --- Row 4 ---
+   Dash_CreateLbl(DASH_PREFIX+"LMgn", lx, y, "Margin:", NeutralColor, 9, false);
+   Dash_CreateLbl(DASH_PREFIX+"VMgn", vx, y, "-", TextColor, 9, true); 
    
-   Dash_CreateLbl(DASH_PREFIX+"LMan", rx, y+4, "Lot|Cnt:", NeutralColor, 8, false);
-   Dash_CreateEdit(DASH_PREFIX+"ELots", rx+40, y+2, 32, 18, "0.01", C'25,32,48', TextColor);
-   Dash_CreateEdit(DASH_PREFIX+"ECnt",  rx+76, y+2, 22, 18, "1",    C'25,32,48', TextColor);
-   Dash_CreateBtn(DASH_PREFIX+"BtnBuy", rx+102, y+1, 40, 20, "BUY",  BuyColor);
-   Dash_CreateBtn(DASH_PREFIX+"BtnSell",rx+145, y+1, 40, 20, "SELL", SellColor);
+   Dash_CreateLbl(DASH_PREFIX+"LMan", rx, y+2, "Lot|Cnt:", NeutralColor, 8, false);
+   Dash_CreateEdit(DASH_PREFIX+"ELots", rx+46, y, 40, 18, "0.01", C'25,32,48', TextColor);
+   Dash_CreateEdit(DASH_PREFIX+"ECnt",  rx+88, y, 28, 18, "1",    C'25,32,48', TextColor);
+   Dash_CreateBtn(DASH_PREFIX+"BtnBuy", rx+118, y-1, 40, 20, "BUY",  BuyColor);
+   Dash_CreateBtn(DASH_PREFIX+"BtnSell",rx+160, y-1, 40, 20, "SELL", SellColor);
+   y+=h+10;
+   
+   // --- Row 5 ---
+   Dash_CreateBtn(DASH_PREFIX+"BtnCloseBuy",  lx,      y, 82, 22, "Close BUY",  C'0,150,100');
+   Dash_CreateBtn(DASH_PREFIX+"BtnCloseSell", lx+86,   y, 82, 22, "Close SELL", C'0,150,100');
+   Dash_CreateBtn(DASH_PREFIX+"BtnStart",     rx,      y, 96, 22, "▶ START",  C'40,110,60');
+   Dash_CreateBtn(DASH_PREFIX+"BtnStop",      rx+100,  y, 96, 22, "⏸ STOP",   C'120,50,30');
    y+=26;
    
-   // --- Row 7 (Buttons) ---
-   Dash_CreateBtn(DASH_PREFIX+"BtnCloseWin",  lx,      y, 90, 22, "Close Win",  C'0,150,100');
-   Dash_CreateBtn(DASH_PREFIX+"BtnCloseLoss", lx+96,   y, 90, 22, "Close Loss", C'180,50,70');
-   
-   Dash_CreateBtn(DASH_PREFIX+"BtnCloseAll",  rx, y, 85, 22, "Close All",  C'150,30,30');
-   Dash_CreateBtn(DASH_PREFIX+"BtnSync",      rx+90, y, 95, 22, "♽ SYNC",     C'50,100,180');
+   // --- Row 6 ---
+   Dash_CreateBtn(DASH_PREFIX+"BtnCloseWin",  lx,      y, 82, 22, "Close Win",  C'0,150,100');
+   Dash_CreateBtn(DASH_PREFIX+"BtnCloseLoss", lx+86,   y, 82, 22, "Close Loss", C'180,50,70');
+   Dash_CreateBtn(DASH_PREFIX+"BtnCloseAll",  rx, y, 96, 22, "Close All",  C'150,30,30');
+   Dash_CreateBtn(DASH_PREFIX+"BtnSync",      rx+100, y, 96, 22, "♽ SYNC",     C'50,100,180');
    
    ChartRedraw();
 }
@@ -239,9 +234,12 @@ void OnChartEvent(const int id, const long &lparam, const double &dparam, const 
                     
                     double prof = PositionGetDouble(POSITION_PROFIT);
                     ulong tk = PositionGetTicket(i);
+                    long type = PositionGetInteger(POSITION_TYPE);
                     
                     if(sparam == DASH_PREFIX+"BtnCloseWin" && prof > 0.0) dashTrade.PositionClose(tk);
                     if(sparam == DASH_PREFIX+"BtnCloseLoss" && prof < 0.0) dashTrade.PositionClose(tk);
+                    if(sparam == DASH_PREFIX+"BtnCloseBuy" && type == POSITION_TYPE_BUY) dashTrade.PositionClose(tk);
+                    if(sparam == DASH_PREFIX+"BtnCloseSell" && type == POSITION_TYPE_SELL) dashTrade.PositionClose(tk);
                     if(sparam == DASH_PREFIX+"BtnCloseAll") dashTrade.PositionClose(tk);
                 }
             }

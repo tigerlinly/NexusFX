@@ -26,6 +26,21 @@
 | **11. VSABot** (Wyckoff) | วิเคราะห์แรงซื้อ/ขายของผู้เล่นรายใหญ่ด้วย Volume ผูกกับขนาดแท่งเทียน | Tick Volume, แท่งเทียน Spread (ความกว้าง Bar) | เกิด Volume มหาศาล แต่แท่งเทียนแคบ (Accumulation/Distribution) สวนทางกับแรงสะสม | เปลี่ยนเทรนด์ หรือ มี VSA Signal ฝั่งตรงข้าม | **SL:** ใต้/บน ไส้เทียน (สวิง) 5 Pips<br>**TP:** แนวรับต้านนัยยะสำคัญ | **Entry:** M15<br>**Trend:** H4 | สินทรัพย์ที่มี Volume หนัก (XAU, หลัก) |
 
 ---
+
+## 🎨 Visual Chart / Technical Object Reference (การวาดเส้นและออบเจ็กต์บนกราฟ)
+
+EA ในระบบได้รับการอัพเกรดเป็น **Institutional Grade** สามารถวาด Object เชิงเทคนิคบนกราฟ MT5 ได้อัตโนมัติ เพื่อให้ผู้ใช้/แอดมินเห็นภาพกลยุทธ์ที่บอทกำลังทำงานอยู่ทันที:
+
+| 🤖 ชื่อบอท | 🎨 Object ที่ระบบวาด | 🖍️ ความหมายและสี | 📍 วิธีการทำงาน (รหัสสี MT5) |
+| :--- | :--- | :--- | :--- |
+| **SMCBot** | `OBJ_RECTANGLE` (กรอบสี่เหลี่ยม) | ตีโซน Fair Value Gap (FVG)<br>• **สีทอง (GoldenRod):** Bearish FVG (Resistance)<br>• **สีม่วง (MediumPurple):** Bullish FVG (Support) | คำนวณช่วงโหว่ของแท่งเทียน 1 และ 3 แบบอัตโนมัติ |
+| **FollowerTrend** | `ChartIndicatorAdd` (เส้นอินดิเคเตอร์) | โหลดเส้นกะแนวโน้มทันที<br>• **เส้นสีเหลือง:** Fast Trend (EMA 50)<br>• **เส้นสีแดง:** Slow Trend (EMA 200) | ดึง Handle จาก `iMA` และแปะลง Sub-window หลัก |
+| **BreakoutBot** | `OBJ_HLINE` (เส้นแนวนอนแบบประ) | วัดกรอบ Breakout Range<br>• **สีฟ้า (DeepSkyBlue):** Brk_Max แนวต้าน<br>• **สีบานเย็น (Magenta):** Brk_Min แนวรับ | ตีเส้นขอบด้วย `STYLE_DASH` |
+| **TurtleBot** | `OBJ_HLINE` (เส้นแนวนอนทึบ) | ตีกรอบ Donchian Channel<br>• **สีเขียว (LimeGreen):** Tur_Max (High 20 วัน)<br>• **สีส้มแดง (OrangeRed):** Tur_Min (Low 20 วัน) | ตีเส้นขอบแข็งด้วย `STYLE_SOLID` |
+| **ZoneBot** | `OBJ_HLINE` (เส้นระบุโซน) | แยกขอบเขตเพื่อทำจุด Grid Recovery<br>• **สีฟ้า (DeepSkyBlue):** ZON_Max ด้านบน<br>• **สีส้ม (Orange):** ZON_Min ด้านล่าง | กริดโซนใช้ `STYLE_SOLID` |
+
+---
+
 ### คำอธิบายเพิ่มเติมสำหรับตาราง (Notes)
 - **Timeframe:** `Entry` แปลว่าดูสัญญาณสั่งเปิดไม้, `Trend` แปลว่าใช้เพื่อกรองหาทิศทางหลัก เพื่อไม่ให้เข้าเทรดทวนกระแสใหญ่
 - **การใช้กับ "App Auto":** ในกรอบการรัน EA จะมีตัวแปรออเดอร์ Comment เช่น `BreakoutBot VSA (M15/H4) Acc` หากเชื่อมกับระบบ App Auto ระบบอ่านหน้าจอหรือเทอร์มินัลของคุณก็สามารถตรวจสอบ String เหล่านี้เพื่อนับ Stat ของโรบอทแต่ละตัวแยกออกจากไม้ที่ User กดเทรดปกติได้เลยครับ

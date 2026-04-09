@@ -20,8 +20,8 @@ input ulong    MagicNumber = 908;
 input ENUM_TIMEFRAMES EntryTF = PERIOD_M15;    
 input ENUM_TIMEFRAMES TrendTF = PERIOD_H4;     
 
-// --- Zone Recovery Matrix ---
-input int      ZonePips      = 300;    // ความกว้างของ Zone/Grid Recovery (Pips)
+// --- Zone Matrix ---
+input int      ZonePips      = 300;    // ความกว้างของ Zone/Grid (Pips)
 input double   Multiplier    = 1.5;    // Martingale หลอดสำหรับเปิดไม้ฝั่งตรงข้าม
 input double   TargetProfit  = 10.0;   // รวบยอดกำไรเมื่อ PnL (เงินสด) ถึงเป้า
 
@@ -52,7 +52,7 @@ int OnInit() {
    }
    
    DASH_PREFIX = "NXZON_";
-   Dash_CreatePanel("NexusFX Zone Recovery", MagicNumber, EnumToString(EntryTF), EnumToString(TrendTF));
+   Dash_CreatePanel("NexusFX Zone Bot", MagicNumber, EnumToString(EntryTF), EnumToString(TrendTF));
    return(INIT_SUCCEEDED); 
 }
 
@@ -183,7 +183,7 @@ void OnTick()
    }
 
    // ============================================================
-   // 2. Zone Recovery Grid Logic (ตามแก้ออเดอร์ Martingale)
+   // 2. Zone Grid Logic (ตามแก้ออเดอร์ Martingale)
    // ============================================================
    if(totalTrades > 0 && netProfit < 0)
    {

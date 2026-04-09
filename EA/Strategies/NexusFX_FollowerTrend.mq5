@@ -62,13 +62,17 @@ int OnInit() {
    handleFast = iMA(_Symbol, EntryTF, FastEMA, 0, MODE_EMA, PRICE_CLOSE);
    handleSlow = iMA(_Symbol, TrendTF, SlowEMA, 0, MODE_EMA, PRICE_CLOSE);
    
+   // --- วาดเส้น EMA ลงกราฟเพื่อให้ผู้ใช้มองเห็นเทรนด์ (Visual Trend) ---
+   ChartIndicatorAdd(0, 0, handleFast);
+   ChartIndicatorAdd(0, 0, handleSlow);
+   
    pointUnit = SymbolInfoDouble(_Symbol, SYMBOL_POINT);
    if(SymbolInfoInteger(_Symbol, SYMBOL_DIGITS) == 5 || SymbolInfoInteger(_Symbol, SYMBOL_DIGITS) == 3) {
        pointUnit *= 10;
    }
    
    DASH_PREFIX = "NXTrd_";
-   Dash_CreatePanel("Trend Follower Pro", MagicNumber, EnumToString(EntryTF), EnumToString(TrendTF));
+   Dash_CreatePanel("Follower Trend Bot", MagicNumber, EnumToString(EntryTF), EnumToString(TrendTF));
    return INIT_SUCCEEDED;
 }
 
