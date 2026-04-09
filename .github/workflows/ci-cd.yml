@@ -95,12 +95,14 @@ jobs:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           password: ${{ secrets.PASSWORD }}
+          port: 14321
           command_timeout: 10m
           script: |
             echo "🔄 Starting NexusFX deployment..."
             cd /var/www/nexusfx
             
-            # Pull latest
+            # Reset local changes & pull latest
+            git checkout -- .
             git pull origin main
             
             # Rebuild containers
