@@ -15,6 +15,7 @@ jobs:
         run: |
           echo "🔄 Starting NexusFX deployment..."
           cd /var/www/nexusfx
+          git checkout -- .
           git pull origin main
 
       - name: Rebuild & restart containers
