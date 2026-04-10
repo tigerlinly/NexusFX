@@ -29,7 +29,7 @@ input ENUM_TIMEFRAMES TrendTF = PERIOD_D1;  // สำหรับแสดงผ
 // --- Risk Management & Target ---
 input double   RiskPercent          = 1.0;     // คำนวณ Lot
 input double   TargetProfit         = 5.0;     // Profit Goal (Account Currency) to close pair
-input double   DailyProfitTargetPct = 3.0;     // หยุดเมื่อกำไรชนเป้า/วัน
+input double   DailyProfitTargetPct = 0.0;     // หยุดเมื่อกำไรชนเป้า/วัน
 input double   DailyDrawdownPct     = 5.0;     // ตัดขาดทุนถ้าลบเกินเป้า/วัน
 input double   InitialSLPips        = 500.0;   // SL คุ้มครองพอร์ตกรณีคู่เงินฉีกขาดถาวร
 

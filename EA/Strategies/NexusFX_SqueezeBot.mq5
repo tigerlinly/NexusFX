@@ -27,7 +27,7 @@ input double   ScaleLotMultiplier = 0.5; // ป้องกันความเ
 
 // --- Risk Management & Target ---
 input double   RiskPercent          = 1.0;    // คำนวณ Lot จาก % ทุน
-input double   DailyProfitTargetPct = 3.0;    // เลิกเทรดเมื่อกำไรถึง % ต่อวัน
+input double   DailyProfitTargetPct = 0.0;    // เลิกเทรดเมื่อกำไรถึง % ต่อวัน
 input double   DailyDrawdownPct     = 5.0;    // เลิกเทรดเมื่อลบถึง % ต่อวัน
 input int      MaxSpreadPoints      = 30;     // ป้องกันช่วงข่าว Spread ถ่าง (30 points = 3 pips)
 input double   InitialSLPips        = 200.0;  

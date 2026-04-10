@@ -111,28 +111,22 @@ router.post('/sync', async (req, res) => {
       [balance, equity, req.account.id]
     );
 
-    // Auto update target to 5% if it's currently 0 or NULL
-    if (balance > 0) {
-      await client.query(
-        `UPDATE daily_targets SET target_amount = $1 
-         WHERE account_id = $2 AND (target_amount = 0 OR target_amount IS NULL)`,
-        [(balance * 0.05).toFixed(2), req.account.id]
-      );
-    }
+    // (Auto update 5% target removed to allow 0 to mean 'unlimited' target)
 
     // 2. Sync Trades (UPSERT pattern for open positions)
     if (trades && Array.isArray(trades)) {
       for (const trade of trades) {
         // Assume trade object mapping standard MQL to DB fields
         await client.query(`
-          INSERT INTO trades (account_id, ticket, symbol, side, lot_size, entry_price, stop_loss, take_profit, current_price, pnl, status, opened_at)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'OPEN', COALESCE($11, NOW()))
+          INSERT INTO trades (account_id, ticket, symbol, side, lot_size, entry_price, stop_loss, take_profit, current_price, pnl, status, opened_at, magic_number)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'OPEN', COALESCE($11, NOW()), $12)
           ON CONFLICT (account_id, ticket) 
           DO UPDATE SET 
             current_price = EXCLUDED.current_price,
             pnl = EXCLUDED.pnl,
             stop_loss = EXCLUDED.stop_loss,
             take_profit = EXCLUDED.take_profit,
+            magic_number = COALESCE(NULLIF(EXCLUDED.magic_number, 0), trades.magic_number),
             status = 'OPEN'
         `, [
           req.account.id, 
@@ -145,7 +139,8 @@ router.post('/sync', async (req, res) => {
           trade.tp || 0, 
           trade.current_price, 
           trade.profit,
-          trade.open_time ? new Date(trade.open_time * 1000) : null // Unix timestamp conversion
+          trade.open_time ? new Date(trade.open_time * 1000) : null, // Unix timestamp conversion
+          trade.magic_number || 0
         ]);
       }
     }

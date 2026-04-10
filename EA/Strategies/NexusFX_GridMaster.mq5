@@ -25,7 +25,7 @@ input int      ATR_Period           = 14;
 
 // --- Profit Booking ---
 input double   BasketProfitTarget   = 20.0;   // เก็บเงินสดต่อรอบตาข่าย (Account Currency)
-input double   DailyProfitTargetPct = 5.0;
+input double   DailyProfitTargetPct = 0.0;
 input double   DailyDrawdownPct     = 10.0;
 
 int handleATR;

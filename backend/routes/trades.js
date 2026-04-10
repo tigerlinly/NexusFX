@@ -350,7 +350,15 @@ router.post('/', auditLog('PLACE_TRADE', 'ORDER'), async (req, res) => {
   }
 });
 
-// sync and sync-all routes removed
+// POST /api/trades/sync-all (Mocked to success since EA bridge handles this automatically)
+router.post('/sync-all', async (req, res) => {
+  res.json({ success: true, message: 'ข้อมูลได้รับการซิงค์อัตโนมัติจากระบบ Bridge แล้ว' });
+});
+
+// POST /api/trades/sync/:accountId
+router.post('/sync/:accountId', async (req, res) => {
+  res.json({ success: true, message: 'ข้อมูลได้รับการซิงค์อัตโนมัติจากระบบ Bridge แล้ว' });
+});
 
 // GET /api/trades/live/:accountId
 router.get('/live/:accountId', auditLog('VIEW_LIVE_TRADES', 'ACCOUNT'), async (req, res) => {

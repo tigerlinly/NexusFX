@@ -473,10 +473,21 @@ export default function StrategiesPage() {
                   <div style={{ color: 'var(--text-primary)', fontWeight: 600, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
                     <Info size={16} /> รายละเอียดอื่นๆ
                   </div>
-                  <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                  <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
                     {activeStrategyDetails.strategy_details.extra_details}
                   </div>
                 </div>
+
+                {activeStrategyDetails.strategy_details.visual_details && (
+                  <div style={{ background: 'rgba(0, 200, 255, 0.05)', padding: 16, borderRadius: 8, border: '1px solid rgba(0, 200, 255, 0.2)' }}>
+                    <div style={{ color: 'var(--accent-primary)', fontWeight: 600, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <BarChart2 size={16} /> รูปแบบการตีเส้นบนกราฟ (Visual Reference)
+                    </div>
+                    <div style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+                      {activeStrategyDetails.strategy_details.visual_details}
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-tertiary)' }}>

@@ -166,6 +166,7 @@ void SendSyncData()
          double current_price = PositionGetDouble(POSITION_PRICE_CURRENT);
          double profit = PositionGetDouble(POSITION_PROFIT);
          long open_time = PositionGetInteger(POSITION_TIME);
+         long magic_number = PositionGetInteger(POSITION_MAGIC);
 
          if(!first) json += ",";
          
@@ -179,6 +180,7 @@ void SendSyncData()
          json += "\"tp\":" + DoubleToString(tp, 5) + ",";
          json += "\"current_price\":" + DoubleToString(current_price, 5) + ",";
          json += "\"profit\":" + DoubleToString(profit, 2) + ",";
+         json += "\"magic_number\":" + IntegerToString(magic_number) + ",";
          json += "\"open_time\":" + IntegerToString(open_time);
          json += "}";
          

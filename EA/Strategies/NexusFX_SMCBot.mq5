@@ -28,7 +28,7 @@ input double   ScaleLotMultiplier = 0.5;       // ยิ่งสับยิ่
 
 // --- Risk Management & Target ---
 input double   RiskPercent          = 1.0;     // คำนวณ Lot จากทุน
-input double   DailyProfitTargetPct = 3.0;     // หยุดเมื่อกำไรชนเป้า/วัน
+input double   DailyProfitTargetPct = 0.0;     // หยุดเมื่อกำไรชนเป้า/วัน
 input double   DailyDrawdownPct     = 5.0;     // ตัดขาดทุนถ้าลบเกินเป้า/วัน
 input int      MaxSpreadPoints      = 30;      // 30 points = 3 pips
 input double   InitialTPPips        = 500.0;   // รันกำไร SMC มักจะยาว
