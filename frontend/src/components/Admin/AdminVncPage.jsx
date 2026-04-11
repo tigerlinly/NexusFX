@@ -28,34 +28,33 @@ export default function AdminVncPage() {
 
   return (
     <div className="page-container" style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 20px)' }}>
-      <div className="page-header" style={{ marginBottom: 'var(--space-sm)' }}>
-        <h1 className="page-title">
-          <Terminal size={24} className="text-secondary" />
-          การจัดการ MT5 Nodes (VNC)
-        </h1>
-        <p className="page-subtitle">ควบคุมและจัดการหน้าจอ MT5 สำหรับ Infrastructure แบบรวมศูนย์</p>
-      </div>
-
-      <div style={{ display: 'flex', gap: 'var(--space-md)', marginBottom: 'var(--space-sm)' }}>
-        {nodes.map(node => (
-          <button
-            key={node.id}
-            className={`btn ${activeNode === node.id ? 'btn-primary' : 'btn-outline'}`}
-            onClick={() => setActiveNode(node.id)}
-            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-          >
-            <Server size={18} />
-            {node.name}
-            {node.status === 'online' ? (
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--profit)' }}></span>
-            ) : (
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--text-tertiary)' }}></span>
-            )}
-          </button>
-        ))}
-
-        <div style={{ marginLeft: 'auto' }}>
-          <button className="btn btn-outline" onClick={handleRefresh} disabled={isRefreshing}>
+      <div className="page-header" style={{ marginBottom: 'var(--space-sm)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+        <div>
+          <h1 className="page-title">
+            <Terminal size={24} className="text-secondary" />
+            การจัดการ MT5 Nodes (VNC)
+          </h1>
+          <p className="page-subtitle">ควบคุมและจัดการหน้าจอ MT5 สำหรับ Infrastructure แบบรวมศูนย์</p>
+        </div>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ position: 'relative', width: '240px' }}>
+            <select
+              className="form-control"
+              value={activeNode}
+              onChange={(e) => setActiveNode(e.target.value)}
+              style={{ paddingLeft: '36px', appearance: 'auto', backgroundColor: '#1e2433', border: '1px solid var(--border-primary)', color: 'var(--text-primary)', height: '40px', borderRadius: '8px' }}
+            >
+              {nodes.map(node => (
+                <option key={node.id} value={node.id}>
+                  {node.name} {node.status === 'online' ? '🟢' : '⚪'}
+                </option>
+              ))}
+            </select>
+            <Server size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)', pointerEvents: 'none' }} />
+          </div>
+          
+          <button className="btn btn-outline" onClick={handleRefresh} disabled={isRefreshing} style={{ height: '40px' }}>
             <RefreshCw size={18} className={isRefreshing ? 'spin' : ''} />
             โหลดหน้าจอใหม่
           </button>
