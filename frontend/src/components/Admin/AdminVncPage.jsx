@@ -7,9 +7,9 @@ export default function AdminVncPage() {
 
   // Nodes configuration
   const nodes = [
-    { id: 'node1', name: 'Node 1 (Primary Data)', url: '/vnc/node1/', status: 'online' },
-    { id: 'node2', name: 'Node 2 (Standby Data)', url: '/vnc/node2/', status: 'offline' },
-    { id: 'node3', name: 'Node 3 (Strategy)', url: '/vnc/node3/', status: 'offline' }
+    { id: 'node1', name: 'Node 1 (Primary Data)', url: '/vnc/node1/?resize=scale&autoconnect=true', status: 'online' },
+    { id: 'node2', name: 'Node 2 (Standby Data)', url: '/vnc/node2/?resize=scale&autoconnect=true', status: 'offline' },
+    { id: 'node3', name: 'Node 3 (Strategy)', url: '/vnc/node3/?resize=scale&autoconnect=true', status: 'offline' }
   ];
 
   const handleRefresh = () => {
@@ -62,7 +62,7 @@ export default function AdminVncPage() {
         </div>
       </div>
 
-      <div className="card" style={{ padding: 0, overflow: 'hidden', height: 'calc(100vh - 240px)', minHeight: '600px', display: 'flex', flexDirection: 'column' }}>
+      <div className="card" style={{ padding: 0, overflow: 'hidden', height: 'calc(100vh - 180px)', minHeight: '600px', display: 'flex', flexDirection: 'column' }}>
         <div style={{ background: '#1e2433', padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-primary)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#a0aabc', fontSize: '14px' }}>
             <MonitorPlay size={16} />
