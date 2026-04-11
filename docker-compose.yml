@@ -104,11 +104,47 @@ services:
       - WINEDLLOVERRIDES=winedbg.exe=d;dbghelp=d
     restart: unless-stopped
 
+  mt5-node-2:
+    build:
+      context: ./docker-mt5-node
+      dockerfile: Dockerfile
+    container_name: nexusfx-mt5-node-2
+    privileged: true
+    ports:
+      - "8081:8080"
+      - "5901:5900"
+    volumes:
+      - mt5-data-2:/root/.wine
+      - ./EA:/root/ea-source
+    environment:
+      - WINEDEBUG=-all
+      - WINEDLLOVERRIDES=winedbg.exe=d;dbghelp=d
+    restart: unless-stopped
+
+  mt5-node-3:
+    build:
+      context: ./docker-mt5-node
+      dockerfile: Dockerfile
+    container_name: nexusfx-mt5-node-3
+    privileged: true
+    ports:
+      - "8082:8080"
+      - "5902:5900"
+    volumes:
+      - mt5-data-3:/root/.wine
+      - ./EA:/root/ea-source
+    environment:
+      - WINEDEBUG=-all
+      - WINEDLLOVERRIDES=winedbg.exe=d;dbghelp=d
+    restart: unless-stopped
+
 volumes:
   certbot-etc:
     driver: local
   certbot-var:
     driver: local
   mt5-data-1:
+  mt5-data-2:
+  mt5-data-3:
   nexusfx_pgdata:
     external: true
