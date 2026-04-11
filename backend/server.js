@@ -89,7 +89,13 @@ const tradeLimiter = rateLimit({
   message: { error: 'Too many trade requests, please slow down.' },
 });
 
-app.use('/api', generalLimiter);
+// 📊 Exclude /api/bridge from general rate limits since EAs pump data every second
+app.use('/api', (req, res, next) => {
+  if (req.path.startsWith('/bridge')) {
+    return next();
+  }
+  return generalLimiter(req, res, next);
+});
 
 // 📊 Metrics middleware (counts requests)
 app.use(metrics.middleware());
