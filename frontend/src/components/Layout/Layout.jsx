@@ -174,7 +174,17 @@ export default function Layout() {
                 <Cog size={18} className="nav-icon" />
                 {showLabels && <span>ตั้งค่าระบบ (Config)</span>}
               </NavLink>
-              <NavLink to="/admin/nodes" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="การจัดการ MT5 Nodes">
+              <NavLink 
+                to="/admin/nodes" 
+                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} 
+                title="การจัดการ MT5 Nodes"
+                onClick={(e) => {
+                  if (window.location.pathname === '/admin/nodes') {
+                    e.preventDefault();
+                    window.dispatchEvent(new Event('force-vnc-reload'));
+                  }
+                }}
+              >
                 <TerminalSquare size={18} className="nav-icon" />
                 {showLabels && <span>การจัดการ MT5 Nodes</span>}
               </NavLink>

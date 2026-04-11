@@ -16,11 +16,27 @@ export default function AdminVncPage() {
       });
     }
   }, []);
-
   // Force iframe reload when navigating to this menu from sidebar again
   useEffect(() => {
     setTimestamp(Date.now());
   }, [location.key]);
+
+  // Listen for manual force reload from Sidebar explicitly
+  useEffect(() => {
+    const forceReload = () => {
+      setTimestamp(Date.now());
+      setIsRefreshing(true);
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+          registrations.forEach(registration => registration.update());
+        });
+      }
+      setTimeout(() => setIsRefreshing(false), 500);
+    };
+
+    window.addEventListener('force-vnc-reload', forceReload);
+    return () => window.removeEventListener('force-vnc-reload', forceReload);
+  }, []);
 
   // Nodes configuration
   const nodes = [
