@@ -266,12 +266,6 @@ export default function BrokersPage() {
                       
                       {isAdmin && (
                         <>
-                          <button onClick={() => handleToggleActive(broker)}
-                            className={`btn btn-sm ${broker.is_active ? 'btn-primary' : 'btn-outline'}`}
-                            style={{ fontSize: 11, padding: '2px 8px', height: 'auto', minHeight: 0 }}
-                          >
-                            {broker.is_active ? 'Active' : 'Inactive'}
-                          </button>
                           <button className="btn btn-ghost btn-icon btn-sm" onClick={() => handleOpenEdit(broker)} title="แก้ไข">
                             <Edit2 size={16} />
                           </button>
