@@ -1,9 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MonitorPlay, Settings, RefreshCw, Terminal, Server } from 'lucide-react';
 
 export default function AdminVncPage() {
   const [activeNode, setActiveNode] = useState('node1');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [timestamp, setTimestamp] = useState(Date.now());
+
+  // Force update service worker to clear outdated cache rules for /vnc/
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then((registrations) => {
+        registrations.forEach(registration => registration.update());
+      });
+    }
+  }, []);
 
   // Nodes configuration
   const nodes = [
@@ -14,12 +24,8 @@ export default function AdminVncPage() {
 
   const handleRefresh = () => {
     setIsRefreshing(true);
-    // Add small delay to show animation and force iframe reload
+    setTimestamp(Date.now());
     setTimeout(() => {
-      const iframe = document.getElementById('vnc-iframe');
-      if (iframe) {
-        iframe.src = iframe.src;
-      }
       setIsRefreshing(false);
     }, 500);
   };
@@ -75,7 +81,7 @@ export default function AdminVncPage() {
           {currentNode.status === 'online' ? (
             <iframe
               id="vnc-iframe"
-              src={currentNode.url}
+              src={`${currentNode.url}?nocache=${timestamp}`}
               style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
               title={`VNC ${currentNode.name}`}
             ></iframe>
