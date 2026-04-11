@@ -241,7 +241,7 @@ void DrawDashboard() {
     if(g_minimized) return;
     
     // Status
-    string lastUpdStr = (lastUpdateTime == 0) ? "Never" : TimeToString(lastUpdateTime, TIME_DATE|TIME_MINUTES);
+    string lastUpdStr = (lastUpdateTime == 0) ? "Never" : TimeToString(lastUpdateTime + (7 * 3600), TIME_DATE|TIME_MINUTES);
     CreateLabel("PumpDash_LastUpd", "Last Pump: " + lastUpdStr, g_PanelX+10, g_PanelY+35, clrLightGray);
     CreateLabel("PumpDash_Info", "Next: Sun @06:00 (W), 1st @06:00 (M)", g_PanelX+10, g_PanelY+55, C'100,100,100');
     

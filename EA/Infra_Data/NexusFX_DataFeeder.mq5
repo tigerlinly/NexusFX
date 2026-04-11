@@ -202,7 +202,7 @@ void OnTimer() {
     } else {
         dash_pulled_symbols = activeSymbols;
     }
-    dash_last_update = TimeToString(TimeCurrent(), TIME_DATE|TIME_SECONDS);
+    dash_last_update = TimeToString(TimeGMT() + (7 * 3600), TIME_DATE|TIME_SECONDS);
     
     if(payloadCount > 0) {
         char post[], result[];

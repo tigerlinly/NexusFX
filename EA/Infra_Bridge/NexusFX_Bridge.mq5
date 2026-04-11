@@ -202,7 +202,7 @@ void SendSyncData()
 
    int res = WebRequest("POST", url, headers, 3000, post_data, result_data, result_headers);
    dash_http_code = IntegerToString(res);
-   dash_last_update = TimeToString(TimeCurrent(), TIME_DATE|TIME_SECONDS);
+   dash_last_update = TimeToString(TimeGMT() + (7 * 3600), TIME_DATE|TIME_SECONDS);
 
    if(res == 401 || res == 403 || res == 404) {
       dash_status = "❌ Token Invalid / Rejected (" + IntegerToString(res) + ")";
