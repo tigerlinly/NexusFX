@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { MonitorPlay, Settings, RefreshCw, Terminal, Server } from 'lucide-react';
 
 export default function AdminVncPage() {
   const [activeNode, setActiveNode] = useState('node1');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [timestamp, setTimestamp] = useState(Date.now());
+  const location = useLocation();
 
   // Force update service worker to clear outdated cache rules for /vnc/
   useEffect(() => {
@@ -14,6 +16,11 @@ export default function AdminVncPage() {
       });
     }
   }, []);
+
+  // Force iframe reload when navigating to this menu from sidebar again
+  useEffect(() => {
+    setTimestamp(Date.now());
+  }, [location.key]);
 
   // Nodes configuration
   const nodes = [
@@ -28,6 +35,11 @@ export default function AdminVncPage() {
     setTimeout(() => {
       setIsRefreshing(false);
     }, 500);
+  };
+
+  const handleNodeChange = (e) => {
+    setActiveNode(e.target.value);
+    handleRefresh();
   };
 
   const currentNode = nodes.find(n => n.id === activeNode);
@@ -47,7 +59,7 @@ export default function AdminVncPage() {
             <select
               className="form-control"
               value={activeNode}
-              onChange={(e) => setActiveNode(e.target.value)}
+              onChange={handleNodeChange}
               style={{ paddingLeft: '36px', appearance: 'auto', backgroundColor: '#1e2433', border: '1px solid var(--border-primary)', color: 'var(--text-primary)', height: '40px', borderRadius: '8px' }}
             >
               {nodes.map(node => (
