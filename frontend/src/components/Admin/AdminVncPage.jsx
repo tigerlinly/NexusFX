@@ -27,8 +27,8 @@ export default function AdminVncPage() {
   const currentNode = nodes.find(n => n.id === activeNode);
 
   return (
-    <div className="page-container">
-      <div className="page-header">
+    <div className="page-container" style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 20px)' }}>
+      <div className="page-header" style={{ marginBottom: 'var(--space-sm)' }}>
         <h1 className="page-title">
           <Terminal size={24} className="text-secondary" />
           การจัดการ MT5 Nodes (VNC)
@@ -36,7 +36,7 @@ export default function AdminVncPage() {
         <p className="page-subtitle">ควบคุมและจัดการหน้าจอ MT5 สำหรับ Infrastructure แบบรวมศูนย์</p>
       </div>
 
-      <div style={{ display: 'flex', gap: 'var(--space-md)', marginBottom: 'var(--space-md)' }}>
+      <div style={{ display: 'flex', gap: 'var(--space-md)', marginBottom: 'var(--space-sm)' }}>
         {nodes.map(node => (
           <button
             key={node.id}
@@ -62,7 +62,7 @@ export default function AdminVncPage() {
         </div>
       </div>
 
-      <div className="card" style={{ padding: 0, overflow: 'hidden', height: 'calc(100vh - 180px)', minHeight: '600px', display: 'flex', flexDirection: 'column' }}>
+      <div className="card" style={{ padding: 0, overflow: 'hidden', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         <div style={{ background: '#1e2433', padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-primary)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#a0aabc', fontSize: '14px' }}>
             <MonitorPlay size={16} />
@@ -73,12 +73,12 @@ export default function AdminVncPage() {
           </div>
         </div>
 
-        <div style={{ flex: 1, position: 'relative', background: '#000' }}>
+        <div style={{ flex: 1, position: 'relative', background: '#000', overflow: 'hidden' }}>
           {currentNode.status === 'online' ? (
             <iframe
               id="vnc-iframe"
               src={currentNode.url}
-              style={{ width: '100%', height: '100%', border: 'none' }}
+              style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
               title={`VNC ${currentNode.name}`}
             ></iframe>
           ) : (
