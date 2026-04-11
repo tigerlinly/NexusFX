@@ -319,7 +319,7 @@ export default function BrokersPage() {
                   </div>
                   
                   <div style={{ padding: 24, flex: 1, display: 'flex', flexDirection: 'column' }}>
-                    <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20, lineHeight: 1.6, flex: 1 }}>
+                    <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20, lineHeight: 1.6, minHeight: 62, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
                       {broker.description || 'ไม่มีคำอธิบาย'}
                     </p>
 
@@ -361,7 +361,7 @@ export default function BrokersPage() {
                       target="_blank" 
                       rel="noopener noreferrer" 
                       className="btn btn-primary"
-                      style={{ width: '100%', justifyContent: 'center', display: 'flex', gap: 8 }}
+                      style={{ width: '100%', justifyContent: 'center', display: 'flex', gap: 8, marginTop: 'auto' }}
                     >
                       <ExternalLink size={16} /> สมัครสมาชิกบัญชีเทรด
                     </a>
