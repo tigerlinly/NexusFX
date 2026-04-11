@@ -5,12 +5,12 @@
 //| Updated: 2026-04-08                                              |
 //+------------------------------------------------------------------+
 #property copyright "NexusFX"
-#property link      "https://nexusfx.com"
+#property link      "https://nexusfx.biz"
 #property version   "1.01"
 #property strict
 
 //--- Input parameters
-input string   API_URL = "http://203.151.66.51:4000"; // Web Service URL 
+input string   API_URL = "https://nexusfx.biz"; // Web Service URL   http://203.151.66.51:4000
 input string   BRIDGE_TOKEN = "";                   // EA Bridge Token (จากหน้าระบบ)
 input int      SyncDelayMS = 3000;                  // ความถี่ในการ Sync (มิลลิวินาที)
 

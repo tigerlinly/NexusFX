@@ -1,16 +1,16 @@
 //+------------------------------------------------------------------+
 //|                                         NexusFX_HistoryPump.mq5  |
 //|                                     Copyright 2026, NexusFX Co.  |
-//|                                             https://nexusfx.com  |
+//|                                             https://nexusfx.biz  |
 //| Created: 2026-04-01                                              |
 //| Updated: 2026-04-08                                              |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2026, NexusFX Co."
-#property link      "https://nexusfx.com"
+#property link      "https://nexusfx.biz"
 #property version   "1.05"
 // ถูกปรับเปลี่ยนจาก Script เป็น Expert Advisor (EA) เพื่อให้ทำงานตลอดเวลา
 
-input string   InpGatewayURL        = "http://203.151.66.51:4000/api/bridge/feed"; 
+input string   InpGatewayURL        = "https://nexusfx.biz/api/bridge/feed";   // http://203.151.66.51:4000/api/bridge/feed
 input string   InpFeedToken         = "NEXUS_FEED_SECRET_123";
 input string   InpBrokerName        = "EXNESS";                       
 input int      InpMaxYearsIfNoData  = 2; // ย้อนหลังสูงสุดกี่ปี (หากไม่มีประวัติ)

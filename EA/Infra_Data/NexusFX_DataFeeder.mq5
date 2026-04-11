@@ -1,17 +1,17 @@
 //+------------------------------------------------------------------+
 //|                                     NexusFX_DataFeeder_v0.0.1.mq5 |
 //|                                     Copyright 2026, NexusFX Co.  |
-//|                                             https://nexusfx.com  |
+//|                                             https://nexusfx.biz  |
 //| Created: 2026-04-01                                              |
 //| Updated: 2026-04-08                                              |
 //+------------------------------------------------------------------+
 #property copyright   "Copyright 2026, NexusFX Co."
-#property link        "https://nexusfx.com"
+#property link        "https://nexusfx.biz"
 #property version   "1.01"
 #property description "Data Feeder with Dashboard - v0.0.1"
 #property strict
 
-input string   InpGatewayURL        = "http://203.151.66.51:4000/api/bridge/feed"; 
+input string   InpGatewayURL        = "https://nexusfx.biz/api/bridge/feed";   // http://203.151.66.51:4000/api/bridge/feed
 input string   InpFeedToken         = "NEXUS_FEED_SECRET_123";
 input string   InpBrokerName        = "EXNESS";                           
 
