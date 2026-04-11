@@ -17,6 +17,7 @@ import AdminPage from './components/Admin/AdminPage';
 import AdminBillingPage from './components/Admin/AdminBillingPage';
 import AdminConfigPage from './components/Admin/AdminConfigPage';
 import AdminDashboardPage from './components/Admin/AdminDashboardPage';
+import AdminVncPage from './components/Admin/AdminVncPage';
 // BotsPage & TerminalPage are used inside TradingPage (not imported here)
 import TradingPage from './components/Trading/TradingPage';
 import ForgotPasswordPage from './components/Auth/ForgotPasswordPage';
@@ -76,6 +77,7 @@ function AppRoutes() {
         <Route path="admin/billing" element={<AdminBillingPage />} />
         <Route path="admin/config" element={<AdminConfigPage />} />
         <Route path="admin/dashboard" element={<AdminDashboardPage />} />
+        <Route path="admin/nodes" element={<AdminVncPage />} />
         <Route path="brokers" element={<BrokersPage />} />
         <Route path="agent" element={<AgentDashboard />} />
         <Route path="settings" element={<SettingsPage />} />

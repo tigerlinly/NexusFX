@@ -174,6 +174,10 @@ export default function Layout() {
                 <Cog size={18} className="nav-icon" />
                 {showLabels && <span>ตั้งค่าระบบ (Config)</span>}
               </NavLink>
+              <NavLink to="/admin/nodes" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="การจัดการ MT5 Nodes">
+                <TerminalSquare size={18} className="nav-icon" />
+                {showLabels && <span>การจัดการ MT5 Nodes</span>}
+              </NavLink>
             </>
           )}
 
