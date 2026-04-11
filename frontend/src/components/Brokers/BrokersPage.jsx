@@ -260,7 +260,7 @@ export default function BrokersPage() {
                 <div key={broker.id} className="card hover-glow" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                   <div style={{ padding: 24, borderBottom: '1px solid var(--border-primary)' }}>
                     {/* Row 1: Logo + Name + Active Badge + Edit + Delete */}
-                    <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 12 }}>
+                    <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 4 }}>
                       <BrokerLogo brokerName={broker.name} dbLogoUrl={broker.logo_url} size={64} />
                       <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', flex: 1 }}>{broker.display_name}</h3>
                       
