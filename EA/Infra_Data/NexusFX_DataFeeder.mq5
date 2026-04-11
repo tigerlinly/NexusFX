@@ -16,7 +16,7 @@ input string   InpFeedToken         = "NEXUS_FEED_SECRET_123";
 input string   InpBrokerName        = "EXNESS";                           
 
 string targetSymbols[] = {
-    "AUDUSD", "BTCUSD", "EURUSD", "GBPUSD", "GBPJPY", "XAUUSD", "USDJPY", "NZDUSD", "USDCAD", "USDCHF"
+    "AUDUSD", "BTCUSD", "EURUSD", "GBPJPY", "GBPUSD", "NZDUSD", "USDCAD", "USDCHF", "USDJPY", "XAUUSD"
 };
 
 // Global variables for dashboard

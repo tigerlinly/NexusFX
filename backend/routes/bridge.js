@@ -4,6 +4,7 @@ const { bridgeAuth } = require('../middleware/bridgeAuth');
 const riskCalculator = require('../services/riskCalculator');
 const LineNotify = require('../services/lineNotify');
 const TelegramNotify = require('../services/telegramNotify');
+const feedHealthMonitor = require('../services/feedHealthMonitor');
 const router = express.Router();
 
 // POST /api/bridge/feed — Master Feed EA pushes market candles
@@ -48,6 +49,11 @@ router.post('/feed', async (req, res) => {
       }
 
       await client.query('COMMIT');
+
+      // บันทึก heartbeat ให้ Health Monitor
+      const uniqueSymbols = [...new Set(candles.map(c => c.symbol))];
+      feedHealthMonitor.recordFeed(candles.length, uniqueSymbols);
+
       res.json({ success: true, count: candles.length });
     } catch (dbErr) {
       await client.query('ROLLBACK');
@@ -59,6 +65,13 @@ router.post('/feed', async (req, res) => {
     console.error('Bridge feed error:', err);
     res.status(500).json({ error: 'Internal server error while processing feed' });
   }
+});
+
+// GET /api/bridge/health/data-feed — ตรวจสอบสถานะ DataFeeder
+router.get('/health/data-feed', (req, res) => {
+  const status = feedHealthMonitor.getStatus();
+  const httpCode = status.is_healthy ? 200 : (status.status === 'waiting' ? 202 : 503);
+  res.status(httpCode).json(status);
 });
 
 router.use(bridgeAuth);

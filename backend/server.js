@@ -16,6 +16,7 @@ const trailingStopEngine = require('./services/trailingStopEngine');
 const RiskEngine = require('./services/riskEngine');
 const metrics = require('./services/metrics');
 const FeeTracker = require('./services/feeTracker');
+const feedHealthMonitor = require('./services/feedHealthMonitor');
 
 const commissionEngine = require('./services/commissionEngine');
 
@@ -260,6 +261,7 @@ async function start() {
     trailingStopEngine.setIo(io);
     trailingStopEngine.start();
     commissionEngine.start();
+    feedHealthMonitor.start();
 
     server.listen(PORT, () => {
       console.log(`\n🚀 NexusFX Backend running on http://localhost:${PORT}`);
@@ -268,7 +270,8 @@ async function start() {
       console.log(`   Metrics: http://localhost:${PORT}/metrics`);
       console.log(`   Socket.io: ws://localhost:${PORT}`);
       console.log(`   CORS: ${ALLOWED_ORIGINS.join(', ')}`);
-      console.log(`   Security: Helmet ✅ | Rate Limit ✅ | Encryption ✅ | Metrics ✅\n`);
+      console.log(`   Security: Helmet ✅ | Rate Limit ✅ | Encryption ✅ | Metrics ✅`);
+      console.log(`   Health Monitor: Feed Threshold ${process.env.FEED_HEALTH_THRESHOLD || '60'}s ✅\n`);
     });
   } catch (err) {
     console.error('❌ Failed to start server:', err);
@@ -282,6 +285,7 @@ start();
 process.on('SIGTERM', () => {
   console.log('\n🛑 SIGTERM received — shutting down gracefully...');
   commissionEngine.stop();
+  feedHealthMonitor.stop();
   riskEngine.stop();
   profitTracker.stop?.();
   aggregationService.stop?.();
