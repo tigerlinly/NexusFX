@@ -17,10 +17,11 @@ input string   RunMagic = "BreakoutBot"; // BreakoutBot for Bot, Breakout for Ap
 input ulong    MagicNumber = 101;
 
 // --- Signal Config ---
-input ENUM_TIMEFRAMES BreakoutTF = PERIOD_M15; 
-input ENUM_TIMEFRAMES TrendTF    = PERIOD_H1;  
-input int      Trend_MA_Period   = 200;        
-input int      Lookback          = 20;         
+input ENUM_TIMEFRAMES BoxTimeframe  = PERIOD_H1;  // Timeframe สำหรับวาดกรอบ (เช่น H1)
+input int             BoxLookback   = 3;          // จำนวนแท่งเทียนที่ใช้สร้างกรอบ (เช่น 3 แท่งก่อนหน้า)
+input int             BreakoutBufferPips = 2;     // ระยะเผื่อทะลุกรอบ (กรอง False Break)
+input ENUM_TIMEFRAMES TrendTF       = PERIOD_H4;  // Timeframe สำหรับดูเทรนด์ (เช่น H4)
+input int             Trend_MA_Period = 50;       // เส้น MA บอกเทรนด์
 
 // --- Pyramiding (การสับไม้) ---
 input int      MaxPositions       = 50;   
@@ -56,7 +57,7 @@ int    currentDayCheck = 0;
 int OnInit() {
    trade.SetExpertMagicNumber(MagicNumber);
    DASH_PREFIX = "NXBrk_";
-   Dash_CreatePanel("Nexus Breakout Bot", MagicNumber, EnumToString(BreakoutTF), EnumToString(TrendTF));
+   Dash_CreatePanel("Nexus Breakout Bot", MagicNumber, EnumToString(BoxTimeframe), EnumToString(TrendTF));
    
    pointUnit = SymbolInfoDouble(_Symbol, SYMBOL_POINT);
    if(SymbolInfoInteger(_Symbol, SYMBOL_DIGITS) == 5 || SymbolInfoInteger(_Symbol, SYMBOL_DIGITS) == 3) {
@@ -74,7 +75,7 @@ void OnDeinit(const int reason) {
 
 bool IsNewBar() {
    static datetime lastTime = 0;
-   datetime currTime = iTime(_Symbol, BreakoutTF, 0);
+   datetime currTime = iTime(_Symbol, BoxTimeframe, 0);
    if (currTime != lastTime) { lastTime = currTime; return true; }
    return false;
 }
@@ -154,7 +155,7 @@ int GetTrendDirection() {
 }
 
 string GetOrderComment(string actionParams) {
-   string entryTfStr = EnumToString(BreakoutTF); string trendTfStr = EnumToString(TrendTF);
+   string entryTfStr = EnumToString(BoxTimeframe); string trendTfStr = EnumToString(TrendTF);
    StringReplace(entryTfStr, "PERIOD_", ""); StringReplace(trendTfStr, "PERIOD_", "");
    return StringFormat("%s Breakout (%s/%s) %s", RunMagic, entryTfStr, trendTfStr, actionParams);
 }
@@ -193,8 +194,8 @@ void OnTick() {
    double highData[], lowData[];
    ArraySetAsSeries(highData, true); ArraySetAsSeries(lowData, true);
    
-   if(CopyHigh(_Symbol, BreakoutTF, 1, Lookback, highData) < Lookback) return;
-   if(CopyLow(_Symbol, BreakoutTF, 1, Lookback, lowData) < Lookback) return;
+   if(CopyHigh(_Symbol, BoxTimeframe, 1, BoxLookback, highData) < BoxLookback) return;
+   if(CopyLow(_Symbol, BoxTimeframe, 1, BoxLookback, lowData) < BoxLookback) return;
    
    double Brk_Max = highData[ArrayMaximum(highData, 0, WHOLE_ARRAY)];
    double Brk_Min = lowData[ArrayMinimum(lowData, 0, WHOLE_ARRAY)];
@@ -218,13 +219,15 @@ void OnTick() {
       int trend = GetTrendDirection();
       double lotToOpen = CalculateDynamicLot(RiskPercent);
       
-      if(ask > Brk_Max && trend >= 0) {
+      double bufferOffset = BreakoutBufferPips * pointUnit;
+
+      if(ask > (Brk_Max + bufferOffset) && trend >= 0) {
          double sl = MathMax(Brk_Min, ask - (InitialSLPips * pointUnit));
          double tp = ask + (InitialTPPips * pointUnit);
          trade.Buy(lotToOpen, _Symbol, ask, sl, tp, GetOrderComment("Breakout UP"));
          return;
       }
-      else if(bid < Brk_Min && trend <= 0) {
+      else if(bid < (Brk_Min - bufferOffset) && trend <= 0) {
          double sl = MathMin(Brk_Max, bid + (InitialSLPips * pointUnit));
          double tp = bid - (InitialTPPips * pointUnit);
          trade.Sell(lotToOpen, _Symbol, bid, sl, tp, GetOrderComment("Breakout DOWN"));
@@ -254,8 +257,8 @@ void OnTick() {
    // 3. Breakeven & Trailing Bar
    // ============================================================
    if(IsNewBar() && totalPos > 0) {
-      double tbLow  = iLow(_Symbol, BreakoutTF, iLowest(_Symbol, BreakoutTF, MODE_LOW, TrailingBars, 1));
-      double tbHigh = iHigh(_Symbol, BreakoutTF, iHighest(_Symbol, BreakoutTF, MODE_HIGH, TrailingBars, 1));
+      double tbLow  = iLow(_Symbol, BoxTimeframe, iLowest(_Symbol, BoxTimeframe, MODE_LOW, TrailingBars, 1));
+      double tbHigh = iHigh(_Symbol, BoxTimeframe, iHighest(_Symbol, BoxTimeframe, MODE_HIGH, TrailingBars, 1));
 
       for(int i = PositionsTotal()-1; i >= 0; i--) {
          if(PositionGetSymbol(i) == _Symbol && PositionGetInteger(POSITION_MAGIC) == MagicNumber) {

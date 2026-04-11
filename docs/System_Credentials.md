@@ -14,13 +14,13 @@
 
 ---
 
-## 2. 🗄️ ฐานข้อมูลหลัก `nexus_datacenter_db` (ข้อมูล Data Feed / MT5)
+## 2. 🗄️ ฐานข้อมูลหลัก `nexusfx-datacenter-db` (ข้อมูล Data Feed / MT5)
 ฐานข้อมูล TimescaleDB ที่รันอยู่บน INET เป็นหลัก (อันแรกสุด)
 - **IP Address:** `203.151.66.51`
 - **Port:** `5432`
 - **User:** `nexus_admin`
 - **Password:** `N3xusFX_DataC3nter2026!`
-- **Database Name:** `nexus_datacenter`
+- **Database Name:** `nexusfx_datacenter`
 
 ---
 

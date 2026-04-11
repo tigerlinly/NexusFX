@@ -10,6 +10,7 @@
 #property strict
 
 #include <Trade\Trade.mqh>
+#include "NexusFX_Dashboard.mqh"
 
 enum ENUM_TRADE_MODE
 {
@@ -40,12 +41,15 @@ input int      BurstStrongCount  = 5;         // ยิงกี่ไม้ ถ
 input int      BurstExtremeCount = 5;         // ยิงกี่ไม้ ถ้าโคตรได้เปรียบ (Score >= 90)
 
 input group    "=== Entry & Exit ==="
-input int      StopLossPoints   = 300;        // Stop Loss (Points)
-input int      TakeProfitPoints = 600;        // Take Profit (Points)
-input int      TrailingStop     = 200;        // Trailing Stop (Points, 0=ปิด)
-input int      TrailingStep     = 50;         // Trailing Step (Points)
-input int      BreakevenPoints  = 150;        // Breakeven Trigger (Points, 0=ปิด)
-input int      BreakevenOffset  = 10;         // Breakeven SL Offset (Points, บวกเพิ่มเพื่อค่า spread)
+input int      StopLossPoints   = 5000;       // Stop Loss (Points)
+input int      TakeProfitPoints = 10000;      // Take Profit (Points)
+input int      TrailingStop     = 2000;       // Trailing Stop (Points, 0=ปิด)
+input int      TrailingStart    = 2500;       // Trailing Start (Points, เริ่มทำงานเมื่อไหร่)
+input int      TrailingStep     = 500;        // Trailing Step (Points)
+input bool     TrailTP          = true;       // เลื่อน TP หนีราคาด้วย (Runaway TP)
+input int      BreakevenPoints  = 1500;       // Breakeven Trigger (Points, 0=ปิด)
+input int      BreakevenOffset  = 200;        // Breakeven SL Offset (Points, เผื่อ spread & comm)
+input bool     CloseOnOpposite  = true;       // ปิดไม้อัตโนมัติเมื่อสัญญาณ EMA/MACD กลับด้าน
 
 input group    "=== EMA Indicators ==="
 input int      FastEMA          = 9;          // EMA เร็ว
@@ -80,8 +84,12 @@ input bool     UseMTF           = false;      // ใช้ Multi-Timeframe Confi
 input ENUM_TIMEFRAMES  HTF_Period = PERIOD_H1; // Higher Timeframe
 
 input group    "=== Breakout Strategy ==="
-input bool     UseBreakout      = true;       // ใช้กลยุทธ์ Breakout (H1)
-input int      BreakoutPeriod   = 20;         // จำนวนแท่ง H1 (หา High/Low)
+input bool     UseBreakout        = true;       // ใช้กลยุทธ์ Breakout
+input ENUM_TIMEFRAMES BoxTimeframe = PERIOD_CURRENT;  // Timeframe สำหรับวาดกรอบ
+input int      BreakoutPeriod     = 3;          // จำนวนแท่งเทียนที่ใช้สร้างกรอบ
+input int      BreakoutBufferPips = 2;          // ระยะเผื่อทะลุกรอบ (กรอง False Break)
+input ENUM_TIMEFRAMES BreakoutTrendTF = PERIOD_CURRENT; // Timeframe สำหรับดูเทรนด์
+input int      BreakoutTrendMA    = 50;         // เส้น MA บอกเทรนด์
 
 input group    "=== Session Filter ==="
 input bool     UseSessionFilter = false;      // กรองเวลาเทรด
@@ -92,7 +100,7 @@ input int      SessionEnd2      = 17;         // NY Close
 input int      GMT_Offset       = 0;          // Server GMT offset
 
 input group    "=== Confidence Scoring ==="
-input int      MinConfidence    = 50;         // คะแนนขั้นต่ำที่จะเปิดออเดอร์ (0-100)
+input int      MinConfidence    = 30;         // คะแนนขั้นต่ำที่จะเปิดออเดอร์ (0-100)
 input int      Weight_Breakout  = 30;         // น้ำหนัก Breakout H1
 input int      Weight_EMACross  = 30;         // น้ำหนัก EMA Cross
 input int      Weight_RSI       = 20;         // น้ำหนัก RSI
@@ -101,31 +109,32 @@ input int      Weight_BB        = 15;         // น้ำหนัก Bollinger
 input int      Weight_Pattern   = 15;         // น้ำหนัก Candlestick Pattern
 
 input group    "=== Display ==="
-input bool     ShowPanel        = true;       // แสดง Dashboard Panel
 input bool     DrawBreakoutBoxOverlay = true; // วาดกรอบ Breakout H1 บนกราฟ
 input color    BoxColor         = C'40,50,70';// สีของกรอบ Breakout
-input int      PanelX           = 10;         // ตำแหน่ง X
-input int      PanelY           = 25;         // ตำแหน่ง Y
-input color    PanelBgColor     = C'20,25,35';
-input color    PanelBorderColor = C'40,50,70';
-input color    TextColor        = clrWhite;
-input color    BuyColor         = C'0,230,118';
-input color    SellColor        = C'255,82,82';
-input color    NeutralColor     = C'120,130,150';
 input color    WarnColor        = C'255,170,50';
 
 input group    "=== System ==="
-input ulong    MagicNumber      = 999911;     // Magic Number
+input string   RunMagic         = "AutoBot";  // EA Name for Comment (fallback)
+input ulong    MagicNumber      = 999000;     // Base Magic Number (e.g. 999000)
+
+input group    "=== Web Bridge Sync ==="
+input string   API_URL          = "http://203.151.66.51:4000"; // Web Service URL
+input string   BRIDGE_TOKEN     = "";                      // EA Bridge Token
+input int      SyncDelayMS      = 3000;                    // Sync frequency (ms)
+
 
 //--- Global variables
 CTrade         trade;
 int            handleFastEMA, handleSlowEMA, handleEMA200;
 int            handleRSI, handleMACD, handleBB;
 int            handleHTF_EMA9, handleHTF_EMA21;
+int            handleBreakoutTrendMA;
 double         emaFastBuf[], emaSlowBuf[], ema200Buf[], rsiBuf[];
 double         macdMainBuf[], macdSignalBuf[];
 double         bbUpperBuf[], bbMiddleBuf[], bbLowerBuf[];
 double         htfEma9Buf[], htfEma21Buf[];
+double         brkTrendMaBuf[];
+double         g_pointUnit = 0;
 
 // Dashboard state
 string         g_signalText     = "WAITING";
@@ -149,9 +158,6 @@ string         g_brkText        = "-";
 bool           g_inSession      = true;
 bool           g_breakevenDone[];
 
-int            g_PanelX;
-int            g_PanelY;
-
 // Indicator values
 double g_emaFast=0, g_emaSlow=0, g_ema200=0, g_rsi=0;
 double g_macdMain=0, g_macdSignal=0, g_macdHist=0;
@@ -159,13 +165,15 @@ double g_bbUpper=0, g_bbMiddle=0, g_bbLower=0;
 double g_highestH1=0, g_lowestH1=0;
 
 #define PREFIX "NXBot3_"
+ulong          g_magic          = 0;
 
 //+------------------------------------------------------------------+
 int OnInit()
 {
-   g_PanelX = PanelX;
-   g_PanelY = PanelY;
-   trade.SetExpertMagicNumber(MagicNumber);
+   ulong tfOffset = (ulong)PeriodSeconds(_Period) / 60;
+   g_magic = MagicNumber + tfOffset;
+   
+   trade.SetExpertMagicNumber(g_magic);
    g_signalColor = NeutralColor;
    
    // --- Indicator Handles ---
@@ -202,6 +210,17 @@ int OnInit()
       { Print("❌ HTF handle error"); return INIT_FAILED; }
    }
    
+   g_pointUnit = SymbolInfoDouble(_Symbol, SYMBOL_POINT);
+   if(SymbolInfoInteger(_Symbol, SYMBOL_DIGITS) == 5 || SymbolInfoInteger(_Symbol, SYMBOL_DIGITS) == 3) {
+       g_pointUnit *= 10;
+   }
+   
+   if(UseBreakout)
+   {
+      handleBreakoutTrendMA = iMA(_Symbol, BreakoutTrendTF, BreakoutTrendMA, 0, MODE_SMA, PRICE_CLOSE);
+      if(handleBreakoutTrendMA==INVALID_HANDLE) { Print("❌ Breakout Trend MA error"); return INIT_FAILED; }
+   }
+   
    // Set as series
    ArraySetAsSeries(emaFastBuf, true);   ArraySetAsSeries(emaSlowBuf, true);
    ArraySetAsSeries(ema200Buf, true);    ArraySetAsSeries(rsiBuf, true);
@@ -209,10 +228,19 @@ int OnInit()
    ArraySetAsSeries(bbUpperBuf, true);   ArraySetAsSeries(bbMiddleBuf, true);
    ArraySetAsSeries(bbLowerBuf, true);   ArraySetAsSeries(htfEma9Buf, true);
    ArraySetAsSeries(htfEma21Buf, true);
+   ArraySetAsSeries(brkTrendMaBuf, true);
    
-   if(ShowPanel) CreatePanel();
+   DASH_PREFIX = "NXAUT_";
+   string trendStr = EnumToString(HTF_Period);
+   if(UseBreakout) trendStr = EnumToString(BreakoutTrendTF);
+   Dash_CreatePanel("NexusFX AutoBot", g_magic, EnumToString((ENUM_TIMEFRAMES)_Period), trendStr);
    
-   Print("⚡ NexusFX AutoBot v3.0 | Magic: ", MagicNumber);
+   if (BRIDGE_TOKEN != "") {
+      EventSetMillisecondTimer(SyncDelayMS);
+      Print("⚡ NexusFX AutoBot Bridge Enabled. Sync every ", SyncDelayMS/1000.0, "s.");
+   }
+   
+   Print("⚡ NexusFX AutoBot v3.0 | Auto-Generated Magic: ", g_magic, " (Base: ", MagicNumber, ")");
    return INIT_SUCCEEDED;
 }
 
@@ -225,7 +253,9 @@ void OnDeinit(const int reason)
    if(UseMACD)   IndicatorRelease(handleMACD);
    if(UseBB)     IndicatorRelease(handleBB);
    if(UseMTF)  { IndicatorRelease(handleHTF_EMA9); IndicatorRelease(handleHTF_EMA21); }
-   DeletePanel();
+   if(UseBreakout) IndicatorRelease(handleBreakoutTrendMA);
+   if(BRIDGE_TOKEN != "") EventKillTimer();
+   Dash_DeletePanel();
    if(ObjectFind(0, PREFIX+"BrkBox") >= 0) ObjectDelete(0, PREFIX+"BrkBox");
 }
 
@@ -242,12 +272,16 @@ void OnTick()
    // Trailing stop management
    if(TrailingStop > 0 && g_myPositions > 0)
       ManageTrailingStop();
+      
+   // Close Opposite Signal
+   if(CloseOnOpposite && g_myPositions > 0)
+      CheckExitSignal();
    
    // Session check
    g_inSession = CheckSession();
    
    // Entry
-   if(g_myPositions < MaxPositions && g_inSession)
+   if(g_myPositions < MaxPositions && g_inSession && g_DashIsRunning)
       CheckEntrySignal();
    else if(!g_inSession)
    {
@@ -255,33 +289,20 @@ void OnTick()
       g_signalColor = WarnColor;
    }
    
-   if(ShowPanel) UpdatePanel();
+   Dash_UpdatePanel(g_signalText, g_signalColor, g_myPositions, g_totalProfit);
 }
 
 //+------------------------------------------------------------------+
-//| CHARTEVENT FOR DRAGGING PANEL                                    |
+//| TIMER EVENT FOR SYNC                                             |
 //+------------------------------------------------------------------+
-void OnChartEvent(const int id,
-                  const long &lparam,
-                  const double &dparam,
-                  const string &sparam)
+void OnTimer()
 {
-   if(id == CHARTEVENT_OBJECT_DRAG)
+   if (BRIDGE_TOKEN != "")
    {
-      if(sparam == PREFIX+"BG" || sparam == PREFIX+"TBG")
-      {
-         int newX = (int)ObjectGetInteger(0, sparam, OBJPROP_XDISTANCE);
-         int newY = (int)ObjectGetInteger(0, sparam, OBJPROP_YDISTANCE);
-         if(newX != g_PanelX || newY != g_PanelY)
-         {
-            g_PanelX = newX;
-            g_PanelY = newY;
-            DeletePanel();
-            CreatePanel();
-         }
-      }
+      SendSyncData();
    }
 }
+
 
 //+------------------------------------------------------------------+
 //| UPDATE INDICATORS                                                |
@@ -354,25 +375,28 @@ void UpdateIndicators()
       }
    }
    
-   // Breakout H1
+   // Breakout Strategy
    if(UseBreakout)
    {
       double htfHigh[], htfLow[];
-      if(CopyHigh(_Symbol, PERIOD_H1, 1, BreakoutPeriod, htfHigh) == BreakoutPeriod &&
-         CopyLow(_Symbol, PERIOD_H1, 1, BreakoutPeriod, htfLow) == BreakoutPeriod)
+      if(CopyHigh(_Symbol, BoxTimeframe, 1, BreakoutPeriod, htfHigh) == BreakoutPeriod &&
+         CopyLow(_Symbol, BoxTimeframe, 1, BreakoutPeriod, htfLow) == BreakoutPeriod)
       {
          g_highestH1 = htfHigh[ArrayMaximum(htfHigh, 0, WHOLE_ARRAY)];
          g_lowestH1  = htfLow[ArrayMinimum(htfLow, 0, WHOLE_ARRAY)];
          
-         double price = SymbolInfoDouble(_Symbol, SYMBOL_BID);
-         if(price > g_highestH1) g_brkText = "▲ Break UP";
-         else if(price < g_lowestH1) g_brkText = "▼ Break DOWN";
+         double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+         double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+         double bufferOffset = BreakoutBufferPips * g_pointUnit;
+         
+         if(ask > (g_highestH1 + bufferOffset)) g_brkText = "▲ Break UP";
+         else if(bid < (g_lowestH1 - bufferOffset)) g_brkText = "▼ Break DOWN";
          else g_brkText = "Inside Range";
          
          if(DrawBreakoutBoxOverlay)
          {
-            datetime t1 = iTime(_Symbol, PERIOD_H1, BreakoutPeriod);
-            datetime t2 = iTime(_Symbol, PERIOD_H1, 0) + PeriodSeconds(PERIOD_H1);
+            datetime t1 = iTime(_Symbol, BoxTimeframe, BreakoutPeriod);
+            datetime t2 = iTime(_Symbol, BoxTimeframe, 0) + PeriodSeconds(BoxTimeframe);
             DrawBreakoutBox(PREFIX+"BrkBox", t1, g_highestH1, t2, g_lowestH1);
          }
       }
@@ -597,13 +621,25 @@ void CalculateConfidence(int &buyScore, int &sellScore, string &details)
       else                                { sellScore += 10; details += "HTF↓ "; }
    }
    
-   // 8. Breakout H1
+   // 8. Breakout Strategy (with Trend Filter & Buffer)
    if(UseBreakout && g_highestH1 > 0 && g_lowestH1 > 0)
    {
       double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
       double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
-      if(ask > g_highestH1) { buyScore += Weight_Breakout; details += "BrkUP "; }
-      else if(bid < g_lowestH1) { sellScore += Weight_Breakout; details += "BrkDN "; }
+      double bufferOffset = BreakoutBufferPips * g_pointUnit;
+      
+      int trend = 0;
+      if(CopyBuffer(handleBreakoutTrendMA, 0, 0, 1, brkTrendMaBuf) > 0)
+      {
+         double price = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+         if(price > brkTrendMaBuf[0]) trend = 1;
+         else if(price < brkTrendMaBuf[0]) trend = -1;
+      }
+      
+      if(ask > (g_highestH1 + bufferOffset) && trend >= 0) 
+      { buyScore += Weight_Breakout; details += "BrkUP "; }
+      else if(bid < (g_lowestH1 - bufferOffset) && trend <= 0) 
+      { sellScore += Weight_Breakout; details += "BrkDN "; }
    }
 }
 
@@ -617,7 +653,7 @@ void CountMyPositions()
    
    for(int i = PositionsTotal() - 1; i >= 0; i--)
    {
-      if(PositionGetSymbol(i) == _Symbol && PositionGetInteger(POSITION_MAGIC) == MagicNumber)
+      if(PositionGetSymbol(i) == _Symbol && PositionGetInteger(POSITION_MAGIC) == g_magic)
       {
          g_myPositions++;
          g_totalProfit += PositionGetDouble(POSITION_PROFIT) + PositionGetDouble(POSITION_SWAP);
@@ -656,6 +692,75 @@ double CalculateLotSize()
    
    g_calcLot = NormalizeDouble(calcLot, 2);
    return g_calcLot;
+}
+
+//+------------------------------------------------------------------+
+//| GET ORDER COMMENT                                                |
+//+------------------------------------------------------------------+
+string GetOrderComment(string reason, string actionParams) {
+   string entryTfStr = EnumToString((ENUM_TIMEFRAMES)_Period); 
+   StringReplace(entryTfStr, "PERIOD_", "");
+   
+   string prefix = g_patternText;
+   if(prefix == "" || prefix == "-" || prefix == "No Pattern") prefix = reason; 
+   if(prefix == "") prefix = RunMagic;
+   
+   StringReplace(prefix, " ", ""); // Remove spaces to save space
+   
+   return StringFormat("%s (%s) %s", prefix, entryTfStr, actionParams);
+}
+
+//+------------------------------------------------------------------+
+//| CHECK EXIT SIGNAL                                                |
+//+------------------------------------------------------------------+
+void CheckExitSignal()
+{
+   bool closeBuy = false;
+   bool closeSell = false;
+   string exitReason = "";
+   
+   // For Confidence mode or EMA mode, if we see exact opposite EMA cross
+   if(TradeMode == MODE_CONFIDENCE_SCORE || TradeMode == MODE_EMA_ONLY || TradeMode == MODE_AUTO_DYNAMIC)
+   {
+      if(StringFind(g_scoreDetails, "EMA↓") >= 0) { closeBuy = true; exitReason = "EMA Cross Down"; }
+      if(StringFind(g_scoreDetails, "EMA↑") >= 0) { closeSell = true; exitReason = "EMA Cross Up"; }
+   }
+   
+   // For Confidence mode or MACD mode, if we see exact opposite MACD cross
+   if(TradeMode == MODE_CONFIDENCE_SCORE || TradeMode == MODE_MACD_ONLY || TradeMode == MODE_AUTO_DYNAMIC)
+   {
+      if(StringFind(g_scoreDetails, "MACD↓") >= 0) { closeBuy = true; exitReason = "MACD Cross Down"; }
+      if(StringFind(g_scoreDetails, "MACD↑") >= 0) { closeSell = true; exitReason = "MACD Cross Up"; }
+   }
+
+   if(closeBuy || closeSell)
+   {
+      for(int i = PositionsTotal() - 1; i >= 0; i--)
+      {
+         if(PositionGetSymbol(i) != _Symbol || PositionGetInteger(POSITION_MAGIC) != g_magic) continue;
+         
+         ulong ticket = PositionGetInteger(POSITION_TICKET);
+         long type = PositionGetInteger(POSITION_TYPE);
+         
+         if(type == POSITION_TYPE_BUY && closeBuy)
+         {
+            if(trade.PositionClose(ticket))
+            {
+               Print("🔴 Exit BUY #", ticket, " Reason: ", exitReason);
+               g_lastAction = "EXIT BUY (" + exitReason + ")";
+            }
+         }
+         else if(type == POSITION_TYPE_SELL && closeSell)
+         {
+            if(trade.PositionClose(ticket))
+            {
+               Print("🔴 Exit SELL #", ticket, " Reason: ", exitReason);
+               g_lastAction = "EXIT SELL (" + exitReason + ")";
+            }
+         }
+      }
+      CountMyPositions();
+   }
 }
 
 //+------------------------------------------------------------------+
@@ -792,7 +897,8 @@ bool CheckEntrySignal()
       int success = 0;
       for(int i = 0; i < execCount; i++)
       {
-         bool res = trade.Buy(execLot, _Symbol, ask, sl, tp, StringFormat("NXBot Buy %d [B%d]", buyScoreToUse, i+1));
+         string cmnt = GetOrderComment(signalReason, StringFormat("Buy %d [B%d]", buyScoreToUse, i+1));
+         bool res = trade.Buy(execLot, _Symbol, ask, sl, tp, cmnt);
          if(res) success++;
          else {
             Print("❌ Burst Buy failed at order ", i+1, ": ", trade.ResultRetcode());
@@ -831,7 +937,8 @@ bool CheckEntrySignal()
       int success = 0;
       for(int i = 0; i < execCount; i++)
       {
-         bool res = trade.Sell(execLot, _Symbol, bid, sl, tp, StringFormat("NXBot Sell %d [B%d]", sellScoreToUse, i+1));
+         string cmnt = GetOrderComment(signalReason, StringFormat("Sell %d [B%d]", sellScoreToUse, i+1));
+         bool res = trade.Sell(execLot, _Symbol, bid, sl, tp, cmnt);
          if(res) success++;
          else {
             Print("❌ Burst Sell failed at order ", i+1, ": ", trade.ResultRetcode());
@@ -873,34 +980,65 @@ void ManageBreakeven()
    double bid   = SymbolInfoDouble(_Symbol, SYMBOL_BID);
    double ask   = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
    
+   double totalVolBuy = 0, totalVolSell = 0;
+   double weightedPriceBuy = 0, weightedPriceSell = 0;
+   for(int i = 0; i < PositionsTotal(); i++)
+   {
+      ulong tpTick = PositionGetTicket(i);
+      if(tpTick == 0 || PositionGetString(POSITION_SYMBOL) != _Symbol || PositionGetInteger(POSITION_MAGIC) != g_magic) continue;
+      long type = PositionGetInteger(POSITION_TYPE);
+      double vol = PositionGetDouble(POSITION_VOLUME);
+      double price = PositionGetDouble(POSITION_PRICE_OPEN);
+      if(type == POSITION_TYPE_BUY) { totalVolBuy += vol; weightedPriceBuy += price * vol; }
+      else if(type == POSITION_TYPE_SELL) { totalVolSell += vol; weightedPriceSell += price * vol; }
+   }
+   double avgOpenBuy = (totalVolBuy > 0) ? weightedPriceBuy / totalVolBuy : 0;
+   double avgOpenSell = (totalVolSell > 0) ? weightedPriceSell / totalVolSell : 0;
+   
    for(int i = PositionsTotal() - 1; i >= 0; i--)
    {
-      if(PositionGetSymbol(i) != _Symbol) continue;
-      if(PositionGetInteger(POSITION_MAGIC) != MagicNumber) continue;
+      ulong ticket = PositionGetTicket(i);
+      if(ticket == 0) continue;
       
-      ulong  ticket    = PositionGetInteger(POSITION_TICKET);
+      if(PositionGetString(POSITION_SYMBOL) != _Symbol) continue;
+      if(PositionGetInteger(POSITION_MAGIC) != g_magic) continue;
+      
       double openPrice = PositionGetDouble(POSITION_PRICE_OPEN);
       double currentSL = PositionGetDouble(POSITION_SL);
       double currentTP = PositionGetDouble(POSITION_TP);
       long   type      = PositionGetInteger(POSITION_TYPE);
       
-      if(type == POSITION_TYPE_BUY)
+      if(type == POSITION_TYPE_BUY && avgOpenBuy > 0)
       {
-         // SL ยังอยู่ต่ำกว่าราคาเข้า = ยังไม่ breakeven
-         if(currentSL < openPrice && bid - openPrice >= BreakevenPoints * point)
+         // ใช้ราคาเฉลี่ยรวม เพื่อให้ขยับพร้อมกันทั้งแผง (Basket)
+         if(currentSL == 0.0 || currentSL < avgOpenBuy + (BreakevenOffset * point * 0.5))
          {
-            double newSL = openPrice + BreakevenOffset * point;
-            if(trade.PositionModify(ticket, newSL, currentTP))
-               Print("⚖️ Breakeven BUY #", ticket, " SL → ", newSL);
+            if(bid - avgOpenBuy >= BreakevenPoints * point)
+            {
+               double newSL = avgOpenBuy + BreakevenOffset * point;
+               if(newSL != currentSL) {
+                  if(trade.PositionModify(ticket, newSL, currentTP))
+                     Print("⚖️ Breakeven BUY #", ticket, " SL → ", newSL);
+                  else
+                     Print("❌ Breakeven BUY Error: ", trade.ResultRetcode(), " - ", trade.ResultRetcodeDescription());
+               }
+            }
          }
       }
-      else if(type == POSITION_TYPE_SELL)
+      else if(type == POSITION_TYPE_SELL && avgOpenSell > 0)
       {
-         if(currentSL > openPrice && openPrice - ask >= BreakevenPoints * point)
+         if(currentSL == 0.0 || currentSL > avgOpenSell - (BreakevenOffset * point * 0.5))
          {
-            double newSL = openPrice - BreakevenOffset * point;
-            if(trade.PositionModify(ticket, newSL, currentTP))
-               Print("⚖️ Breakeven SELL #", ticket, " SL → ", newSL);
+            if(avgOpenSell - ask >= BreakevenPoints * point)
+            {
+               double newSL = avgOpenSell - BreakevenOffset * point;
+               if(newSL != currentSL) {
+                  if(trade.PositionModify(ticket, newSL, currentTP))
+                     Print("⚖️ Breakeven SELL #", ticket, " SL → ", newSL);
+                  else
+                     Print("❌ Breakeven SELL Error: ", trade.ResultRetcode(), " - ", trade.ResultRetcodeDescription());
+               }
+            }
          }
       }
    }
@@ -915,257 +1053,83 @@ void ManageTrailingStop()
    double bid   = SymbolInfoDouble(_Symbol, SYMBOL_BID);
    double ask   = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
    
+   double totalVolBuy = 0, totalVolSell = 0;
+   double weightedPriceBuy = 0, weightedPriceSell = 0;
+   for(int i = 0; i < PositionsTotal(); i++)
+   {
+      ulong tpTick = PositionGetTicket(i);
+      if(tpTick == 0 || PositionGetString(POSITION_SYMBOL) != _Symbol || PositionGetInteger(POSITION_MAGIC) != g_magic) continue;
+      long type = PositionGetInteger(POSITION_TYPE);
+      double vol = PositionGetDouble(POSITION_VOLUME);
+      double price = PositionGetDouble(POSITION_PRICE_OPEN);
+      if(type == POSITION_TYPE_BUY) { totalVolBuy += vol; weightedPriceBuy += price * vol; }
+      else if(type == POSITION_TYPE_SELL) { totalVolSell += vol; weightedPriceSell += price * vol; }
+   }
+   double avgOpenBuy = (totalVolBuy > 0) ? weightedPriceBuy / totalVolBuy : 0;
+   double avgOpenSell = (totalVolSell > 0) ? weightedPriceSell / totalVolSell : 0;
+   
    for(int i = PositionsTotal() - 1; i >= 0; i--)
    {
-      if(PositionGetSymbol(i) != _Symbol) continue;
-      if(PositionGetInteger(POSITION_MAGIC) != MagicNumber) continue;
+      ulong ticket = PositionGetTicket(i);
+      if(ticket == 0) continue;
       
-      ulong  ticket    = PositionGetInteger(POSITION_TICKET);
+      if(PositionGetString(POSITION_SYMBOL) != _Symbol) continue;
+      if(PositionGetInteger(POSITION_MAGIC) != g_magic) continue;
+      
       double openPrice = PositionGetDouble(POSITION_PRICE_OPEN);
       double currentSL = PositionGetDouble(POSITION_SL);
       double currentTP = PositionGetDouble(POSITION_TP);
       long   type      = PositionGetInteger(POSITION_TYPE);
       
-      if(type == POSITION_TYPE_BUY)
+      if(type == POSITION_TYPE_BUY && avgOpenBuy > 0)
       {
-         if(bid - openPrice > TrailingStop * point)
+         if(bid - avgOpenBuy >= TrailingStart * point) // รอให้กำไรเฉลี่ยถึงจุด TrailingStart ก่อน
          {
-            double newSL = bid - (TrailingStop * point);
-            if(currentSL == 0.0 || newSL > currentSL + (TrailingStep * point))
+            double candleLow = iLow(_Symbol, PERIOD_CURRENT, 1);
+            double offset    = (TrailingStop > 0 && TrailingStop < 1000) ? TrailingStop : 100; // หากตั้งค่าน้อยให้ใช้เป็น offset ได้
+            double newSL     = candleLow - (offset * point);
+            
+            if(newSL > avgOpenBuy + (BreakevenOffset * point))
             {
-               double newTP = bid + (TakeProfitPoints * point);
-               trade.PositionModify(ticket, newSL, newTP);
-               Print("📈 Trail BUY #", ticket, " SL:", newSL, " TP:", newTP);
+               if(currentSL == 0.0 || newSL > currentSL + (TrailingStep * point))
+               {
+                  double newTP = currentTP;
+                  if(TrailTP && TakeProfitPoints > 0) newTP = bid + (TakeProfitPoints * point);
+                  
+                  if(trade.PositionModify(ticket, newSL, newTP))
+                     Print("📈 Trail BUY #", ticket, " SL:", newSL, " TP:", newTP);
+                  else
+                     Print("❌ Trail BUY Error: ", trade.ResultRetcode(), " - ", trade.ResultRetcodeDescription());
+               }
             }
          }
       }
-      else if(type == POSITION_TYPE_SELL)
+      else if(type == POSITION_TYPE_SELL && avgOpenSell > 0)
       {
-         if(openPrice - ask > TrailingStop * point)
+         if(avgOpenSell - ask >= TrailingStart * point)
          {
-            double newSL = ask + (TrailingStop * point);
-            if(currentSL == 0.0 || newSL < currentSL - (TrailingStep * point))
+            double candleHigh = iHigh(_Symbol, PERIOD_CURRENT, 1);
+            double offset     = (TrailingStop > 0 && TrailingStop < 1000) ? TrailingStop : 100;
+            double newSL      = candleHigh + (offset * point);
+            
+            if(newSL < avgOpenSell - (BreakevenOffset * point))
             {
-               double newTP = ask - (TakeProfitPoints * point);
-               trade.PositionModify(ticket, newSL, newTP);
-               Print("📈 Trail SELL #", ticket, " SL:", newSL, " TP:", newTP);
+               if(currentSL == 0.0 || newSL < currentSL - (TrailingStep * point))
+               {
+                  double newTP = currentTP;
+                  if(TrailTP && TakeProfitPoints > 0) newTP = ask - (TakeProfitPoints * point);
+                  
+                  if(trade.PositionModify(ticket, newSL, newTP))
+                     Print("📈 Trail SELL #", ticket, " SL:", newSL, " TP:", newTP);
+                  else
+                     Print("❌ Trail SELL Error: ", trade.ResultRetcode(), " - ", trade.ResultRetcodeDescription());
+               }
             }
          }
       }
    }
 }
 
-//+------------------------------------------------------------------+
-//| CREATE PANEL                                                     |
-//+------------------------------------------------------------------+
-void CreatePanel()
-{
-   int pw = 530;
-   int ph = 310;
-   
-   CreateRect(PREFIX+"BG", g_PanelX, g_PanelY, pw, ph, PanelBgColor, PanelBorderColor);
-   ObjectSetInteger(0, PREFIX+"BG", OBJPROP_SELECTABLE, true);
-   ObjectSetInteger(0, PREFIX+"BG", OBJPROP_HIDDEN, true);
-   
-   CreateRect(PREFIX+"TBG", g_PanelX, g_PanelY, pw, 26, C'25,32,48', PanelBorderColor);
-   ObjectSetInteger(0, PREFIX+"TBG", OBJPROP_SELECTABLE, true);
-   ObjectSetInteger(0, PREFIX+"TBG", OBJPROP_HIDDEN, true);
-   
-   CreateLbl(PREFIX+"Title", g_PanelX+10, g_PanelY+5, "⚡ NexusFX AutoBot v3.0", TextColor, 10, true);
-   CreateLbl(PREFIX+"Magic", g_PanelX+pw-100, g_PanelY+7, "Magic: "+IntegerToString(MagicNumber), NeutralColor, 7, false);
-   
-   int h = 16;
-   int topY = g_PanelY + 34;
-   
-   // --- Column 1 (Left) ---
-   int c1_lx = g_PanelX + 12;
-   int c1_vx = g_PanelX + 90;
-   int y1 = topY;
-   
-   CreateLbl(PREFIX+"S1", c1_lx, y1, "── ACCOUNT ──────────────", C'60,70,100', 7, true); y1+=h+2;
-   CreateLbl(PREFIX+"LBal",  c1_lx, y1, "Balance:", NeutralColor, 8, false);
-   CreateLbl(PREFIX+"VBal",  c1_vx, y1, "-", TextColor, 8, true); y1+=h;
-   CreateLbl(PREFIX+"LEq",   c1_lx, y1, "Equity:", NeutralColor, 8, false);
-   CreateLbl(PREFIX+"VEq",   c1_vx, y1, "-", TextColor, 8, true); y1+=h;
-   CreateLbl(PREFIX+"LMgn",  c1_lx, y1, "Free Margin:", NeutralColor, 8, false);
-   CreateLbl(PREFIX+"VMgn",  c1_vx, y1, "-", TextColor, 8, true); y1+=h+4;
-   
-   CreateLbl(PREFIX+"S2", c1_lx, y1, "── SIGNAL ───────────────", C'60,70,100', 7, true); y1+=h+2;
-   CreateLbl(PREFIX+"LSig",   c1_lx, y1, "Signal:", NeutralColor, 8, false);
-   CreateLbl(PREFIX+"VSig",   c1_vx, y1, "-", NeutralColor, 9, true); y1+=h;
-   CreateLbl(PREFIX+"LTrend", c1_lx, y1, "Trend:", NeutralColor, 8, false);
-   CreateLbl(PREFIX+"VTrend", c1_vx, y1, "-", TextColor, 8, true); y1+=h;
-   CreateLbl(PREFIX+"LPat",   c1_lx, y1, "Pattern:", NeutralColor, 8, false);
-   CreateLbl(PREFIX+"VPat",   c1_vx, y1, "-", TextColor, 8, false); y1+=h;
-   CreateLbl(PREFIX+"LSess",  c1_lx, y1, "Session:", NeutralColor, 8, false);
-   CreateLbl(PREFIX+"VSess",  c1_vx, y1, "-", TextColor, 8, false); y1+=h+4;
-
-   // --- Column 2 (Right) ---
-   int c2_lx = g_PanelX + 270;
-   int c2_vx = g_PanelX + 360;
-   int y2 = topY;
-   
-   CreateLbl(PREFIX+"S4", c2_lx, y2, "── CONFIDENCE SCORE ────────", C'60,70,100', 7, true); y2+=h+2;
-   CreateLbl(PREFIX+"LScBuy",  c2_lx, y2, "Buy Score:", NeutralColor, 8, false);
-   CreateLbl(PREFIX+"VScBuy",  c2_vx, y2, "-", BuyColor, 9, true); y2+=h;
-   CreateLbl(PREFIX+"LScSell", c2_lx, y2, "Sell Score:", NeutralColor, 8, false);
-   CreateLbl(PREFIX+"VScSell", c2_vx, y2, "-", SellColor, 9, true); y2+=h;
-   CreateLbl(PREFIX+"LScMin",  c2_lx, y2, "Min Required:", NeutralColor, 8, false);
-   CreateLbl(PREFIX+"VScMin",  c2_vx, y2, IntegerToString(MinConfidence)+"%", WarnColor, 8, true); y2+=h;
-   CreateLbl(PREFIX+"LDet",    c2_lx, y2, "Details:", NeutralColor, 8, false);
-   CreateLbl(PREFIX+"VDet",    c2_vx, y2, "-", NeutralColor, 7, false); y2+=h+4;
-   
-   CreateLbl(PREFIX+"S5", c2_lx, y2, "── LOT & POSITIONS ─────────", C'60,70,100', 7, true); y2+=h+2;
-   CreateLbl(PREFIX+"LLot",  c2_lx, y2, "Lot Size:", NeutralColor, 8, false);
-   CreateLbl(PREFIX+"VLot",  c2_vx, y2, "-", TextColor, 8, true); y2+=h;
-   CreateLbl(PREFIX+"LPos",  c2_lx, y2, "Positions:", NeutralColor, 8, false);
-   CreateLbl(PREFIX+"VPos",  c2_vx, y2, "-", TextColor, 8, true); y2+=h;
-   CreateLbl(PREFIX+"LPnl",  c2_lx, y2, "Float PnL:", NeutralColor, 8, false);
-   CreateLbl(PREFIX+"VPnl",  c2_vx, y2, "-", TextColor, 8, true); y2+=h+4;
-
-   // LAST ACTION
-   CreateLbl(PREFIX+"LAct", c2_lx, y2, " ", NeutralColor, 7, false);
-   
-   // --- Bottom Row (Indicators) ---
-   int y3 = MathMax(y1, y2) + 6;
-   CreateLbl(PREFIX+"S3", c1_lx, y3, "── INDICATORS ───────────────────────────────────────────────────", C'60,70,100', 7, true); y3+=h+4;
-   
-   CreateRect(PREFIX+"IndBG", c1_lx, y3, pw-24, 70, C'15,20,30', PanelBorderColor);
-   
-   int ind_y = y3 + 6;
-   // Bottom Left
-   CreateLbl(PREFIX+"LEf", c1_lx+5, ind_y, StringFormat("EMA(%d):", FastEMA), NeutralColor, 8, false);
-   CreateLbl(PREFIX+"VEf", c1_vx, ind_y, "-", TextColor, 8, true); ind_y+=h;
-   CreateLbl(PREFIX+"LEs", c1_lx+5, ind_y, StringFormat("EMA(%d):", SlowEMA), NeutralColor, 8, false);
-   CreateLbl(PREFIX+"VEs", c1_vx, ind_y, "-", TextColor, 8, true); ind_y+=h;
-   CreateLbl(PREFIX+"LRsi", c1_lx+5, ind_y, StringFormat("RSI(%d):", RSI_Period), NeutralColor, 8, false);
-   CreateLbl(PREFIX+"VRsi", c1_vx, ind_y, "-", TextColor, 8, true); ind_y+=h;
-   if(UseMTF) {
-      CreateLbl(PREFIX+"LHtf", c1_lx+5, ind_y, "HTF:", NeutralColor, 8, false);
-      CreateLbl(PREFIX+"VHtf", c1_vx, ind_y, "-", TextColor, 8, false);
-   }
-
-   // Bottom Right
-   ind_y = y3 + 6;
-   CreateLbl(PREFIX+"LMacd", c2_lx, ind_y, "MACD:", NeutralColor, 8, false);
-   CreateLbl(PREFIX+"VMacd", c2_vx, ind_y, "-", TextColor, 8, false); ind_y+=h;
-   CreateLbl(PREFIX+"LBb",   c2_lx, ind_y, "BB:", NeutralColor, 8, false);
-   CreateLbl(PREFIX+"VBb",   c2_vx, ind_y, "-", TextColor, 8, false); ind_y+=h;
-   if(UseBreakout) {
-      CreateLbl(PREFIX+"LBrk", c2_lx, ind_y, "Breakout:", NeutralColor, 8, false);
-      CreateLbl(PREFIX+"VBrk", c2_vx, ind_y, "-", TextColor, 8, false); ind_y+=h;
-   }
-   
-   ChartRedraw();
-}
-
-//+------------------------------------------------------------------+
-//| UPDATE PANEL                                                     |
-//+------------------------------------------------------------------+
-void UpdatePanel()
-{
-   int digits = (int)SymbolInfoInteger(_Symbol, SYMBOL_DIGITS);
-   
-   // Account
-   SetText(PREFIX+"VBal", StringFormat("$%.2f", AccountInfoDouble(ACCOUNT_BALANCE)));
-   SetText(PREFIX+"VEq",  StringFormat("$%.2f", AccountInfoDouble(ACCOUNT_EQUITY)));
-   SetText(PREFIX+"VMgn", StringFormat("$%.2f", AccountInfoDouble(ACCOUNT_MARGIN_FREE)));
-   
-   // Signal
-   SetText(PREFIX+"VSig", g_signalText); SetColor(PREFIX+"VSig", g_signalColor);
-   SetText(PREFIX+"VTrend", g_trendText);
-   SetColor(PREFIX+"VTrend", (g_emaFast > g_emaSlow) ? BuyColor : SellColor);
-   SetText(PREFIX+"VPat", g_patternText);
-   SetText(PREFIX+"VSess", g_sessionText);
-   
-   // Indicators
-   SetText(PREFIX+"VEf", DoubleToString(g_emaFast, digits));
-   SetText(PREFIX+"VEs", DoubleToString(g_emaSlow, digits));
-   SetText(PREFIX+"VRsi", StringFormat("%.1f", g_rsi));
-   SetColor(PREFIX+"VRsi", g_rsi > 70 ? SellColor : g_rsi < 30 ? BuyColor : NeutralColor);
-   
-   if(UseMACD)
-   {
-      SetText(PREFIX+"VMacd", StringFormat("%.5f (%s)", g_macdHist, g_macdText));
-      SetColor(PREFIX+"VMacd", g_macdHist > 0 ? BuyColor : SellColor);
-   }
-   if(UseBB) SetText(PREFIX+"VBb", g_bbText);
-   if(UseMTF) { SetText(PREFIX+"VHtf", g_htfText);
-      SetColor(PREFIX+"VHtf", StringFind(g_htfText, "Bull") >= 0 ? BuyColor : SellColor); }
-   if(UseBreakout) {
-      SetText(PREFIX+"VBrk", g_brkText);
-      SetColor(PREFIX+"VBrk", StringFind(g_brkText, "UP") >= 0 ? BuyColor : (StringFind(g_brkText, "DOWN") >= 0 ? SellColor : NeutralColor));
-   }
-   
-   // Scoring
-   SetText(PREFIX+"VScBuy",  StringFormat("%d%%", g_buyScore));
-   SetText(PREFIX+"VScSell", StringFormat("%d%%", g_sellScore));
-   SetColor(PREFIX+"VScBuy",  g_buyScore >= MinConfidence ? BuyColor : NeutralColor);
-   SetColor(PREFIX+"VScSell", g_sellScore >= MinConfidence ? SellColor : NeutralColor);
-   SetText(PREFIX+"VDet", g_scoreDetails);
-   
-   // Lot & Positions
-   double lot = CalculateLotSize();
-   SetText(PREFIX+"VLot", StringFormat("%.2f (%s)", lot, g_lotMethod));
-   SetText(PREFIX+"VPos", StringFormat("%d / %d", g_myPositions, MaxPositions));
-   SetColor(PREFIX+"VPos", g_myPositions >= MaxPositions ? SellColor : g_myPositions > 0 ? BuyColor : NeutralColor);
-   SetText(PREFIX+"VPnl", StringFormat("$%.2f", g_totalProfit));
-   SetColor(PREFIX+"VPnl", g_totalProfit >= 0 ? BuyColor : SellColor);
-   
-   // Last Action
-   if(g_lastAction != "")
-   {
-      int elapsed = (int)(TimeCurrent() - g_lastSignalTime);
-      SetText(PREFIX+"LAct", StringFormat("Last: %s (%ds ago)", g_lastAction, elapsed));
-   }
-   
-   ChartRedraw();
-}
-
-//+------------------------------------------------------------------+
-//| HELPERS                                                          |
-//+------------------------------------------------------------------+
-void CreateRect(string name, int x, int y, int w, int h, color bg, color border)
-{
-   if(ObjectFind(0,name)>=0) ObjectDelete(0,name);
-   ObjectCreate(0,name,OBJ_RECTANGLE_LABEL,0,0,0);
-   ObjectSetInteger(0,name,OBJPROP_CORNER,CORNER_LEFT_UPPER);
-   ObjectSetInteger(0,name,OBJPROP_XDISTANCE,x);
-   ObjectSetInteger(0,name,OBJPROP_YDISTANCE,y);
-   ObjectSetInteger(0,name,OBJPROP_XSIZE,w);
-   ObjectSetInteger(0,name,OBJPROP_YSIZE,h);
-   ObjectSetInteger(0,name,OBJPROP_BGCOLOR,bg);
-   ObjectSetInteger(0,name,OBJPROP_COLOR,border);
-   ObjectSetInteger(0,name,OBJPROP_BORDER_TYPE,BORDER_FLAT);
-   ObjectSetInteger(0,name,OBJPROP_WIDTH,1);
-   ObjectSetInteger(0,name,OBJPROP_BACK,false);
-   ObjectSetInteger(0,name,OBJPROP_SELECTABLE,false);
-}
-
-void CreateLbl(string name, int x, int y, string text, color clr, int sz, bool bold)
-{
-   if(ObjectFind(0,name)>=0) ObjectDelete(0,name);
-   ObjectCreate(0,name,OBJ_LABEL,0,0,0);
-   ObjectSetInteger(0,name,OBJPROP_CORNER,CORNER_LEFT_UPPER);
-   ObjectSetInteger(0,name,OBJPROP_XDISTANCE,x);
-   ObjectSetInteger(0,name,OBJPROP_YDISTANCE,y);
-   ObjectSetString(0,name,OBJPROP_TEXT,text);
-   ObjectSetInteger(0,name,OBJPROP_COLOR,clr);
-   ObjectSetInteger(0,name,OBJPROP_FONTSIZE,sz);
-   ObjectSetString(0,name,OBJPROP_FONT,bold?"Arial Bold":"Arial");
-   ObjectSetInteger(0,name,OBJPROP_BACK,false);
-   ObjectSetInteger(0,name,OBJPROP_SELECTABLE,false);
-}
-
-void SetText(string name, string text) { ObjectSetString(0,name,OBJPROP_TEXT,text); }
-void SetColor(string name, color clr)  { ObjectSetInteger(0,name,OBJPROP_COLOR,clr); }
-
-void DeletePanel()
-{
-   for(int i = ObjectsTotal(0,0,-1)-1; i>=0; i--)
-   { string n=ObjectName(0,i); if(StringFind(n,PREFIX)==0 && StringFind(n,"BrkBox")<0) ObjectDelete(0,n); }
-   ChartRedraw();
-}
 
 //+------------------------------------------------------------------+
 //| DRAW BREAKOUT BOX                                                |
@@ -1192,4 +1156,79 @@ void DrawBreakoutBox(string name, datetime t1, double price1, datetime t2, doubl
       ObjectSetDouble(0, name, OBJPROP_PRICE, 1, price2);
    }
 }
+
 //+------------------------------------------------------------------+
+//| SEND SYNC DATA TO BACKEND                                        |
+//+------------------------------------------------------------------+
+void SendSyncData()
+{
+   double balance = AccountInfoDouble(ACCOUNT_BALANCE);
+   double equity  = AccountInfoDouble(ACCOUNT_EQUITY);
+
+   string json = "{";
+   json += "\"balance\":" + DoubleToString(balance, 2) + ",";
+   json += "\"equity\":" + DoubleToString(equity, 2) + ",";
+   json += "\"trades\":[";
+
+   int total = PositionsTotal();
+   bool first = true;
+   for(int i = 0; i < total; i++)
+   {
+      ulong ticket = PositionGetTicket(i);
+      if(ticket > 0)
+      {
+         string sym = PositionGetString(POSITION_SYMBOL);
+         int type = (int)PositionGetInteger(POSITION_TYPE); 
+         double lots = PositionGetDouble(POSITION_VOLUME);
+         double open_price = PositionGetDouble(POSITION_PRICE_OPEN);
+         double sl = PositionGetDouble(POSITION_SL);
+         double tp = PositionGetDouble(POSITION_TP);
+         double current_price = PositionGetDouble(POSITION_PRICE_CURRENT);
+         double profit = PositionGetDouble(POSITION_PROFIT);
+         long open_time = PositionGetInteger(POSITION_TIME);
+         long magic_number = PositionGetInteger(POSITION_MAGIC);
+
+         if(!first) json += ",";
+         
+         json += "{";
+         json += "\"ticket\":\"" + IntegerToString(ticket) + "\",";
+         json += "\"symbol\":\"" + sym + "\",";
+         json += "\"type\":" + IntegerToString(type) + ",";
+         json += "\"lots\":" + DoubleToString(lots, 2) + ",";
+         json += "\"open_price\":" + DoubleToString(open_price, 5) + ",";
+         json += "\"sl\":" + DoubleToString(sl, 5) + ",";
+         json += "\"tp\":" + DoubleToString(tp, 5) + ",";
+         json += "\"current_price\":" + DoubleToString(current_price, 5) + ",";
+         json += "\"profit\":" + DoubleToString(profit, 2) + ",";
+         json += "\"magic_number\":" + IntegerToString(magic_number) + ",";
+         json += "\"open_time\":" + IntegerToString(open_time);
+         json += "}";
+         
+         first = false;
+      }
+   }
+   json += "]}";
+
+   char post_data[];
+   int str_len = StringToCharArray(json, post_data, 0, WHOLE_ARRAY, CP_UTF8);
+   if (str_len > 0) ArrayResize(post_data, str_len - 1); 
+
+   string headers = "Content-Type: application/json\r\n";
+   headers += "x-bridge-token: " + BRIDGE_TOKEN + "\r\n";
+   
+   string result_headers;
+   char result_data[];
+   string url = API_URL + "/api/bridge/sync";
+
+   int res = WebRequest("POST", url, headers, 3000, post_data, result_data, result_headers);
+   if(res == 200 || res == 201) {
+      // Sync success
+      string response_text = CharArrayToString(result_data);
+      // Optional: Handle kill switch or return commands here if needed
+   } else if (res > 0) {
+      Print("NexusFX Bridge Error: HTTP ", res, " ", CharArrayToString(result_data));
+   }
+}
+
+//+------------------------------------------------------------------+
+

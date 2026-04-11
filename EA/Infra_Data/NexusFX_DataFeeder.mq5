@@ -130,10 +130,13 @@ string TimeframeToString(ENUM_TIMEFRAMES tf) {
     if(tf == PERIOD_M1) return "M1";
     if(tf == PERIOD_M5) return "M5";
     if(tf == PERIOD_M15) return "M15";
+    if(tf == PERIOD_M30) return "M30";
     if(tf == PERIOD_H1) return "H1";
     if(tf == PERIOD_H4) return "H4";
     if(tf == PERIOD_D1) return "D1";
-    return "UNKNOWN";
+    if(tf == PERIOD_W1) return "W1";
+    if(tf == PERIOD_MN1) return "MN1";
+    return "UNK";
 }
 
 void OnTimer() {
@@ -144,7 +147,7 @@ void OnTimer() {
     int failCount = 0;
     
     // Define the TFs to ingest
-    ENUM_TIMEFRAMES tfs[] = { PERIOD_M1, PERIOD_M5, PERIOD_M15, PERIOD_H1, PERIOD_H4, PERIOD_D1 };
+    ENUM_TIMEFRAMES tfs[] = { PERIOD_M1, PERIOD_M5, PERIOD_M15, PERIOD_M30, PERIOD_H1, PERIOD_H4, PERIOD_D1, PERIOD_W1, PERIOD_MN1 };
     int numTfs = ArraySize(tfs);
 
     string activeSymbols = "";

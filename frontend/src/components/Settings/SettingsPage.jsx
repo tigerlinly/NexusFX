@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTheme } from '../../context/ThemeContext';
-import { Palette, Bell, Globe, Moon, Save, Eye, EyeOff, Key, Shield, Copy, Check, Clock, Plus, Trash2 } from 'lucide-react';
+import { Palette, Bell, Globe, Moon, Save, Eye, EyeOff, Key, Shield, Copy, Check, Trash2 } from 'lucide-react';
 import { api } from '../../utils/api';
 
 export default function SettingsPage() {
@@ -106,27 +106,7 @@ export default function SettingsPage() {
     setSettings(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleAddSchedule = () => {
-    setSettings(prev => {
-      const s = prev.sync_schedules ? [...prev.sync_schedules, '12:00'] : ['07:00', '12:00'];
-      return { ...prev, sync_schedules: s.sort() };
-    });
-  };
 
-  const handleUpdateSchedule = (index, value) => {
-    setSettings(prev => {
-      const newSchedules = [...(prev.sync_schedules || [])];
-      newSchedules[index] = value;
-      return { ...prev, sync_schedules: newSchedules.sort() };
-    });
-  };
-
-  const handleRemoveSchedule = (index) => {
-    setSettings(prev => {
-      const newSchedules = (prev.sync_schedules || []).filter((_, i) => i !== index);
-      return { ...prev, sync_schedules: newSchedules };
-    });
-  };
 
   const handleSaveAll = async () => {
     setIsSaving(true);
@@ -177,7 +157,7 @@ export default function SettingsPage() {
   const tabs = [
     { id: 'theme', label: 'ธีมสี', icon: Palette },
     { id: 'notifications', label: 'การแจ้งเตือน', icon: Bell },
-    { id: 'schedule', label: 'ตั้งเวลาอัพเดท', icon: Clock },
+
     { id: 'security', label: 'ความปลอดภัย', icon: Shield },
     { id: 'general', label: 'ทั่วไป', icon: Moon }
   ];
@@ -606,45 +586,7 @@ export default function SettingsPage() {
               </div>
             )}
 
-            {/* Schedule */}
-            {activeTab === 'schedule' && (
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-lg)' }}>
-                  <p style={{ color: 'var(--text-tertiary)', fontSize: 13, margin: 0 }}>
-                    ตั้งเวลาอัพเดตพอร์ตการเปิด/ปิดออเดอร์อัตโนมัติ (เวลา Default คือ 07:00 น.)
-                  </p>
-                  <button className="btn btn-secondary btn-sm" onClick={handleAddSchedule}>
-                    <Plus size={14} /> เพิ่มเวลาอัพเดต
-                  </button>
-                </div>
 
-                <div style={{ display: 'grid', gap: '12px' }}>
-                  {(settings.sync_schedules || []).length === 0 ? (
-                    <div className="empty-state" style={{ padding: 'var(--space-xl)', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-lg)' }}>
-                      ยังไม่ได้ตั้งเวลาอัพเดตอัตโนมัติ
-                    </div>
-                  ) : (
-                    settings.sync_schedules.map((schedule, i) => (
-                      <div key={i} className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--bg-tertiary)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <Clock size={18} color="var(--accent-primary)" />
-                          <input
-                            type="time"
-                            className="form-input"
-                            style={{ background: 'var(--bg-secondary)', width: '120px' }}
-                            value={schedule}
-                            onChange={(e) => handleUpdateSchedule(i, e.target.value)}
-                          />
-                        </div>
-                        <button className="btn btn-ghost btn-icon" style={{ color: 'var(--loss)' }} onClick={() => handleRemoveSchedule(i)}>
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
 
 
             {/* Security / MFA */}

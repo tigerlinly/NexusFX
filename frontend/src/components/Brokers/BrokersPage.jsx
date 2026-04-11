@@ -258,55 +258,69 @@ export default function BrokersPage() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: 24 }}>
               {brokers.map((broker) => (
                 <div key={broker.id} className="card hover-glow" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ padding: 24, borderBottom: '1px solid var(--border-primary)', display: 'flex', gap: 16, alignItems: 'center', position: 'relative' }}>
-                    <BrokerLogo brokerName={broker.name} dbLogoUrl={broker.logo_url} size={64} />
-                    <div style={{ flex: 1 }}>
-                      <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>{broker.display_name}</h3>
-                      {renderStars(Number(broker.rating) || 0)}
+                  <div style={{ padding: 24, borderBottom: '1px solid var(--border-primary)' }}>
+                    {/* Row 1: Logo + Name + Active Badge + Edit + Delete */}
+                    <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 12 }}>
+                      <BrokerLogo brokerName={broker.name} dbLogoUrl={broker.logo_url} size={64} />
+                      <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', flex: 1 }}>{broker.display_name}</h3>
+                      
+                      {isAdmin && (
+                        <>
+                          <button onClick={() => handleToggleActive(broker)}
+                            className={`btn btn-sm ${broker.is_active ? 'btn-primary' : 'btn-outline'}`}
+                            style={{ fontSize: 11, padding: '2px 8px', height: 'auto', minHeight: 0 }}
+                          >
+                            {broker.is_active ? 'Active' : 'Inactive'}
+                          </button>
+                          <button className="btn btn-ghost btn-icon btn-sm" onClick={() => handleOpenEdit(broker)} title="แก้ไข">
+                            <Edit2 size={16} />
+                          </button>
+                          <button className="btn btn-ghost btn-icon btn-sm" onClick={() => handleDelete(broker.id, broker.name)} style={{ color: 'var(--loss)' }} title="ลบ">
+                            <Trash2 size={16} />
+                          </button>
+                        </>
+                      )}
+
+                      {!isAdmin && broker.rating >= 4.5 && !broker.is_lead && (
+                        <div style={{ background: 'rgba(255, 215, 0, 0.1)', color: '#FFD700', padding: '4px 8px', borderRadius: 8, fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <Award size={12} /> TOP
+                        </div>
+                      )}
                     </div>
-                    
-                    {isAdmin && (
-                      <div style={{ position: 'absolute', top: 16, right: 16, display: 'flex', gap: 8, alignItems: 'center' }}>
-                        {broker.has_data ? (
-                           <span style={{ fontSize: 11, fontWeight: 700, color: '#10b981', background: 'rgba(16,185,129,0.1)', padding: '2px 6px', borderRadius: 4 }}>
-                             🟢 พร้อมเทรด
-                           </span>
-                        ) : (
-                           <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-muted)' }}>
-                             🟠 รอข้อมูล Data
-                           </span>
-                        )}
-                        <button onClick={() => handleToggleActive(broker)}
-                          className={`btn btn-sm ${broker.is_active ? 'btn-primary' : 'btn-outline'}`}
-                          style={{ fontSize: 11, padding: '2px 8px', height: 'auto', minHeight: 0 }}
+
+                    {/* Row 2: Stars + Data Status + Active Toggle */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginLeft: 80 }}>
+                      {renderStars(Number(broker.rating) || 0)}
+                      
+                      {isAdmin && (
+                        <>
+                          {broker.has_data ? (
+                            <span style={{ fontSize: 11, fontWeight: 700, color: '#10b981', background: 'rgba(16,185,129,0.1)', padding: '2px 6px', borderRadius: 4 }}>
+                              🟢 พร้อมเทรด
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-muted)' }}>
+                              🟠 รอข้อมูล Data
+                            </span>
+                          )}
+                          <button onClick={() => handleToggleActive(broker)}
+                            className={`btn btn-sm ${broker.is_active ? 'btn-primary' : 'btn-outline'}`}
+                            style={{ fontSize: 11, padding: '2px 8px', height: 'auto', minHeight: 0 }}
+                          >
+                            {broker.is_active ? 'Active' : 'Inactive'}
+                          </button>
+                        </>
+                      )}
+
+                      {broker.is_lead && (
+                        <button onClick={() => handleToggleAllowTeam(broker)}
+                          className={`btn btn-sm ${broker.is_allowed_for_team ? 'btn-primary' : 'btn-outline'}`}
+                          style={{ fontSize: 11, padding: '4px 12px', height: 'auto', minHeight: 0 }}
                         >
-                          {broker.is_active ? 'Active' : 'Inactive'}
+                          {broker.is_allowed_for_team ? '✅ อนุญาตสำหรับกลุ่ม' : '❌ ปิดกั้นสำหรับกลุ่ม'}
                         </button>
-                        <button className="btn btn-ghost btn-icon btn-sm" onClick={() => handleOpenEdit(broker)} title="แก้ไข">
-                          <Edit2 size={16} />
-                        </button>
-                        <button className="btn btn-ghost btn-icon btn-sm" onClick={() => handleDelete(broker.id, broker.name)} style={{ color: 'var(--loss)' }} title="ลบ">
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    )}
-                    
-                    {broker.is_lead && (
-                      <div style={{ position: 'absolute', top: 16, right: 16, display: 'flex', gap: 8 }}>
-                         <button onClick={() => handleToggleAllowTeam(broker)}
-                           className={`btn btn-sm ${broker.is_allowed_for_team ? 'btn-primary' : 'btn-outline'}`}
-                           style={{ fontSize: 11, padding: '4px 12px', height: 'auto', minHeight: 0 }}
-                         >
-                           {broker.is_allowed_for_team ? '✅ อนุญาตสำหรับกลุ่ม' : '❌ ปิดกั้นสำหรับกลุ่ม'}
-                         </button>
-                      </div>
-                    )}
-                    
-                    {broker.rating >= 4.5 && !isAdmin && !broker.is_lead && (
-                      <div style={{ position: 'absolute', top: 16, right: 16, background: 'rgba(255, 215, 0, 0.1)', color: '#FFD700', padding: '4px 8px', borderRadius: 8, fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <Award size={12} /> TOP
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                   
                   <div style={{ padding: 24, flex: 1, display: 'flex', flexDirection: 'column' }}>

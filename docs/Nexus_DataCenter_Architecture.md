@@ -66,10 +66,10 @@ Host: 203.151.66.51
 Port: 5432
 User: nexus_admin
 Password: N3xusFX_DataC3nter2026!
-Database: nexus_datacenter
+Database: nexusfx_datacenter
 
 # Connection URL:
-postgresql://nexus_admin:N3xusFX_DataC3nter2026!@203.151.66.51:5432/nexus_datacenter?schema=public
+postgresql://nexus_admin:N3xusFX_DataC3nter2026!@203.151.66.51:5432/nexusfx_datacenter?schema=public
 ```
 
 ### Table Schema (`market_candles`)

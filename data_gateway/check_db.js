@@ -2,7 +2,7 @@ const { Pool } = require('pg');
 require('dotenv').config();
 
 const pool = new Pool({
-  connectionString: 'postgresql://nexus_admin:N3xusFX_DataC3nter2026!@203.151.66.51:5432/nexus_datacenter?schema=public',
+  connectionString: 'postgresql://nexus_admin:N3xusFX_DataC3nter2026!@203.151.66.51:5432/nexusfx_datacenter?schema=public',
 });
 
 async function checkData() {
