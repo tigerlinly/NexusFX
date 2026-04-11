@@ -34,7 +34,6 @@ export default function AdminVncPage() {
             <Terminal size={24} className="text-secondary" />
             การจัดการ MT5 Nodes (VNC)
           </h1>
-          <p className="page-subtitle">ควบคุมและจัดการหน้าจอ MT5 สำหรับ Infrastructure แบบรวมศูนย์</p>
         </div>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
