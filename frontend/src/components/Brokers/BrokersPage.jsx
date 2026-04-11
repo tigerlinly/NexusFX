@@ -261,18 +261,12 @@ export default function BrokersPage() {
                   <div style={{ padding: 24, borderBottom: '1px solid var(--border-primary)', display: 'flex', gap: 16, alignItems: 'center' }}>
                     <BrokerLogo brokerName={broker.name} dbLogoUrl={broker.logo_url} size={64} />
                     <div style={{ flex: 1 }}>
-                      {/* Row 1: Name + Active + Edit + Delete */}
+                      {/* Row 1: Name + Edit + Delete */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                         <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', flex: 1 }}>{broker.display_name}</h3>
 
                         {isAdmin && (
                           <>
-                            <button onClick={() => handleToggleActive(broker)}
-                              className={`btn btn-sm ${broker.is_active ? 'btn-primary' : 'btn-outline'}`}
-                              style={{ fontSize: 11, padding: '2px 8px', height: 'auto', minHeight: 0 }}
-                            >
-                              {broker.is_active ? 'Active' : 'Inactive'}
-                            </button>
                             <button className="btn btn-ghost btn-icon btn-sm" onClick={() => handleOpenEdit(broker)} title="แก้ไข">
                               <Edit2 size={16} />
                             </button>
@@ -298,19 +292,27 @@ export default function BrokersPage() {
                         )}
                       </div>
 
-                      {/* Row 2: Stars + Data Status */}
+                      {/* Row 2: Stars + Data Status + Active */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                         {renderStars(Number(broker.rating) || 0)}
                         {isAdmin && (
-                          broker.has_data ? (
-                            <span style={{ fontSize: 11, fontWeight: 700, color: '#10b981', background: 'rgba(16,185,129,0.1)', padding: '2px 6px', borderRadius: 4 }}>
-                              🟢 พร้อมเทรด
-                            </span>
-                          ) : (
-                            <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-muted)' }}>
-                              🟠 รอข้อมูล Data
-                            </span>
-                          )
+                          <>
+                            {broker.has_data ? (
+                              <span style={{ fontSize: 11, fontWeight: 700, color: '#10b981', background: 'rgba(16,185,129,0.1)', padding: '2px 6px', borderRadius: 4 }}>
+                                🟢 พร้อมเทรด
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-muted)' }}>
+                                🟠 รอข้อมูล Data
+                              </span>
+                            )}
+                            <button onClick={() => handleToggleActive(broker)}
+                              className={`btn btn-sm ${broker.is_active ? 'btn-primary' : 'btn-outline'}`}
+                              style={{ fontSize: 11, padding: '2px 8px', height: 'auto', minHeight: 0 }}
+                            >
+                              {broker.is_active ? 'Active' : 'Inactive'}
+                            </button>
+                          </>
                         )}
                       </div>
                     </div>
