@@ -261,24 +261,23 @@ export default function BrokersPage() {
                   <div style={{ padding: 24, borderBottom: '1px solid var(--border-primary)', display: 'flex', gap: 16, alignItems: 'center' }}>
                     <BrokerLogo brokerName={broker.name} dbLogoUrl={broker.logo_url} size={64} />
                     <div style={{ flex: 1 }}>
-                      {/* Row 1: Data Status + Active + Edit + Delete */}
+                      {/* Row 1: Name + Active + Edit + Delete */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                        <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', flex: 1 }}>{broker.display_name}</h3>
+
                         {isAdmin && (
                           <>
-                            {broker.has_data ? (
-                              <span style={{ fontSize: 11, fontWeight: 700, color: '#10b981', background: 'rgba(16,185,129,0.1)', padding: '2px 6px', borderRadius: 4 }}>
-                                🟢 พร้อมเทรด
-                              </span>
-                            ) : (
-                              <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-muted)' }}>
-                                🟠 รอข้อมูล Data
-                              </span>
-                            )}
                             <button onClick={() => handleToggleActive(broker)}
                               className={`btn btn-sm ${broker.is_active ? 'btn-primary' : 'btn-outline'}`}
                               style={{ fontSize: 11, padding: '2px 8px', height: 'auto', minHeight: 0 }}
                             >
                               {broker.is_active ? 'Active' : 'Inactive'}
+                            </button>
+                            <button className="btn btn-ghost btn-icon btn-sm" onClick={() => handleOpenEdit(broker)} title="แก้ไข">
+                              <Edit2 size={16} />
+                            </button>
+                            <button className="btn btn-ghost btn-icon btn-sm" onClick={() => handleDelete(broker.id, broker.name)} style={{ color: 'var(--loss)' }} title="ลบ">
+                              <Trash2 size={16} />
                             </button>
                           </>
                         )}
@@ -292,19 +291,6 @@ export default function BrokersPage() {
                           </button>
                         )}
 
-                        <div style={{ flex: 1 }} />
-
-                        {isAdmin && (
-                          <>
-                            <button className="btn btn-ghost btn-icon btn-sm" onClick={() => handleOpenEdit(broker)} title="แก้ไข">
-                              <Edit2 size={16} />
-                            </button>
-                            <button className="btn btn-ghost btn-icon btn-sm" onClick={() => handleDelete(broker.id, broker.name)} style={{ color: 'var(--loss)' }} title="ลบ">
-                              <Trash2 size={16} />
-                            </button>
-                          </>
-                        )}
-
                         {!isAdmin && broker.rating >= 4.5 && !broker.is_lead && (
                           <div style={{ background: 'rgba(255, 215, 0, 0.1)', color: '#FFD700', padding: '4px 8px', borderRadius: 8, fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
                             <Award size={12} /> TOP
@@ -312,11 +298,21 @@ export default function BrokersPage() {
                         )}
                       </div>
 
-                      {/* Row 2: Broker Name */}
-                      <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>{broker.display_name}</h3>
-
-                      {/* Row 3: Stars */}
-                      {renderStars(Number(broker.rating) || 0)}
+                      {/* Row 2: Stars + Data Status */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        {renderStars(Number(broker.rating) || 0)}
+                        {isAdmin && (
+                          broker.has_data ? (
+                            <span style={{ fontSize: 11, fontWeight: 700, color: '#10b981', background: 'rgba(16,185,129,0.1)', padding: '2px 6px', borderRadius: 4 }}>
+                              🟢 พร้อมเทรด
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-muted)' }}>
+                              🟠 รอข้อมูล Data
+                            </span>
+                          )
+                        )}
+                      </div>
                     </div>
                   </div>
                   
