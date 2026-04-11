@@ -35,6 +35,7 @@ services:
       - "host.docker.internal:host-gateway"
     environment:
       DATABASE_URL: postgresql://postgres:nexusfx_secure_password@host.docker.internal:5433/nexusfx
+      DATACENTER_DATABASE_URL: postgresql://nexus_admin:N3xusFX_DataC3nter2026!@host.docker.internal:5432/nexusfx_datacenter
       JWT_SECRET: ${JWT_SECRET:-nexusfx-production-secret-change-this}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
       PORT: 4000

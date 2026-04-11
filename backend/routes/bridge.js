@@ -1,5 +1,5 @@
 const express = require('express');
-const { pool } = require('../config/database');
+const { pool, datacenterPool } = require('../config/database');
 const { bridgeAuth } = require('../middleware/bridgeAuth');
 const riskCalculator = require('../services/riskCalculator');
 const LineNotify = require('../services/lineNotify');
@@ -7,7 +7,7 @@ const TelegramNotify = require('../services/telegramNotify');
 const feedHealthMonitor = require('../services/feedHealthMonitor');
 const router = express.Router();
 
-// POST /api/bridge/feed — Master Feed EA pushes market candles
+// POST /api/bridge/feed — Master Feed EA pushes market candles → nexus_datacenter
 router.post('/feed', async (req, res) => {
   try {
     const feedToken = req.headers['x-feed-token'];
@@ -20,34 +20,42 @@ router.post('/feed', async (req, res) => {
       return res.status(400).json({ error: 'Invalid payload' });
     }
 
-    const client = await pool.connect();
+    // ใช้ datacenterPool เขียนลง nexus_datacenter
+    const client = await datacenterPool.connect();
     try {
       await client.query('BEGIN');
 
+      // Bulk insert ที่มีประสิทธิภาพ
+      let insertQuery = `
+        INSERT INTO market_candles (broker, symbol, timeframe, "timestamp", open, high, low, close, volume)
+        VALUES `;
+      const values = [];
+      let paramIndex = 1;
+
       for (const candle of candles) {
-        await client.query(`
-          INSERT INTO market_candles (broker, symbol, interval, open_time, open, high, low, close, volume)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-          ON CONFLICT (broker, symbol, interval, open_time) 
-          DO UPDATE SET 
-            open = EXCLUDED.open,
-            high = EXCLUDED.high,
-            low = EXCLUDED.low,
-            close = EXCLUDED.close,
-            volume = EXCLUDED.volume
-        `, [
+        if (paramIndex > 1) insertQuery += ', ';
+        insertQuery += `($${paramIndex++}, $${paramIndex++}, $${paramIndex++}, to_timestamp($${paramIndex++}), $${paramIndex++}::numeric, $${paramIndex++}::numeric, $${paramIndex++}::numeric, $${paramIndex++}::numeric, $${paramIndex++}::numeric)`;
+        values.push(
           candle.broker || 'EXNESS',
-          candle.symbol, 
-          candle.interval, 
-          candle.open_time, 
-          candle.open, 
-          candle.high, 
-          candle.low, 
-          candle.close, 
-          candle.volume
-        ]);
+          candle.symbol,
+          candle.interval || candle.timeframe,
+          candle.open_time || candle.timestamp,
+          candle.open,
+          candle.high,
+          candle.low,
+          candle.close,
+          candle.volume || 0
+        );
       }
 
+      insertQuery += ` ON CONFLICT (broker, symbol, timeframe, "timestamp") DO UPDATE SET
+        open = EXCLUDED.open,
+        high = EXCLUDED.high,
+        low = EXCLUDED.low,
+        close = EXCLUDED.close,
+        volume = EXCLUDED.volume;`;
+
+      await client.query(insertQuery, values);
       await client.query('COMMIT');
 
       // บันทึก heartbeat ให้ Health Monitor

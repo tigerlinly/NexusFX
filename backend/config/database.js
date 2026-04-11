@@ -5,9 +5,21 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
+// Datacenter Pool — สำหรับเก็บข้อมูลราคา (market_candles)
+const datacenterPool = new Pool({
+  connectionString: process.env.DATACENTER_DATABASE_URL || process.env.DATABASE_URL,
+  max: 50,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
+});
+
 pool.on('error', (err) => {
   console.error('❌ Unexpected DB error:', err);
   process.exit(-1);
+});
+
+datacenterPool.on('error', (err) => {
+  console.error('❌ Unexpected Datacenter DB error:', err);
 });
 
 // Initialize database schema
@@ -1217,4 +1229,34 @@ async function initDatabase() {
   }
 }
 
-module.exports = { pool, initDatabase };
+// Initialize datacenter database schema (market_candles)
+async function initDatacenterDB() {
+  const client = await datacenterPool.connect();
+  try {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS market_candles (
+        id SERIAL PRIMARY KEY,
+        broker VARCHAR(50) NOT NULL DEFAULT 'EXNESS',
+        symbol VARCHAR(20) NOT NULL,
+        timeframe VARCHAR(10) NOT NULL,
+        "timestamp" TIMESTAMPTZ NOT NULL,
+        open NUMERIC NOT NULL,
+        high NUMERIC NOT NULL,
+        low NUMERIC NOT NULL,
+        close NUMERIC NOT NULL,
+        volume NUMERIC DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(broker, symbol, timeframe, "timestamp")
+      );
+      CREATE INDEX IF NOT EXISTS idx_candles_lookup 
+        ON market_candles(broker, symbol, timeframe, "timestamp" DESC);
+    `);
+    console.log('✅ Datacenter DB schema initialized (market_candles)');
+  } catch (err) {
+    console.error('⚠️ Datacenter DB init error:', err.message);
+  } finally {
+    client.release();
+  }
+}
+
+module.exports = { pool, datacenterPool, initDatabase, initDatacenterDB };

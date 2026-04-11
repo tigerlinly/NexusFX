@@ -6,7 +6,7 @@ const { Server } = require('socket.io');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
-const { initDatabase } = require('./config/database');
+const { initDatabase, initDatacenterDB } = require('./config/database');
 // MT5Service removed
 const ProfitTracker = require('./services/profitTracker');
 const AggregationService = require('./services/aggregationService');
@@ -250,6 +250,7 @@ const PORT = process.env.PORT || 4000;
 async function start() {
   try {
     await initDatabase();
+    await initDatacenterDB();
     // await ms.init() removed
     profitTracker.start();
     aggregationService.start();
