@@ -16,13 +16,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     xvfb x11vnc fluxbox supervisor net-tools procps \
     cabextract python3 python3-numpy && \
     locale-gen en_US.UTF-8
-# Install WineHQ stable v9.0 explicitly (fixes MT5 illegal instruction & debugger errors)
+# Install WineHQ stable v10.0+ (MT5 requires Wine 10.0 or later)
 RUN mkdir -pm755 /etc/apt/keyrings && \
     wget -O /etc/apt/keyrings/winehq-archive.key https://dl.winehq.org/wine-builds/winehq.key && \
     wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/jammy/winehq-jammy.sources && \
     dpkg --add-architecture i386 && \
     apt-get update && \
-    apt-get install -y --allow-downgrades winehq-stable=9.0.0.0~jammy-1 wine-stable=9.0.0.0~jammy-1 wine-stable-amd64=9.0.0.0~jammy-1 wine-stable-i386=9.0.0.0~jammy-1 && \
+    apt-get install -y --install-recommends winehq-stable && \
     rm -rf /var/lib/apt/lists/*
 
 # Install noVNC + websockify from source to fix Ubuntu 22.04 apt package UI bugs (Cannot read properties of null 'type')
