@@ -166,14 +166,6 @@ export default function Layout() {
                 <Shield size={18} className="nav-icon" />
                 {showLabels && <span>แผงควบคุม</span>}
               </NavLink>
-              <NavLink to="/admin/billing" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="ตั้งค่าบัญชีรับเงิน">
-                <DollarSign size={18} className="nav-icon" />
-                {showLabels && <span>ตั้งค่าบัญชีรับเงิน</span>}
-              </NavLink>
-              <NavLink to="/admin/config" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="ตั้งค่าระบบ">
-                <Cog size={18} className="nav-icon" />
-                {showLabels && <span>ตั้งค่าระบบ (Config)</span>}
-              </NavLink>
               <NavLink 
                 to="/admin/nodes" 
                 className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} 
@@ -187,6 +179,14 @@ export default function Layout() {
               >
                 <TerminalSquare size={18} className="nav-icon" />
                 {showLabels && <span>การจัดการ MT5 Nodes</span>}
+              </NavLink>
+              <NavLink to="/admin/billing" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="ตั้งค่าบัญชีรับเงิน">
+                <DollarSign size={18} className="nav-icon" />
+                {showLabels && <span>ตั้งค่าบัญชีรับเงิน</span>}
+              </NavLink>
+              <NavLink to="/admin/config" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title="ตั้งค่าระบบ">
+                <Cog size={18} className="nav-icon" />
+                {showLabels && <span>ตั้งค่าระบบ (Config)</span>}
               </NavLink>
             </>
           )}
