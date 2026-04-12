@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../utils/api';
 import {
   Shield, Users, UserCheck, Activity, DollarSign, Server, Database,
   TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, BarChart3,
-  PieChart as PieChartIcon, Wallet, Banknote, Zap, RefreshCw
+  PieChart as PieChartIcon, Wallet, Banknote, Zap, RefreshCw,
+  Settings2, Edit3, Save, X, GripVertical, Eye, EyeOff, RotateCcw, Check
 } from 'lucide-react';
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
@@ -27,6 +28,28 @@ export default function AdminDashboardPage() {
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Layout State
+  const [layout, setLayout] = useState(['summary', 'charts', 'checkpoints']);
+  const [editMode, setEditMode] = useState(false);
+  const [editLayout, setEditLayout] = useState([]);
+  
+  // Drag & Drop state
+  const [draggedItem, setDraggedItem] = useState(null);
+  const [dragOverItem, setDragOverItem] = useState(null);
+  const dragStartIdx = useRef(null);
+
+  const ALL_WIDGETS = ['summary', 'charts', 'checkpoints'];
+  const WIDGET_NAMES = {
+    summary: 'การ์ดสรุปข้อมูล',
+    charts: 'กราฟสัดส่วน & กระแสเงินสด',
+    checkpoints: 'สิ่งที่ผู้ดูแลควรติดตาม (Checkpoints)',
+  };
+  const WIDGET_ICONS = {
+    summary: <Wallet size={16} />,
+    charts: <PieChartIcon size={16} />,
+    checkpoints: <Activity size={16} />,
+  };
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
@@ -36,16 +59,40 @@ export default function AdminDashboardPage() {
       ]);
       setOverview(ov);
       setRoles(rl);
+
+      // Load layout from localStorage
+      const savedLayout = localStorage.getItem(`nexusfx_admin_layout_${user?.id}`);
+      if (savedLayout) {
+        try {
+          const parsed = JSON.parse(savedLayout);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setLayout(parsed);
+          }
+        } catch(e){}
+      }
     } catch (err) {
       console.error('Admin Dashboard fetch error:', err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  const formatCurrency = (val) => {
+    if (val === undefined || val === null || val === '') return '$0.00';
+    const num = parseFloat(val);
+    if (isNaN(num)) return '$0.00';
+    if (num === 0) return '$0.00';
+    const prefix = num > 0 ? '+' : '-';
+    return `${prefix}$${Math.abs(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  const formatNumber = (val) => {
+    return Number(val || 0).toLocaleString('en-US');
+  };
 
   if (user?.role !== 'admin' && user?.role !== 'super_admin') {
     return (
@@ -65,19 +112,6 @@ export default function AdminDashboardPage() {
       </>
     );
   }
-
-  const formatCurrency = (val) => {
-    if (val === undefined || val === null || val === '') return '$0.00';
-    const num = parseFloat(val);
-    if (isNaN(num)) return '$0.00';
-    if (num === 0) return '$0.00';
-    const prefix = num > 0 ? '+' : '-';
-    return `${prefix}$${Math.abs(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
-
-  const formatNumber = (val) => {
-    return Number(val || 0).toLocaleString('en-US');
-  };
 
   // Prepare role data for pie chart
   const roleData = roles.map(r => ({
@@ -118,30 +152,229 @@ export default function AdminDashboardPage() {
     </text>
   );
 
-  return (
-    <>
-      <div className="header">
-        <div className="header-left">
-          <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Shield size={20} style={{ color: 'var(--accent-primary)' }} />
-            Admin Dashboard
-          </h1>
+  // =============================================
+  // DRAG & DROP HANDLERS
+  // =============================================
+  const handleDragStart = useCallback((e, idx) => {
+    dragStartIdx.current = idx;
+    setDraggedItem(idx);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(idx));
+  }, []);
+
+  const handleDragOver = useCallback((e, idx) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverItem(idx);
+  }, []);
+
+  const handleDragLeave = useCallback(() => {
+    setDragOverItem(null);
+  }, []);
+
+  const handleDrop = useCallback((e, dropIdx) => {
+    e.preventDefault();
+    const startIdx = dragStartIdx.current;
+    if (startIdx === null || startIdx === dropIdx) {
+      setDraggedItem(null);
+      setDragOverItem(null);
+      return;
+    }
+
+    const newLayout = [...editLayout];
+    const [removed] = newLayout.splice(startIdx, 1);
+    newLayout.splice(dropIdx, 0, removed);
+    
+    setEditLayout(newLayout);
+    setDraggedItem(null);
+    setDragOverItem(null);
+    dragStartIdx.current = null;
+  }, [editLayout]);
+
+  const handleDragEnd = useCallback(() => {
+    setDraggedItem(null);
+    setDragOverItem(null);
+    dragStartIdx.current = null;
+  }, []);
+
+  const toggleWidget = useCallback((type) => {
+    setEditLayout(prev => {
+      if (prev.includes(type)) {
+        return prev.filter(t => t !== type);
+      }
+      return [...prev, type];
+    });
+  }, []);
+
+  const enterEditMode = () => {
+    setEditLayout([...layout]);
+    setEditMode(true);
+  };
+
+  const saveLayout = async () => {
+    try {
+      localStorage.setItem(`nexusfx_admin_layout_${user?.id}`, JSON.stringify(editLayout));
+      setLayout(editLayout);
+      setEditMode(false);
+    } catch {
+      alert('Failed to save layout');
+    }
+  };
+
+  const resetLayout = () => {
+    setEditLayout(['summary', 'charts', 'checkpoints']);
+  };
+
+  const cancelEdit = () => {
+    setEditMode(false);
+    setEditLayout([]);
+  };
+
+  // =============================================
+  // EDIT MODE TOOLBAR
+  // =============================================
+  const renderEditToolbar = () => {
+    if (!editMode) return null;
+
+    return (
+      <div className="edit-toolbar" style={{
+        background: 'var(--bg-secondary)',
+        border: '1px solid var(--accent-primary)',
+        borderRadius: 'var(--radius-lg)',
+        padding: 'var(--space-md) var(--space-lg)',
+        marginBottom: 'var(--space-lg)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 'var(--space-md)',
+        animation: 'slideDown 0.3s ease',
+        boxShadow: '0 4px 20px rgba(0, 200, 150, 0.1)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--accent-primary)', fontWeight: 600, fontSize: 13 }}>
+            <Edit3 size={16} /> โหมดแก้ไข
+          </div>
+          
+          <div style={{ height: 20, width: 1, background: 'var(--border-secondary)' }} />
+          
+          {/* Widget toggles */}
+          {ALL_WIDGETS.map(type => {
+            const isActive = editLayout.includes(type);
+            return (
+              <button
+                key={type}
+                onClick={() => toggleWidget(type)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '4px 12px', borderRadius: 'var(--radius-sm)',
+                  border: `1px solid ${isActive ? 'var(--accent-primary)' : 'var(--border-primary)'}`,
+                  background: isActive ? 'rgba(0, 200, 150, 0.1)' : 'var(--bg-tertiary)',
+                  color: isActive ? 'var(--accent-primary)' : 'var(--text-muted)',
+                  cursor: 'pointer', fontSize: 12, fontWeight: 500,
+                  transition: 'all 0.2s ease',
+                }}
+                title={isActive ? 'คลิกเพื่อซ่อน' : 'คลิกเพื่อแสดง'}
+              >
+                {isActive ? <Eye size={13} /> : <EyeOff size={13} />}
+                {WIDGET_ICONS[type]}
+                {WIDGET_NAMES[type]}
+              </button>
+            );
+          })}
         </div>
-        <div className="header-right">
-          <button className="btn btn-ghost btn-sm" onClick={fetchData} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <RefreshCw size={14} /> รีเฟรช
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button 
+            onClick={resetLayout}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 4,
+              padding: '6px 12px', borderRadius: 'var(--radius-sm)',
+              border: '1px solid var(--border-primary)', background: 'transparent',
+              color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 12,
+            }}
+          >
+            <RotateCcw size={13} /> รีเซ็ต
+          </button>
+          <button 
+            onClick={cancelEdit}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 4,
+              padding: '6px 12px', borderRadius: 'var(--radius-sm)',
+              border: '1px solid var(--border-primary)', background: 'transparent',
+              color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 12,
+            }}
+          >
+            <X size={13} /> ยกเลิก
+          </button>
+          <button 
+            onClick={saveLayout}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 4,
+              padding: '6px 14px', borderRadius: 'var(--radius-sm)',
+              border: 'none', background: 'var(--gradient-primary)',
+              color: '#000', cursor: 'pointer', fontSize: 12, fontWeight: 600,
+            }}
+          >
+            <Check size={13} /> บันทึก
           </button>
         </div>
       </div>
+    );
+  };
 
-      <div className="content-area">
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-tertiary)' }}>
-            กำลังโหลดข้อมูล...
-          </div>
-        ) : (
-          <>
-            {/* ===== Summary Cards ===== */}
+  // =============================================
+  // WIDGET RENDERERS
+  // =============================================
+  const renderWidget = (type, idx) => {
+    const isEditing = editMode;
+    const isDragging = draggedItem === idx;
+    const isDragOver = dragOverItem === idx;
+
+    const wrapperStyle = {
+      position: 'relative',
+      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+      opacity: isDragging ? 0.4 : 1,
+      transform: isDragOver ? 'scale(1.01)' : 'scale(1)',
+    };
+
+    const editOverlayStyle = isEditing ? {
+      outline: isDragOver 
+        ? '2px dashed var(--accent-primary)' 
+        : '2px dashed var(--border-secondary)',
+      outlineOffset: '4px',
+      borderRadius: 'var(--radius-lg)',
+      cursor: 'grab',
+    } : {};
+
+    const dragHandle = isEditing ? (
+      <div 
+        className="drag-handle"
+        style={{
+          position: 'absolute',
+          top: 8,
+          right: 8,
+          zIndex: 10,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 4,
+          padding: '4px 10px',
+          background: 'var(--bg-secondary)',
+          border: '1px solid var(--border-secondary)',
+          borderRadius: 'var(--radius-sm)',
+          fontSize: 11,
+          color: 'var(--text-tertiary)',
+          pointerEvents: 'none',
+        }}
+      >
+        <GripVertical size={14} />
+        <span>{WIDGET_NAMES[type]}</span>
+      </div>
+    ) : null;
+
+    const content = (() => {
+      switch (type) {
+        case 'summary':
+          return (
             <div className="stat-grid" style={{ marginBottom: 'var(--space-lg)' }}>
               <div className="card">
                 <div className="card-header">
@@ -207,10 +440,11 @@ export default function AdminDashboardPage() {
                 <div className="card-sub">Active Communities</div>
               </div>
             </div>
+          );
 
-            {/* ===== Charts Row ===== */}
+        case 'charts':
+          return (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 'var(--space-lg)', marginBottom: 'var(--space-lg)' }}>
-
               {/* Role Distribution Pie Chart */}
               <div className="chart-card">
                 <h3 className="chart-title" style={{ marginBottom: 'var(--space-md)' }}>
@@ -272,8 +506,10 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
             </div>
+          );
 
-            {/* ===== Admin Checkpoints ===== */}
+        case 'checkpoints':
+          return (
             <div className="chart-card" style={{ marginBottom: 'var(--space-lg)' }}>
               <h3 className="chart-title" style={{ marginBottom: 'var(--space-lg)' }}>สิ่งที่ผู้ดูแลควรติดตาม (Admin Checkpoints)</h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
@@ -349,7 +585,95 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
             </div>
+          );
 
+        default: return null;
+      }
+    })();
+
+    return (
+      <div
+        key={type}
+        style={{ ...wrapperStyle, ...editOverlayStyle }}
+        draggable={isEditing}
+        onDragStart={isEditing ? (e) => handleDragStart(e, idx) : undefined}
+        onDragOver={isEditing ? (e) => handleDragOver(e, idx) : undefined}
+        onDragLeave={isEditing ? handleDragLeave : undefined}
+        onDrop={isEditing ? (e) => handleDrop(e, idx) : undefined}
+        onDragEnd={isEditing ? handleDragEnd : undefined}
+      >
+        {dragHandle}
+        {content}
+      </div>
+    );
+  };
+
+  const displayLayout = editMode ? editLayout : layout;
+
+  return (
+    <>
+      <div className="header">
+        <div className="header-left">
+          <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Shield size={20} style={{ color: 'var(--accent-primary)' }} />
+            Admin Dashboard
+          </h1>
+        </div>
+        <div className="header-right">
+          <button className="btn btn-ghost btn-sm" onClick={fetchData} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <RefreshCw size={14} /> รีเฟรช
+          </button>
+          
+          <button 
+            className="btn-icon" 
+            title={editMode ? 'ออกจากโหมดแก้ไข' : 'ปรับแต่งแดชบอร์ด'}
+            onClick={editMode ? cancelEdit : enterEditMode}
+            style={{
+              color: editMode ? 'var(--accent-primary)' : 'var(--text-secondary)',
+              background: editMode ? 'rgba(0, 200, 150, 0.1)' : 'transparent',
+              marginLeft: 8
+            }}
+          >
+            <Settings2 size={18} />
+          </button>
+        </div>
+      </div>
+
+      <div className="content-area">
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-tertiary)' }}>
+            กำลังโหลดข้อมูล...
+          </div>
+        ) : (
+          <>
+            {renderEditToolbar()}
+            
+            {editMode && (
+              <div style={{ 
+                color: 'var(--text-tertiary)', fontSize: 12, marginBottom: 'var(--space-md)',
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '8px 12px',
+                background: 'var(--bg-tertiary)',
+                borderRadius: 'var(--radius-sm)',
+                border: '1px dashed var(--border-secondary)',
+              }}>
+                <GripVertical size={14} /> 
+                ลากและวางวิดเจ็ตเพื่อเรียงลำดับใหม่ หรือคลิกปุ่มด้านบนเพื่อแสดง/ซ่อนวิดเจ็ต
+              </div>
+            )}
+
+            {!loading && displayLayout.map((type, idx) => renderWidget(type, idx))}
+            
+            {editMode && displayLayout.length === 0 && (
+              <div style={{
+                textAlign: 'center', padding: 'var(--space-2xl)',
+                color: 'var(--text-tertiary)', fontSize: 14,
+                border: '2px dashed var(--border-secondary)',
+                borderRadius: 'var(--radius-lg)',
+              }}>
+                ไม่มีวิดเจ็ตที่แสดงอยู่ — คลิกปุ่มด้านบนเพื่อเพิ่มวิดเจ็ต
+              </div>
+            )}
           </>
         )}
       </div>
