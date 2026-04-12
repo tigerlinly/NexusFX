@@ -156,9 +156,6 @@ export default function SettingsPage() {
 
   const tabs = [
     { id: 'theme', label: 'ธีมสี', icon: Palette },
-    { id: 'notifications', label: 'การแจ้งเตือน', icon: Bell },
-
-    { id: 'security', label: 'ความปลอดภัย', icon: Shield },
     { id: 'general', label: 'ทั่วไป', icon: Moon }
   ];
 
@@ -456,254 +453,263 @@ export default function SettingsPage() {
               </div>
             )}
 
-            {/* Notifications */}
-            {activeTab === 'notifications' && (
-              <div>
-                <div className="settings-row">
-                  <div>
-                    <div className="settings-label">แจ้งเตือนเมื่อถึงเป้ากำไร</div>
-                    <div className="settings-desc">เปิดแจ้งเตือนเมื่อกำไรรายวันถึงเป้าที่ตั้งไว้</div>
+            {/* General Tab Complete Layout */}
+            {activeTab === 'general' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2xl)' }}>
+                {/* 2-Column Grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 'var(--space-2xl)', alignItems: 'start' }}>
+                  
+                  {/* Left Column */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2xl)' }}>
+                    {/* Locale */}
+                    <div className="card" style={{ background: 'var(--bg-tertiary)', padding: 'var(--space-lg) var(--space-xl)' }}>
+                      <div className="settings-row" style={{ paddingTop: 0 }}>
+                        <div>
+                          <div className="settings-label">ภาษา</div>
+                          <div className="settings-desc">ภาษาที่ใช้แสดงผล</div>
+                        </div>
+                        <select 
+                          className="filter-select" 
+                          value={settings.language} 
+                          onChange={(e) => handleLocalUpdate('language', e.target.value)}
+                          style={{ width: 160 }}
+                        >
+                          <option value="th">🇹🇭 ภาษาไทย</option>
+                          <option value="en">🇬🇧 English</option>
+                        </select>
+                      </div>
+                      <div className="settings-row" style={{ borderBottom: 'none', paddingBottom: 0 }}>
+                        <div>
+                          <div className="settings-label">Timezone</div>
+                          <div className="settings-desc">เขตเวลาที่ใช้แสดงผล</div>
+                        </div>
+                        <select 
+                          className="filter-select" 
+                          value={settings.timezone} 
+                          onChange={(e) => handleLocalUpdate('timezone', e.target.value)}
+                          style={{ width: 220 }}
+                        >
+                          <option value="Asia/Bangkok">Asia/Bangkok (UTC+7)</option>
+                          <option value="UTC">UTC</option>
+                          <option value="America/New_York">New York (UTC-5)</option>
+                          <option value="Europe/London">London (UTC+0)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Security / MFA */}
+                    <div>
+                      <h3 style={{ marginBottom: 'var(--space-md)', fontSize: 16 }}>การยืนยันตัวตนแบบสองขั้นตอน (2FA)</h3>
+                      <p style={{ color: 'var(--text-tertiary)', fontSize: 13, marginBottom: 'var(--space-lg)' }}>
+                        เปิดใช้งาน 2FA เพื่อเพิ่มความปลอดภัยให้กับบัญชีของคุณ โดยคุณจะต้องสแกน QR Code ด้วยแอปเตือนภัยเช่น Google Authenticator
+                      </p>
+
+                      <div className="card" style={{ background: 'var(--bg-tertiary)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ fontWeight: 600, fontSize: 14 }}>สถานะ 2FA:</div>
+                            <div style={{ fontSize: 13, color: mfaStatus ? 'var(--profit)' : 'var(--text-tertiary)' }}>
+                              {mfaStatus ? 'เปิดใช้งานแล้ว' : 'ยังไม่ได้เปิดใช้งาน'}
+                            </div>
+                          </div>
+                          <div>
+                            {!mfaStatus && !mfaSetupData && (
+                              <button className="btn btn-primary btn-sm" onClick={handleSetupMFA}>
+                                เปิดใช้งาน 2FA
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {mfaSetupData && !mfaStatus && (
+                          <div style={{ marginTop: 'var(--space-lg)', paddingTop: 'var(--space-lg)', borderTop: '1px solid var(--border-primary)' }}>
+                            <div style={{ textAlign: 'center', marginBottom: 16 }}>
+                              <img src={mfaSetupData.qr_code} alt="QR Code" style={{ background: '#fff', padding: 8, borderRadius: 8, width: 200, height: 200 }} />
+                              <div style={{ marginTop: 8, fontSize: 13, color: 'var(--text-tertiary)' }}>
+                                สแกน QR Code ด้วย Google Authenticator หรือ Authy
+                                <br />
+                                หรือใส่รหัส: <code style={{ userSelect: 'all', background: 'var(--bg-secondary)', padding: '2px 6px', borderRadius: 4 }}>{mfaSetupData.secret}</code>
+                              </div>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: 12, maxWidth: 300, margin: '0 auto' }}>
+                              <input
+                                type="text"
+                                className="form-input"
+                                placeholder="รหัส 6 หลัก"
+                                maxLength={6}
+                                value={mfaCode}
+                                onChange={(e) => setMfaCode(e.target.value)}
+                              />
+                              <button className="btn btn-primary" onClick={handleVerifyMFA}>ยืนยัน</button>
+                            </div>
+                          </div>
+                        )}
+
+                        {mfaStatus && (
+                          <div style={{ marginTop: 'var(--space-lg)', paddingTop: 'var(--space-lg)', borderTop: '1px solid var(--border-primary)' }}>
+                            <h4 style={{ fontSize: 14, marginBottom: 12, color: 'var(--loss)' }}>ปิดการใช้งาน 2FA</h4>
+                            <p style={{ fontSize: 13, color: 'var(--text-tertiary)', marginBottom: 16 }}>หากต้องการปิด กรุณายืนยันด้วยรหัส 2FA ปัจจุบัน หรือรหัสผ่านของคุณ</p>
+                            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                              <input
+                                type="text"
+                                className="form-input"
+                                placeholder="รหัส 2FA"
+                                maxLength={6}
+                                value={mfaCode}
+                                onChange={(e) => setMfaCode(e.target.value)}
+                                style={{ width: 150 }}
+                              />
+                              <span style={{ display: 'flex', alignItems: 'center', color: 'var(--text-tertiary)' }}>หรือ</span>
+                              <input
+                                type="password"
+                                className="form-input"
+                                placeholder="รหัสผ่านเข้าสู่ระบบ"
+                                value={passwordForMfa}
+                                onChange={(e) => setPasswordForMfa(e.target.value)}
+                                style={{ width: 200 }}
+                              />
+                              <button className="btn" style={{ background: 'var(--loss)', color: '#fff' }} onClick={handleDisableMFA}>ปิดการใช้งาน</button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <div 
-                    className={`toggle ${settings.notifications_enabled ? 'active' : ''}`} 
-                    onClick={() => handleLocalUpdate('notifications_enabled', !settings.notifications_enabled)} 
-                  />
-                </div>
-                <div className="settings-row">
-                  <div>
-                    <div className="settings-label">เสียงแจ้งเตือน</div>
-                    <div className="settings-desc">เปิดเสียงเมื่อมีการแจ้งเตือน</div>
+
+                  {/* Right Column */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2xl)' }}>
+                    {/* Notifications */}
+                    <div className="card" style={{ background: 'var(--bg-tertiary)', padding: 'var(--space-lg) var(--space-xl)' }}>
+                      <div className="settings-row" style={{ paddingTop: 0 }}>
+                        <div>
+                          <div className="settings-label">แจ้งเตือนเมื่อถึงเป้ากำไร</div>
+                          <div className="settings-desc">เปิดแจ้งเตือนเมื่อกำไรรายวันถึงเป้าที่ตั้งไว้</div>
+                        </div>
+                        <div 
+                          className={`toggle ${settings.notifications_enabled ? 'active' : ''}`} 
+                          onClick={() => handleLocalUpdate('notifications_enabled', !settings.notifications_enabled)} 
+                        />
+                      </div>
+                      <div className="settings-row">
+                        <div>
+                          <div className="settings-label">เสียงแจ้งเตือน</div>
+                          <div className="settings-desc">เปิดเสียงเมื่อมีการแจ้งเตือน</div>
+                        </div>
+                        <div 
+                          className={`toggle ${settings.sound_enabled ? 'active' : ''}`} 
+                          onClick={() => handleLocalUpdate('sound_enabled', !settings.sound_enabled)} 
+                        />
+                      </div>
+                      <div className="settings-row" style={{ borderBottom: 'none', paddingBottom: 0 }}>
+                        <div>
+                          <div className="settings-label">แจ้งเตือนการเทรดใหม่</div>
+                          <div className="settings-desc">แจ้งเตือนเมื่อมีการเปิด/ปิดออเดอร์ใหม่</div>
+                        </div>
+                        <div 
+                          className={`toggle ${settings.notify_new_trade ? 'active' : ''}`} 
+                          onClick={() => handleLocalUpdate('notify_new_trade', !settings.notify_new_trade)} 
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div 
-                    className={`toggle ${settings.sound_enabled ? 'active' : ''}`} 
-                    onClick={() => handleLocalUpdate('sound_enabled', !settings.sound_enabled)} 
-                  />
-                </div>
-                <div className="settings-row" style={{ borderBottom: 'none' }}>
-                  <div>
-                    <div className="settings-label">แจ้งเตือนการเทรดใหม่</div>
-                    <div className="settings-desc">แจ้งเตือนเมื่อมีการเปิด/ปิดออเดอร์ใหม่</div>
-                  </div>
-                  <div 
-                    className={`toggle ${settings.notify_new_trade ? 'active' : ''}`} 
-                    onClick={() => handleLocalUpdate('notify_new_trade', !settings.notify_new_trade)} 
-                  />
+
                 </div>
 
-                <div style={{ marginTop: 'var(--space-2xl)' }}>
-                  <h3 style={{ marginBottom: 'var(--space-md)', fontSize: 15, fontWeight: 600 }}>เชื่อมต่อการแจ้งเตือนภายนอก</h3>
+                {/* Bottom Full-width Section: External Notifications */}
+                <div style={{ marginTop: 'var(--space-md)' }}>
+                  <h3 style={{ marginBottom: 'var(--space-md)', fontSize: 16, fontWeight: 600 }}>เชื่อมต่อการแจ้งเตือนภายนอก</h3>
                   <p style={{ color: 'var(--text-tertiary)', fontSize: 13, marginBottom: 'var(--space-lg)' }}>
                     เชื่อมต่อช่องทางการแจ้งเตือนไปยังแอปพลิเคชันภายนอก (LINE Notify, Telegram)
                   </p>
 
-                  {/* Line Notify Token */}
-                  <div className="settings-row" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '12px' }}>
-                      <div className="settings-label" style={{ marginBottom: 0 }}>Line Notify Token</div>
-                      <div className="settings-desc" style={{ marginTop: 0 }}>
-                        ยิงแจ้งเตือนการเทรดผ่าน LINE — <a href="https://notify-bot.line.me/my/" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-primary)', textDecoration: 'none' }}>รับ Token ที่นี่</a>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: '12px' }}>
-                      <div style={{ flex: 1, position: 'relative' }}>
-                        <input
-                          className="form-input"
-                          type={showToken ? 'text' : 'password'}
-                          placeholder="ใส่ Line Notify Token"
-                          style={{ width: '100%', paddingRight: '80px' }}
-                          value={settings.line_notify_token}
-                          onChange={(e) => handleLocalUpdate('line_notify_token', e.target.value)}
-                        />
-                        <div style={{ position: 'absolute', right: '4px', top: '4px', display: 'flex', gap: '2px' }}>
-                          <button className="btn btn-ghost btn-icon" onClick={() => setShowToken(!showToken)} title={showToken ? 'ซ่อน' : 'แสดง'}>
-                            {showToken ? <EyeOff size={16} /> : <Eye size={16} />}
-                          </button>
-                          {settings.line_notify_token && (
-                            <button className="btn btn-ghost btn-icon" onClick={() => handleCopy('line_notify_token')} title="คัดลอก" style={{ color: copiedField === 'line_notify_token' ? 'var(--profit)' : undefined }}>
-                              {copiedField === 'line_notify_token' ? <Check size={16} /> : <Copy size={16} />}
-                            </button>
-                          )}
+                  <div className="card" style={{ background: 'var(--bg-tertiary)', padding: 'var(--space-lg) var(--space-xl)' }}>
+                    {/* Line Notify Token */}
+                    <div className="settings-row" style={{ flexDirection: 'column', alignItems: 'stretch', paddingTop: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '12px' }}>
+                        <div className="settings-label" style={{ marginBottom: 0 }}>Line Notify Token</div>
+                        <div className="settings-desc" style={{ marginTop: 0 }}>
+                          ยิงแจ้งเตือนการเทรดผ่าน LINE — <a href="https://notify-bot.line.me/my/" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-primary)', textDecoration: 'none' }}>รับ Token ที่นี่</a>
                         </div>
                       </div>
-                      <button onClick={handleTestLineNotify} className="btn-secondary" style={{ whiteSpace: 'nowrap' }}>
-                        ทดสอบการส่ง
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Telegram Bot Token & Chat ID */}
-                  <div className="settings-row" style={{ borderBottom: 'none', flexDirection: 'column', alignItems: 'stretch' }}>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '12px' }}>
-                      <div className="settings-label" style={{ marginBottom: 0 }}>Telegram Notifications</div>
-                      <div className="settings-desc" style={{ marginTop: 0 }}>
-                        ยิงแจ้งเตือนการเทรดผ่าน Telegram (สร้าง Bot ด้วย @BotFather)
-                      </div>
-                    </div>
-                    
-                    <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
-                      <div style={{ flex: 1, position: 'relative' }}>
-                        <label className="form-label" style={{ fontSize: 12 }}>Bot Token</label>
-                        <input
-                          className="form-input"
-                          type={showToken ? 'text' : 'password'}
-                          placeholder="123456789:ABCDEF..."
-                          style={{ width: '100%', paddingRight: '80px' }}
-                          value={settings.telegram_bot_token}
-                          onChange={(e) => handleLocalUpdate('telegram_bot_token', e.target.value)}
-                        />
-                        <div style={{ position: 'absolute', right: '4px', top: '22px', display: 'flex', gap: '2px' }}>
-                          <button className="btn btn-ghost btn-icon" onClick={() => setShowToken(!showToken)} title={showToken ? 'ซ่อน' : 'แสดง'}>
-                            {showToken ? <EyeOff size={16} /> : <Eye size={16} />}
-                          </button>
-                          {settings.telegram_bot_token && (
-                            <button className="btn btn-ghost btn-icon" onClick={() => handleCopy('telegram_bot_token')} title="คัดลอก" style={{ color: copiedField === 'telegram_bot_token' ? 'var(--profit)' : undefined }}>
-                              {copiedField === 'telegram_bot_token' ? <Check size={16} /> : <Copy size={16} />}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-
-                      <div style={{ flex: 1 }}>
-                        <label className="form-label" style={{ fontSize: 12 }}>Chat ID</label>
-                        <div style={{ display: 'flex', gap: '8px' }}>
+                      <div style={{ display: 'flex', gap: '12px' }}>
+                        <div style={{ flex: 1, position: 'relative' }}>
                           <input
                             className="form-input"
-                            type="text"
-                            placeholder="เช่น 123456789"
-                            style={{ flex: 1 }}
-                            value={settings.telegram_chat_id}
-                            onChange={(e) => handleLocalUpdate('telegram_chat_id', e.target.value)}
+                            type={showToken ? 'text' : 'password'}
+                            placeholder="ใส่ Line Notify Token"
+                            style={{ width: '100%', paddingRight: '80px' }}
+                            value={settings.line_notify_token}
+                            onChange={(e) => handleLocalUpdate('line_notify_token', e.target.value)}
                           />
-                          <button onClick={handleTestTelegram} className="btn-secondary" style={{ whiteSpace: 'nowrap' }}>
-                            ทดสอบการส่ง
-                          </button>
+                          <div style={{ position: 'absolute', right: '4px', top: '4px', display: 'flex', gap: '2px' }}>
+                            <button className="btn btn-ghost btn-icon" onClick={() => setShowToken(!showToken)} title={showToken ? 'ซ่อน' : 'แสดง'}>
+                              {showToken ? <EyeOff size={16} /> : <Eye size={16} />}
+                            </button>
+                            {settings.line_notify_token && (
+                              <button className="btn btn-ghost btn-icon" onClick={() => handleCopy('line_notify_token')} title="คัดลอก" style={{ color: copiedField === 'line_notify_token' ? 'var(--profit)' : undefined }}>
+                                {copiedField === 'line_notify_token' ? <Check size={16} /> : <Copy size={16} />}
+                              </button>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-            )}
-
-
-
-
-            {/* Security / MFA */}
-            {activeTab === 'security' && (
-              <div>
-                <h3 style={{ marginBottom: 'var(--space-md)', fontSize: 16 }}>การยืนยันตัวตนแบบสองขั้นตอน (2FA)</h3>
-                <p style={{ color: 'var(--text-tertiary)', fontSize: 13, marginBottom: 'var(--space-lg)' }}>
-                  เปิดใช้งาน 2FA เพื่อเพิ่มความปลอดภัยให้กับบัญชีของคุณ โดยคุณจะต้องสแกน QR Code ด้วยแอปเตือนภัยเช่น Google Authenticator
-                </p>
-
-                <div className="card" style={{ background: 'var(--bg-tertiary)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ fontWeight: 600, fontSize: 14 }}>สถานะ 2FA:</div>
-                      <div style={{ fontSize: 13, color: mfaStatus ? 'var(--profit)' : 'var(--text-tertiary)' }}>
-                        {mfaStatus ? 'เปิดใช้งานแล้ว' : 'ยังไม่ได้เปิดใช้งาน'}
-                      </div>
-                    </div>
-                    <div>
-                      {!mfaStatus && !mfaSetupData && (
-                        <button className="btn btn-primary btn-sm" onClick={handleSetupMFA}>
-                          เปิดใช้งาน 2FA
+                        <button onClick={handleTestLineNotify} className="btn-secondary" style={{ whiteSpace: 'nowrap' }}>
+                          ทดสอบการส่ง
                         </button>
-                      )}
+                      </div>
                     </div>
-                  </div>
 
-                  {mfaSetupData && !mfaStatus && (
-                    <div style={{ marginTop: 'var(--space-lg)', paddingTop: 'var(--space-lg)', borderTop: '1px solid var(--border-primary)' }}>
-                      <div style={{ textAlign: 'center', marginBottom: 16 }}>
-                        <img src={mfaSetupData.qr_code} alt="QR Code" style={{ background: '#fff', padding: 8, borderRadius: 8, width: 200, height: 200 }} />
-                        <div style={{ marginTop: 8, fontSize: 13, color: 'var(--text-tertiary)' }}>
-                          สแกน QR Code ด้วย Google Authenticator หรือ Authy
-                          <br />
-                          หรือใส่รหัส: <code style={{ userSelect: 'all', background: 'var(--bg-secondary)', padding: '2px 6px', borderRadius: 4 }}>{mfaSetupData.secret}</code>
+                    {/* Telegram Bot Token & Chat ID */}
+                    <div className="settings-row" style={{ borderBottom: 'none', flexDirection: 'column', alignItems: 'stretch', paddingBottom: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '12px' }}>
+                        <div className="settings-label" style={{ marginBottom: 0 }}>Telegram Notifications</div>
+                        <div className="settings-desc" style={{ marginTop: 0 }}>
+                          ยิงแจ้งเตือนการเทรดผ่าน Telegram (สร้าง Bot ด้วย @BotFather)
                         </div>
                       </div>
+                      
+                      <div style={{ display: 'flex', gap: '12px' }}>
+                        <div style={{ flex: 1, position: 'relative' }}>
+                          <label className="form-label" style={{ fontSize: 12 }}>BOT TOKEN</label>
+                          <input
+                            className="form-input"
+                            type={showToken ? 'text' : 'password'}
+                            placeholder="123456789:ABCDEF..."
+                            style={{ width: '100%', paddingRight: '80px' }}
+                            value={settings.telegram_bot_token}
+                            onChange={(e) => handleLocalUpdate('telegram_bot_token', e.target.value)}
+                          />
+                          <div style={{ position: 'absolute', right: '4px', top: '22px', display: 'flex', gap: '2px' }}>
+                            <button className="btn btn-ghost btn-icon" onClick={() => setShowToken(!showToken)} title={showToken ? 'ซ่อน' : 'แสดง'}>
+                              {showToken ? <EyeOff size={16} /> : <Eye size={16} />}
+                            </button>
+                            {settings.telegram_bot_token && (
+                              <button className="btn btn-ghost btn-icon" onClick={() => handleCopy('telegram_bot_token')} title="คัดลอก" style={{ color: copiedField === 'telegram_bot_token' ? 'var(--profit)' : undefined }}>
+                                {copiedField === 'telegram_bot_token' ? <Check size={16} /> : <Copy size={16} />}
+                              </button>
+                            )}
+                          </div>
+                        </div>
 
-                      <div style={{ display: 'flex', gap: 12, maxWidth: 300, margin: '0 auto' }}>
-                        <input
-                          type="text"
-                          className="form-input"
-                          placeholder="รหัส 6 หลัก"
-                          maxLength={6}
-                          value={mfaCode}
-                          onChange={(e) => setMfaCode(e.target.value)}
-                        />
-                        <button className="btn btn-primary" onClick={handleVerifyMFA}>ยืนยัน</button>
+                        <div style={{ flex: 1 }}>
+                          <label className="form-label" style={{ fontSize: 12 }}>CHAT ID</label>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <input
+                              className="form-input"
+                              type="text"
+                              placeholder="เช่น 123456789"
+                              style={{ flex: 1 }}
+                              value={settings.telegram_chat_id}
+                              onChange={(e) => handleLocalUpdate('telegram_chat_id', e.target.value)}
+                            />
+                            <button onClick={handleTestTelegram} className="btn-secondary" style={{ whiteSpace: 'nowrap' }}>
+                              ทดสอบการส่ง
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  )}
-
-                  {mfaStatus && (
-                    <div style={{ marginTop: 'var(--space-lg)', paddingTop: 'var(--space-lg)', borderTop: '1px solid var(--border-primary)' }}>
-                      <h4 style={{ fontSize: 14, marginBottom: 12, color: 'var(--loss)' }}>ปิดการใช้งาน 2FA</h4>
-                      <p style={{ fontSize: 13, color: 'var(--text-tertiary)', marginBottom: 16 }}>หากต้องการปิด กรุณายืนยันด้วยรหัส 2FA ปัจจุบัน หรือรหัสผ่านของคุณ</p>
-                      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                        <input
-                          type="text"
-                          className="form-input"
-                          placeholder="รหัส 2FA"
-                          maxLength={6}
-                          value={mfaCode}
-                          onChange={(e) => setMfaCode(e.target.value)}
-                          style={{ width: 150 }}
-                        />
-                        <span style={{ display: 'flex', alignItems: 'center', color: 'var(--text-tertiary)' }}>หรือ</span>
-                        <input
-                          type="password"
-                          className="form-input"
-                          placeholder="รหัสผ่านเข้าสู่ระบบ"
-                          value={passwordForMfa}
-                          onChange={(e) => setPasswordForMfa(e.target.value)}
-                          style={{ width: 200 }}
-                        />
-                        <button className="btn" style={{ background: 'var(--loss)', color: '#fff' }} onClick={handleDisableMFA}>ปิดการใช้งาน</button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Locale */}
-            {activeTab === 'general' && (
-              <div>
-                <div className="settings-row">
-                  <div>
-                    <div className="settings-label">ภาษา</div>
-                    <div className="settings-desc">ภาษาที่ใช้แสดงผล</div>
                   </div>
-                  <select 
-                    className="filter-select" 
-                    value={settings.language} 
-                    onChange={(e) => handleLocalUpdate('language', e.target.value)}
-                    style={{ width: 160 }}
-                  >
-                    <option value="th">🇹🇭 ภาษาไทย</option>
-                    <option value="en">🇬🇧 English</option>
-                  </select>
-                </div>
-                <div className="settings-row" style={{ borderBottom: 'none' }}>
-                  <div>
-                    <div className="settings-label">Timezone</div>
-                    <div className="settings-desc">เขตเวลาที่ใช้แสดงผล</div>
-                  </div>
-                  <select 
-                    className="filter-select" 
-                    value={settings.timezone} 
-                    onChange={(e) => handleLocalUpdate('timezone', e.target.value)}
-                    style={{ width: 200 }}
-                  >
-                    <option value="Asia/Bangkok">Asia/Bangkok (UTC+7)</option>
-                    <option value="UTC">UTC</option>
-                    <option value="America/New_York">New York (UTC-5)</option>
-                    <option value="Europe/London">London (UTC+0)</option>
-                  </select>
                 </div>
               </div>
             )}
