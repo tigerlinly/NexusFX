@@ -17,6 +17,7 @@ export default function AdminPage() {
   const [totalUsers, setTotalUsers] = useState(0);
   const [auditLogs, setAuditLogs] = useState([]);
   const [totalLogs, setTotalLogs] = useState(0);
+  const [rolesData, setRolesData] = useState([]);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [page, setPage] = useState(1);
@@ -55,6 +56,9 @@ export default function AdminPage() {
         const data = await api.getAuditLogs({ page, limit: 30 });
         setAuditLogs(data.logs);
         setTotalLogs(data.total);
+      } else if (activeTab === 'role_details') {
+        const data = await api.getAdminRoles();
+        setRolesData(data || []);
       } else if (activeTab === 'agents') {
         const [data, status] = await Promise.all([
           api.getAdminAgents({ search, page, limit: 20 }),
@@ -255,6 +259,7 @@ export default function AdminPage() {
     { id: 'users', label: 'จัดการผู้ใช้', icon: Users },
     { id: 'adjustments', label: 'รออนุมัติเงิน', icon: DollarSign },
     { id: 'agents', label: 'จัดการตัวแทน', icon: Building },
+    { id: 'role_details', label: 'รายละเอียดผู้ใช้แยกตามบทบาท', icon: BarChart3 },
     { id: 'audit', label: 'Audit Logs', icon: Eye },
   ];
 
@@ -596,6 +601,72 @@ export default function AdminPage() {
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Role Details Tab */}
+            {activeTab === 'role_details' && (
+              <div>
+                <h3 className="chart-title" style={{ marginBottom: 'var(--space-lg)', fontSize: 16 }}>รายละเอียดผู้ใช้แยกตามบทบาท</h3>
+                <div className="data-table-wrapper" style={{ border: 'none' }}>
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>บทบาท</th>
+                        <th>จำนวนผู้ใช้</th>
+                        <th>สัดส่วน</th>
+                        <th style={{ width: '40%' }}>Progress</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(() => {
+                        const ROLE_COLORS = ['#00C49F', '#FFBB28', '#FF8042', '#0088FE', '#8884d8'];
+                        let formattedRoles = rolesData.map(r => ({
+                           name: r.role_name === 'admin' ? 'ผู้ดูแล' :
+                                 r.role_name === 'team_lead' ? 'ผู้นำทีม' : 
+                                 r.role_name === 'user' ? 'ผู้ใช้งาน' : r.role_name,
+                           value: parseInt(r.user_count) || 0
+                        })).filter(r => r.value > 0);
+                        const tUsers = formattedRoles.reduce((sum, r) => sum + r.value, 0);
+
+                        if (formattedRoles.length === 0) {
+                          return <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: 40 }}>ไม่มีข้อมูลบทบาท</td></tr>;
+                        }
+
+                        return formattedRoles.map((r, idx) => (
+                          <tr key={idx}>
+                            <td>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <div style={{
+                                  width: 10, height: 10, borderRadius: '50%',
+                                  background: ROLE_COLORS[idx % ROLE_COLORS.length], flexShrink: 0
+                                }} />
+                                <span style={{ fontWeight: 600 }}>{r.name}</span>
+                              </div>
+                            </td>
+                            <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{r.value}</td>
+                            <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>
+                              {tUsers > 0 ? ((r.value / tUsers) * 100).toFixed(1) : 0}%
+                            </td>
+                            <td>
+                              <div className="progress-bar" style={{ height: 6, background: 'var(--bg-tertiary)', borderRadius: 3, overflow: 'hidden' }}>
+                                <div
+                                  className="progress-fill"
+                                  style={{
+                                    height: '100%',
+                                    width: `${tUsers > 0 ? (r.value / tUsers) * 100 : 0}%`,
+                                    background: ROLE_COLORS[idx % ROLE_COLORS.length],
+                                    borderRadius: 3
+                                  }}
+                                />
+                              </div>
+                            </td>
+                          </tr>
+                        ));
+                      })()}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
 
