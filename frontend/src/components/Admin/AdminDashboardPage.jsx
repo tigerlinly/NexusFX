@@ -350,53 +350,6 @@ export default function AdminDashboardPage() {
               </div>
             </div>
 
-            {/* ===== Role Breakdown Table ===== */}
-            <div className="chart-card">
-              <h3 className="chart-title" style={{ marginBottom: 'var(--space-lg)' }}>รายละเอียดผู้ใช้แยกตามบทบาท</h3>
-              <div className="data-table-wrapper" style={{ border: 'none' }}>
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>บทบาท</th>
-                      <th>จำนวนผู้ใช้</th>
-                      <th>สัดส่วน</th>
-                      <th style={{ width: '40%' }}>Progress</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {roleData.map((r, idx) => (
-                      <tr key={r.key || idx}>
-                        <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <div style={{
-                              width: 10, height: 10, borderRadius: '50%',
-                              background: ROLE_COLORS[idx % ROLE_COLORS.length], flexShrink: 0
-                            }} />
-                            <span style={{ fontWeight: 600 }}>{r.name}</span>
-                          </div>
-                        </td>
-                        <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{r.value}</td>
-                        <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>
-                          {totalUsers > 0 ? ((r.value / totalUsers) * 100).toFixed(1) : 0}%
-                        </td>
-                        <td>
-                          <div className="progress-bar" style={{ height: 6 }}>
-                            <div
-                              className="progress-fill"
-                              style={{
-                                width: `${totalUsers > 0 ? (r.value / totalUsers) * 100 : 0}%`,
-                                background: ROLE_COLORS[idx % ROLE_COLORS.length],
-                                borderRadius: 3
-                              }}
-                            />
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
           </>
         )}
       </div>
