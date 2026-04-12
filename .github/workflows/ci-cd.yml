@@ -102,7 +102,9 @@ jobs:
             cd /var/www/nexusfx
             git checkout -- .
             git pull origin main
-            if [ -f "./docker-mt5-node/MT5_Terminal.zip" ]; then echo "Extracting MT5 Terminal..."; unzip -q -o ./docker-mt5-node/MT5_Terminal.zip -d ./EA/; fi
+            echo "📦 Synchronizing MetaTrader 5 Portable binaries from Node 1..."
+            mkdir -p ./EA/MetaTrader\ 5
+            docker cp nexusfx-mt5-node-1:"/root/.wine/drive_c/Program Files/MetaTrader 5/." ./EA/MetaTrader\ 5/ || true
             docker compose build api web mt5-node-2 mt5-node-3
             docker compose stop api web mt5-node-2 mt5-node-3
             docker compose rm -f api web mt5-node-2 mt5-node-3
