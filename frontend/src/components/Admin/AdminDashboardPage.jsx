@@ -276,7 +276,7 @@ export default function AdminDashboardPage() {
             {/* ===== Admin Checkpoints ===== */}
             <div className="chart-card" style={{ marginBottom: 'var(--space-lg)' }}>
               <h3 className="chart-title" style={{ marginBottom: 'var(--space-lg)' }}>สิ่งที่ผู้ดูแลควรติดตาม (Admin Checkpoints)</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
                 <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                   <div style={{
                     width: 48, height: 48, borderRadius: 10,
