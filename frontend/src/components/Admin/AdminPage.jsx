@@ -12,13 +12,11 @@ import AdminUsageDashboard from './AdminUsageDashboard';
 
 export default function AdminPage() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('overview');
-  const [overview, setOverview] = useState(null);
+  const [activeTab, setActiveTab] = useState('users');
   const [users, setUsers] = useState([]);
   const [totalUsers, setTotalUsers] = useState(0);
   const [auditLogs, setAuditLogs] = useState([]);
   const [totalLogs, setTotalLogs] = useState(0);
-  const [roles, setRoles] = useState([]);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [page, setPage] = useState(1);
@@ -46,14 +44,7 @@ export default function AdminPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      if (activeTab === 'overview') {
-        const [ov, rl] = await Promise.all([
-          api.getAdminOverview(),
-          api.getAdminRoles(),
-        ]);
-        setOverview(ov);
-        setRoles(rl);
-      } else if (activeTab === 'users') {
+      if (activeTab === 'users') {
         const data = await api.getAdminUsers({ search, role: roleFilter, page, limit: 20 });
         setUsers(data.users);
         setTotalUsers(data.total);
@@ -261,7 +252,6 @@ export default function AdminPage() {
   }
 
   const tabs = [
-    { id: 'overview', label: 'ภาพรวมระบบ', icon: Activity },
     { id: 'users', label: 'จัดการผู้ใช้', icon: Users },
     { id: 'adjustments', label: 'รออนุมัติเงิน', icon: DollarSign },
     { id: 'agents', label: 'จัดการตัวแทน', icon: Building },
@@ -383,11 +373,6 @@ export default function AdminPage() {
           </div>
 
           <div style={{ padding: 'var(--space-xl)' }}>
-            {/* Overview Tab */}
-            {activeTab === 'overview' && overview && (
-              <AdminUsageDashboard overview={overview} roles={roles} />
-            )}
-
             {/* Users Tab */}
             {activeTab === 'users' && (
               <div>
