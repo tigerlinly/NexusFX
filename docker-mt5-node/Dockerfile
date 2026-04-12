@@ -13,7 +13,7 @@ ENV HOME=/root \
 # Install base deps + locale
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget gnupg2 software-properties-common locales \
-    xvfb x11vnc fluxbox supervisor net-tools procps \
+    xvfb x11vnc fluxbox xterm supervisor net-tools procps \
     cabextract python3 python3-numpy && \
     locale-gen en_US.UTF-8
 # Install WineHQ stable v10.0+ (MT5 requires Wine 10.0 or later)
