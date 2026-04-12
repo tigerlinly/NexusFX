@@ -128,8 +128,8 @@ services:
     container_name: nexusfx-mt5-node-3
     privileged: true
     ports:
-      - "18082:8080"
-      - "15902:5900"
+      - "8081:8080"
+      - "5904:5900"
     volumes:
       - mt5-data-3:/root/.wine
       - ./EA:/root/ea-source
