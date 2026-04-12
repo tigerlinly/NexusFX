@@ -599,9 +599,9 @@ export default function SettingsPage() {
 
                 <div className="card" style={{ background: 'var(--bg-tertiary)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: 14 }}>สถานะ 2FA</div>
-                      <div style={{ fontSize: 13, color: mfaStatus ? 'var(--profit)' : 'var(--text-tertiary)', marginTop: 4 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ fontWeight: 600, fontSize: 14 }}>สถานะ 2FA:</div>
+                      <div style={{ fontSize: 13, color: mfaStatus ? 'var(--profit)' : 'var(--text-tertiary)' }}>
                         {mfaStatus ? 'เปิดใช้งานแล้ว' : 'ยังไม่ได้เปิดใช้งาน'}
                       </div>
                     </div>
