@@ -5,7 +5,7 @@ import ConfirmDialog from '../Layout/ConfirmDialog';
 import {
   Shield, Users, BarChart3, DollarSign, Activity, Search,
   Edit2, UserCheck, UserX, Eye, AlertTriangle, Clock, ChevronDown,
-  Building, UserPlus, Percent, X, Zap, CheckCircle, Calculator, RefreshCw, Trash2
+  Building, UserPlus, Percent, X, Zap, CheckCircle, Calculator, RefreshCw, Trash2, Key
 } from 'lucide-react';
 import DockerNodes from './DockerNodes';
 import AdminUsageDashboard from './AdminUsageDashboard';
@@ -34,6 +34,9 @@ export default function AdminPage() {
   const [showAdjustModal, setShowAdjustModal] = useState(false);
   const [adjustData, setAdjustData] = useState({ userId: null, amount: '', reason: '', username: '' });
   const [isAdjusting, setIsAdjusting] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordData, setPasswordData] = useState({ userId: null, newPassword: '', username: '' });
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [adjustments, setAdjustments] = useState([]);
   const [confirmDialog, setConfirmDialog] = useState({ open: false });
 
@@ -204,6 +207,21 @@ export default function AdminPage() {
     );
   };
 
+  const handlePasswordReset = async (e) => {
+    e.preventDefault();
+    setIsChangingPassword(true);
+    try {
+      await api.adminChangeUserPassword(passwordData.userId, { new_password: passwordData.newPassword });
+      alert(`✅ เปลี่ยนรหัสผ่านสำหรับ ${passwordData.username} สำเร็จ!`);
+      setShowPasswordModal(false);
+      setPasswordData({ userId: null, newPassword: '', username: '' });
+    } catch (err) {
+      alert(`❌ ${err.message || 'เกิดข้อผิดพลาดในการเปลี่ยนรหัสผ่าน'}`);
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
   const handleAdjustBalance = async (e) => {
     e.preventDefault();
     setIsAdjusting(true);
@@ -306,6 +324,40 @@ export default function AdminPage() {
                 <button type="button" className="btn btn-secondary" onClick={() => setShowKillModal(false)}>ยกเลิก</button>
                 <button type="submit" className="btn btn-primary" style={{ background: 'var(--loss)', color: '#fff' }} disabled={isKilling}>
                   {isKilling ? 'กำลังหยุดระบบ...' : 'ยืนยันหยุดการทำงาน'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showPasswordModal && (
+        <div className="modal-overlay" onClick={() => setShowPasswordModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ border: '2px solid var(--accent-primary)' }}>
+            <h2 className="modal-title" style={{ color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Key size={24} /> เปลี่ยนรหัสผ่านผู้ใช้
+            </h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: 20, fontSize: 13, lineHeight: 1.5 }}>
+              คุณกำลังเปลี่ยนรหัสผ่านใหม่ให้กับผู้ใช้: <strong>{passwordData.username}</strong>
+            </p>
+            <form onSubmit={handlePasswordReset}>
+              <div className="form-group" style={{ marginBottom: 20 }}>
+                <label className="form-label">รหัสผ่านใหม่ (ขั้นต่ำ 6 ตัวอักษร)</label>
+                <input 
+                  className="form-input" 
+                  type="text"
+                  autoFocus 
+                  required 
+                  minLength={6}
+                  value={passwordData.newPassword} 
+                  onChange={e => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))} 
+                  placeholder="กรอกรหัสผ่านใหม่" 
+                />
+              </div>
+              <div className="modal-actions">
+                <button type="button" className="btn btn-secondary" onClick={() => setShowPasswordModal(false)}>ยกเลิก</button>
+                <button type="submit" className="btn btn-primary" disabled={isChangingPassword}>
+                  {isChangingPassword ? 'กำลังเปลี่ยน...' : 'ยืนยันเปลี่ยนรหัสผ่าน'}
                 </button>
               </div>
             </form>
@@ -457,6 +509,12 @@ export default function AdminPage() {
                           </td>
                           <td>
                             <div style={{ display: 'flex', gap: 4 }}>
+                              <button className="btn btn-ghost btn-icon" onClick={() => {
+                                setPasswordData({ userId: u.id, newPassword: '', username: u.display_name || u.username });
+                                setShowPasswordModal(true);
+                              }} title="เปลี่ยนรหัสผ่าน" style={{ width: 28, height: 28 }}>
+                                <Key size={12} style={{ color: 'var(--accent-primary)' }} />
+                              </button>
                               <button className="btn btn-ghost btn-icon" onClick={() => {
                                 setAdjustData({ userId: u.id, amount: '', reason: '', username: u.display_name || u.username });
                                 setShowAdjustModal(true);

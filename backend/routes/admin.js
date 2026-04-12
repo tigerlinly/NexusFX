@@ -196,6 +196,44 @@ router.delete('/users/:id', async (req, res) => {
   }
 });
 
+// PUT /api/admin/users/:id/password — change user password
+router.put('/users/:id/password', async (req, res) => {
+  if (req.user.role !== 'super_admin' && req.user.role !== 'team_lead' && req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+  
+  try {
+    const { new_password } = req.body;
+    if (!new_password || new_password.length < 6) {
+      return res.status(400).json({ error: 'New password must be at least 6 characters' });
+    }
+
+    const bcrypt = require('bcryptjs');
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(new_password, salt);
+
+    const result = await pool.query(
+      `UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2 RETURNING username`,
+      [hashedPassword, req.params.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    await pool.query(
+      `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details)
+       VALUES ($1, 'admin.change_password', 'user', $2, $3)`,
+      [req.user.id, req.params.id, JSON.stringify({ target_username: result.rows[0].username })]
+    );
+
+    res.json({ success: true, message: 'Password updated successfully' });
+  } catch (err) {
+    console.error('Admin password update error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // POST /api/admin/users/:id/adjust-balance — Maker-Checker Balance adjustment request
 router.post('/users/:id/adjust-balance', async (req, res) => {
   const client = await pool.connect();
