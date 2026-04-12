@@ -102,6 +102,7 @@ jobs:
             cd /var/www/nexusfx
             git checkout -- .
             git pull origin main
+            if [ -f "./docker-mt5-node/MT5_Terminal.zip" ]; then echo "Extracting MT5 Terminal..."; unzip -q -o ./docker-mt5-node/MT5_Terminal.zip -d ./EA/; fi
             docker compose build api web mt5-node-2 mt5-node-3
             docker compose stop api web mt5-node-2 mt5-node-3
             docker compose rm -f api web mt5-node-2 mt5-node-3
