@@ -33,7 +33,7 @@ const CATEGORY_META = {
 
 export default function AdminConfigPage() {
   const { user } = useAuth();
-  const [activeCategory, setActiveCategory] = useState('infrastructure');
+  const [activeCategory, setActiveCategory] = useState('notification');
   const [configs, setConfigs] = useState([]);
   const [editedValues, setEditedValues] = useState({});
   const [saving, setSaving] = useState(false);
