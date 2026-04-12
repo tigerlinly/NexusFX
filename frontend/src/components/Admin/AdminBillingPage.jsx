@@ -7,6 +7,7 @@ export default function AdminBillingPage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState('stripe');
 
   const [formData, setFormData] = useState({
     STRIPE_PUBLISHABLE_KEY: '',
@@ -15,7 +16,11 @@ export default function AdminBillingPage() {
     CRYPTO_WALLET_ADDRESS: '',
     BANK_ACCOUNT_INFO: '',
     PROMPTPAY_ID: '',
-    PAYMENT_ENABLED: 'false'
+    PAYMENT_ENABLED: 'false',
+    STRIPE_ENABLED: 'false',
+    PROMPTPAY_ENABLED: 'false',
+    CRYPTO_ENABLED: 'false',
+    BANK_TRANSFER_ENABLED: 'false'
   });
 
   const fetchConfig = async () => {
@@ -25,6 +30,9 @@ export default function AdminBillingPage() {
         const newForm = { ...prev };
         data.forEach(item => {
           if (item.key in newForm) {
+            newForm[item.key] = item.value;
+          } else {
+            // Include dynamically added keys if any
             newForm[item.key] = item.value;
           }
         });
@@ -62,6 +70,27 @@ export default function AdminBillingPage() {
     }
   };
 
+  const renderToggle = (key, label) => (
+    <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+      {['true', 'false'].map(val => (
+        <button
+          key={val}
+          type="button"
+          onClick={() => setFormData(p => ({ ...p, [key]: val }))}
+          style={{
+            padding: '4px 16px', borderRadius: 'var(--radius-sm)',
+            border: formData[key] === val ? `2px solid ${val === 'true' ? 'var(--profit)' : 'var(--loss)'}` : '1px solid var(--border-primary)',
+            background: formData[key] === val ? (val === 'true' ? 'rgba(0,200,150,0.1)' : 'rgba(255,71,87,0.1)') : 'transparent',
+            color: formData[key] === val ? (val === 'true' ? 'var(--profit)' : 'var(--loss)') : 'var(--text-secondary)',
+            cursor: 'pointer', fontWeight: formData[key] === val ? 600 : 400, fontSize: 13
+          }}
+        >
+          {val === 'true' ? 'เปิด (ON)' : 'ปิด (OFF)'}
+        </button>
+      ))}
+    </div>
+  );
+
   if (user?.role !== 'admin') {
     return (
       <div className="content-area">
@@ -97,10 +126,10 @@ export default function AdminBillingPage() {
           </div>
 
           <form onSubmit={handleSave}>
-            {/* 1. Payment System Switch */}
+            {/* 1. Master Payment Switch */}
             <div className="form-group" style={{ marginBottom: 24, padding: 16, background: 'var(--bg-tertiary)', borderRadius: 8, border: '1px solid var(--border-primary)' }}>
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 15 }}>
-                เปิด/ปิด ระบบชำระเงิน (Payment Gateway)
+                เปิด/ปิด ระบบฝากเงินทั้งหมด (Master Switch)
               </label>
               <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
                 {['true', 'false'].map(val => (
@@ -122,108 +151,191 @@ export default function AdminBillingPage() {
               </div>
             </div>
 
-            {/* 2. Stripe Config */}
-            <div className="form-group" style={{ marginBottom: 24, padding: 16, background: 'var(--bg-tertiary)', borderRadius: 8, border: '1px solid var(--border-primary)' }}>
-              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 15, marginBottom: 16 }}>
-                <Wallet size={16} style={{ color: '#6366f1' }}/>
-                ระบบชำระเงินด้วยบัตรเครดิต (Stripe API)
-              </label>
-              
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                <div>
-                  <label className="form-label" style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Stripe Publishable Key</label>
-                  <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>โชว์ในฝั่งหน้าเว็บ (Frontend) ขึ้นต้นด้วย pk_live_ หรือ pk_test_</p>
+            {/* Tabs */}
+            <div style={{ display: 'flex', gap: 12, borderBottom: '1px solid var(--border-primary)', marginBottom: 24, overflowX: 'auto' }}>
+              <button
+                type="button"
+                onClick={() => setActiveTab('stripe')}
+                style={{
+                  padding: '12px 16px', background: 'transparent',
+                  border: 'none', borderBottom: activeTab === 'stripe' ? '2px solid #6366f1' : '2px solid transparent',
+                  color: activeTab === 'stripe' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                  fontWeight: activeTab === 'stripe' ? 600 : 400, cursor: 'pointer', whiteSpace: 'nowrap'
+                }}
+              >
+                ระบบบัตรเครดิต (Stripe)
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('promptpay')}
+                style={{
+                  padding: '12px 16px', background: 'transparent',
+                  border: 'none', borderBottom: activeTab === 'promptpay' ? '2px solid #115293' : '2px solid transparent',
+                  color: activeTab === 'promptpay' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                  fontWeight: activeTab === 'promptpay' ? 600 : 400, cursor: 'pointer', whiteSpace: 'nowrap'
+                }}
+              >
+                ระบบโอนพร้อมเพย์
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('crypto')}
+                style={{
+                  padding: '12px 16px', background: 'transparent',
+                  border: 'none', borderBottom: activeTab === 'crypto' ? '2px solid var(--accent-secondary)' : '2px solid transparent',
+                  color: activeTab === 'crypto' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                  fontWeight: activeTab === 'crypto' ? 600 : 400, cursor: 'pointer', whiteSpace: 'nowrap'
+                }}
+              >
+                กระเป๋าเงินคริปโต
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('bank')}
+                style={{
+                  padding: '12px 16px', background: 'transparent',
+                  border: 'none', borderBottom: activeTab === 'bank' ? '2px solid var(--text-secondary)' : '2px solid transparent',
+                  color: activeTab === 'bank' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                  fontWeight: activeTab === 'bank' ? 600 : 400, cursor: 'pointer', whiteSpace: 'nowrap'
+                }}
+              >
+                ข้อมูลบัญชีธนาคาร
+              </button>
+            </div>
+
+            {/* Tab Contents */}
+            <div style={{ minHeight: 250 }}>
+              {activeTab === 'stripe' && (
+                <div className="form-group" style={{ padding: 16, background: 'var(--bg-tertiary)', borderRadius: 8, border: '1px solid var(--border-primary)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+                    <div>
+                      <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 15, marginBottom: 4 }}>
+                        <Wallet size={16} style={{ color: '#6366f1' }}/>
+                        ระบบชำระเงินด้วยบัตรเครดิต (Stripe API)
+                      </label>
+                      <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>สำหรับให้ลูกค้าชาร์จบัตรเครดิตและอนุมัติอัตโนมัติ</p>
+                    </div>
+                    {renderToggle('STRIPE_ENABLED')}
+                  </div>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    <div>
+                      <label className="form-label" style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Stripe Publishable Key</label>
+                      <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>โชว์ในฝั่งหน้าเว็บ (Frontend) ขึ้นต้นด้วย pk_live_ หรือ pk_test_</p>
+                      <input 
+                        type="text" 
+                        className="form-input" 
+                        name="STRIPE_PUBLISHABLE_KEY"
+                        value={formData.STRIPE_PUBLISHABLE_KEY}
+                        onChange={handleChange}
+                        placeholder="pk_live_... หรือ pk_test_..."
+                      />
+                    </div>
+
+                    <div>
+                      <label className="form-label" style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Stripe Secret Key</label>
+                      <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>ใช้ยืนยันการทำธุรกรรมหลังบ้าน ขึ้นต้นด้วย sk_live_ หรือ sk_test_</p>
+                      <input 
+                        type="password" 
+                        className="form-input" 
+                        name="STRIPE_SECRET_KEY"
+                        value={formData.STRIPE_SECRET_KEY}
+                        onChange={handleChange}
+                        placeholder="sk_live_... หรือ sk_test_..."
+                      />
+                    </div>
+
+                    <div>
+                      <label className="form-label" style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Stripe Webhook Signing Secret</label>
+                      <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>ใช้ตรวจสอบข้อมูล Webhook จาก Stripe ขึ้นต้นด้วย whsec_...</p>
+                      <input 
+                        type="password" 
+                        className="form-input" 
+                        name="STRIPE_WEBHOOK_SECRET"
+                        value={formData.STRIPE_WEBHOOK_SECRET}
+                        onChange={handleChange}
+                        placeholder="whsec_..."
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: 16, fontSize: 12, color: 'var(--warning)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <AlertTriangle size={12}/> หมายเหตุ: การสร้างและแก้ไข Secret/Webhook ต้องทำการ Restart Backend ให้ระบบอ่านค่าใหม่
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'promptpay' && (
+                <div className="form-group" style={{ padding: 16, background: 'var(--bg-tertiary)', borderRadius: 8, border: '1px solid var(--border-primary)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+                    <div>
+                      <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 15, marginBottom: 4 }}>
+                        <DollarSign size={16} style={{ color: '#115293' }}/>
+                        ระบบรับชำระเงินโอนพร้อมเพย์ (PromptPay)
+                      </label>
+                      <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>ให้ลูกค้าสแกน QR Code แล้วโอนเงินเข้ามา</p>
+                    </div>
+                    {renderToggle('PROMPTPAY_ENABLED')}
+                  </div>
+                  
                   <input 
                     type="text" 
                     className="form-input" 
-                    name="STRIPE_PUBLISHABLE_KEY"
-                    value={formData.STRIPE_PUBLISHABLE_KEY}
+                    name="PROMPTPAY_ID"
+                    value={formData.PROMPTPAY_ID}
                     onChange={handleChange}
-                    placeholder="pk_live_... หรือ pk_test_..."
+                    placeholder="เบอร์โทรศัพท์ หรือ เลขบัตรประชาชน เช่น 0812345678"
                   />
                 </div>
+              )}
 
-                <div>
-                  <label className="form-label" style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Stripe Secret Key</label>
-                  <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>ใช้ยืนยันการทำธุรกรรมหลังบ้าน ขึ้นต้นด้วย sk_live_ หรือ sk_test_</p>
+              {activeTab === 'crypto' && (
+                <div className="form-group" style={{ padding: 16, background: 'var(--bg-tertiary)', borderRadius: 8, border: '1px solid var(--border-primary)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+                    <div>
+                      <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 15, marginBottom: 4 }}>
+                        <DollarSign size={16} style={{ color: 'var(--accent-secondary)' }}/>
+                        กระเป๋าเงินคริปโต (TRC20 USD หรือ USDT)
+                      </label>
+                      <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>ใช้สำหรับโอนเหรียญเข้ากระเป๋าคริปโตของส่วนกลาง (กรณีเติมเงินแบบ Manual)</p>
+                    </div>
+                    {renderToggle('CRYPTO_ENABLED')}
+                  </div>
+                  
                   <input 
-                    type="password" 
+                    type="text" 
                     className="form-input" 
-                    name="STRIPE_SECRET_KEY"
-                    value={formData.STRIPE_SECRET_KEY}
+                    name="CRYPTO_WALLET_ADDRESS"
+                    value={formData.CRYPTO_WALLET_ADDRESS}
                     onChange={handleChange}
-                    placeholder="sk_live_... หรือ sk_test_..."
+                    placeholder="T..."
                   />
                 </div>
+              )}
 
-                <div>
-                  <label className="form-label" style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Stripe Webhook Signing Secret</label>
-                  <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>ใช้ตรวจสอบข้อมูล Webhook จาก Stripe ขึ้นต้นด้วย whsec_...</p>
+              {activeTab === 'bank' && (
+                <div className="form-group" style={{ padding: 16, background: 'var(--bg-tertiary)', borderRadius: 8, border: '1px solid var(--border-primary)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+                    <div>
+                      <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 15, marginBottom: 4 }}>
+                        <Building size={16} style={{ color: 'var(--text-secondary)' }}/>
+                        ข้อมูลบัญชีธนาคาร (Bank Transfer)
+                      </label>
+                      <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>ให้ลูกค้าโอนเงินเข้าบัญชีธนาคารของบริษัท/บุคคลที่ดูแล</p>
+                    </div>
+                    {renderToggle('BANK_TRANSFER_ENABLED')}
+                  </div>
+                  
                   <input 
-                    type="password" 
+                    type="text" 
                     className="form-input" 
-                    name="STRIPE_WEBHOOK_SECRET"
-                    value={formData.STRIPE_WEBHOOK_SECRET}
+                    name="BANK_ACCOUNT_INFO"
+                    value={formData.BANK_ACCOUNT_INFO}
                     onChange={handleChange}
-                    placeholder="whsec_..."
+                    placeholder="เช่น ธ.กสิกรไทย 123-4-56789-0 (บริษัท เน็กซัส เอฟเอ็กซ์)"
                   />
                 </div>
-              </div>
-
-              <div style={{ marginTop: 16, fontSize: 12, color: 'var(--warning)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                <AlertTriangle size={12}/> หมายเหตุ: การสร้างและแก้ไข Secret/Webhook ต้องทำการ Restart Backend ให้ระบบอ่านค่าใหม่
-              </div>
-            </div>
-
-            {/* 3. PromptPay */}
-            <div className="form-group" style={{ marginBottom: 24, padding: 16, background: 'var(--bg-tertiary)', borderRadius: 8, border: '1px solid var(--border-primary)' }}>
-              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 15 }}>
-                <DollarSign size={16} style={{ color: '#115293' }}/>
-                ระบบรับชำระเงินโอนพร้อมเพย์ (PromptPay)
-              </label>
-              <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 8 }}>ลูกค้าจะสแกน QR Code แล้วโอนเงินเข้ามา</p>
-              <input 
-                type="text" 
-                className="form-input" 
-                name="PROMPTPAY_ID"
-                value={formData.PROMPTPAY_ID}
-                onChange={handleChange}
-                placeholder="เบอร์โทรศัพท์ หรือ เลขบัตรประชาชน เช่น 0812345678"
-              />
-            </div>
-
-            {/* 4. Crypto */}
-            <div className="form-group" style={{ marginBottom: 24, padding: 16, background: 'var(--bg-tertiary)', borderRadius: 8, border: '1px solid var(--border-primary)' }}>
-              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 15 }}>
-                <DollarSign size={16} style={{ color: 'var(--accent-secondary)' }}/>
-                กระเป๋าเงินคริปโต (TRC20 USD หรือ USDT)
-              </label>
-              <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 8 }}>ใช้สำหรับแสดงที่อยู่ในการโอนเงินให้ลูกค้า (กรณีเติมเงินแบบ Manual)</p>
-              <input 
-                type="text" 
-                className="form-input" 
-                name="CRYPTO_WALLET_ADDRESS"
-                value={formData.CRYPTO_WALLET_ADDRESS}
-                onChange={handleChange}
-                placeholder="T..."
-              />
-            </div>
-
-            {/* 5. Bank Account */}
-            <div className="form-group" style={{ marginBottom: 24, padding: 16, background: 'var(--bg-tertiary)', borderRadius: 8, border: '1px solid var(--border-primary)' }}>
-              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 15 }}>
-                <Building size={16} style={{ color: 'var(--text-secondary)' }}/>
-                ข้อมูลบัญชีธนาคาร (Bank Transfer)
-              </label>
-              <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 8 }}>แสดงในหน้าฝากเงินให้ลูกค้าโอนเข้าบัญชีส่วนกลาง</p>
-              <input 
-                type="text" 
-                className="form-input" 
-                name="BANK_ACCOUNT_INFO"
-                value={formData.BANK_ACCOUNT_INFO}
-                onChange={handleChange}
-                placeholder="เช่น ธ.กสิกรไทย 123-4-56789-0 (บริษัท เน็กซัส เอฟเอ็กซ์)"
-              />
+              )}
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 32 }}>
