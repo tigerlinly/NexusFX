@@ -5,7 +5,7 @@ import ConfirmDialog from '../Layout/ConfirmDialog';
 import {
   Shield, Users, BarChart3, DollarSign, Activity, Search,
   Edit2, UserCheck, UserX, Eye, AlertTriangle, Clock, ChevronDown,
-  Building, UserPlus, Percent, X, Zap, CheckCircle, Calculator, RefreshCw, Trash2, Key
+  Building, UserPlus, Percent, X, Zap, CheckCircle, Calculator, RefreshCw, Trash2, Key, EyeOff
 } from 'lucide-react';
 import DockerNodes from './DockerNodes';
 import AdminUsageDashboard from './AdminUsageDashboard';
@@ -37,6 +37,7 @@ export default function AdminPage() {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordData, setPasswordData] = useState({ userId: null, newPassword: '', username: '' });
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const [adjustments, setAdjustments] = useState([]);
   const [confirmDialog, setConfirmDialog] = useState({ open: false });
 
@@ -343,16 +344,29 @@ export default function AdminPage() {
             <form onSubmit={handlePasswordReset}>
               <div className="form-group" style={{ marginBottom: 20 }}>
                 <label className="form-label">รหัสผ่านใหม่ (ขั้นต่ำ 6 ตัวอักษร)</label>
-                <input 
-                  className="form-input" 
-                  type="text"
-                  autoFocus 
-                  required 
-                  minLength={6}
-                  value={passwordData.newPassword} 
-                  onChange={e => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))} 
-                  placeholder="กรอกรหัสผ่านใหม่" 
-                />
+                <div style={{ position: 'relative' }}>
+                  <input 
+                    className="form-input" 
+                    type={showNewPassword ? 'text' : 'password'}
+                    autoFocus 
+                    required 
+                    minLength={6}
+                    value={passwordData.newPassword} 
+                    onChange={e => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))} 
+                    placeholder="กรอกรหัสผ่านใหม่" 
+                    style={{ paddingRight: 40 }}
+                  />
+                  <button 
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    style={{
+                      position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
+                      background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0, display: 'flex'
+                    }}
+                  >
+                    {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </div>
               <div className="modal-actions">
                 <button type="button" className="btn btn-secondary" onClick={() => setShowPasswordModal(false)}>ยกเลิก</button>
