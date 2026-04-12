@@ -110,9 +110,8 @@ services:
       dockerfile: Dockerfile
     container_name: nexusfx-mt5-node-2
     privileged: true
-    ports:
-      - "18081:8080"
-      - "15901:5900"
+    expose:
+      - "8080"
     volumes:
       - mt5-data-2:/root/.wine
       - ./EA:/root/ea-source
@@ -127,9 +126,8 @@ services:
       dockerfile: Dockerfile
     container_name: nexusfx-mt5-node-3
     privileged: true
-    ports:
-      - "8081:8080"
-      - "5904:5900"
+    expose:
+      - "8080"
     volumes:
       - mt5-data-3:/root/.wine
       - ./EA:/root/ea-source
