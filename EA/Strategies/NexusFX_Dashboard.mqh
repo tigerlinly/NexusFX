@@ -102,7 +102,7 @@ void Dash_CreatePanel(string botName, ulong magicNumber, string entryTF="Auto", 
    dash_magic = magicNumber;
    g_botName = botName;
    int pw = 404;
-   int ph = 205;
+   int ph = 240;  // เพิ่มความสูงสำหรับแถว PA Status
    
    Dash_CreateRect(DASH_PREFIX+"BG", g_PanelX, g_PanelY, pw, ph, PanelBgColor, PanelBorderColor, true);
    Dash_CreateRect(DASH_PREFIX+"TBG", g_PanelX, g_PanelY, pw, 26, C'25,32,48', PanelBorderColor, false);
@@ -177,6 +177,16 @@ void Dash_CreatePanel(string botName, ulong magicNumber, string entryTF="Auto", 
    Dash_CreateBtn(DASH_PREFIX+"BtnCloseWin",  lx+154,  y, 72, 22, "Close Win",  C'0,150,100');
    Dash_CreateBtn(DASH_PREFIX+"BtnCloseLoss", lx+231,  y, 72, 22, "Close Loss", C'180,50,70');
    Dash_CreateBtn(DASH_PREFIX+"BtnCloseAll",  lx+308,  y, 72, 22, "Close All",  C'150,30,30');
+   y+=28;
+   
+   // --- Row 8 (PA Strategy Status) ---
+   Dash_CreateRect(DASH_PREFIX+"PA_BG", g_PanelX+5, y-3, pw-10, 22, C'18,22,32', C'40,50,70', false);
+   Dash_CreateLbl(DASH_PREFIX+"LPA",    lx,     y, "PA:", clrCyan, 8, true);
+   Dash_CreateLbl(DASH_PREFIX+"VPA_CF", lx+28,  y, "CF:- ",       clrGold, 8, true);
+   Dash_CreateLbl(DASH_PREFIX+"VPA_SW", lx+68,  y, "SW:0/5",      NeutralColor, 8, false);
+   Dash_CreateLbl(DASH_PREFIX+"VPA_PH", lx+120, y, "Phase:INIT",  NeutralColor, 8, false);
+   Dash_CreateLbl(DASH_PREFIX+"VPA_PT", lx+210, y, "Pattern:---", NeutralColor, 8, false);
+   Dash_CreateLbl(DASH_PREFIX+"VPA_TP", lx+310, y, "TP#0",        NeutralColor, 8, false);
    
    ChartRedraw();
 }
@@ -214,6 +224,35 @@ void Dash_DeletePanel()
    for(int i = ObjectsTotal(0,0,-1)-1; i>=0; i--)
    { string n=ObjectName(0,i); if(StringFind(n,DASH_PREFIX)==0) ObjectDelete(0,n); }
    ChartRedraw();
+}
+
+// === PA Bot Dashboard Extension ===
+void Dash_UpdatePA(int confluence, int swing, int phase, string pattern, int tpStep) {
+   // Confluence Score (สี = ระดับ)
+   color cfColor = confluence >= 4 ? clrLime : (confluence >= 2 ? clrGold : clrGray);
+   ObjectSetString(0, DASH_PREFIX+"VPA_CF", OBJPROP_TEXT, StringFormat("CF:%d ", confluence));
+   ObjectSetInteger(0, DASH_PREFIX+"VPA_CF", OBJPROP_COLOR, cfColor);
+   
+   // Swing Count (สีเปลี่ยนตามจำนวน)
+   color swColor = swing >= 4 ? clrOrangeRed : (swing >= 2 ? clrGold : clrWhite);
+   ObjectSetString(0, DASH_PREFIX+"VPA_SW", OBJPROP_TEXT, StringFormat("SW:%d/5", swing));
+   ObjectSetInteger(0, DASH_PREFIX+"VPA_SW", OBJPROP_COLOR, swColor);
+   
+   // Trail Phase
+   string phaseNames[] = {"INIT", "BE", "TRAIL", "SWING"};
+   color phaseColors[] = {C'130,140,160', clrDodgerBlue, clrLime, clrCyan};
+   int pi = (phase >= 0 && phase <= 3) ? phase : 0;
+   ObjectSetString(0, DASH_PREFIX+"VPA_PH", OBJPROP_TEXT, "Phase:" + phaseNames[pi]);
+   ObjectSetInteger(0, DASH_PREFIX+"VPA_PH", OBJPROP_COLOR, phaseColors[pi]);
+   
+   // Pattern
+   color ptColor = (pattern == "W CF") ? clrLime : ((pattern == "M CF") ? clrRed : C'130,140,160');
+   ObjectSetString(0, DASH_PREFIX+"VPA_PT", OBJPROP_TEXT, "Pattern:" + pattern);
+   ObjectSetInteger(0, DASH_PREFIX+"VPA_PT", OBJPROP_COLOR, ptColor);
+   
+   // TP Step Count
+   ObjectSetString(0, DASH_PREFIX+"VPA_TP", OBJPROP_TEXT, StringFormat("TP#%d", tpStep));
+   ObjectSetInteger(0, DASH_PREFIX+"VPA_TP", OBJPROP_COLOR, tpStep > 0 ? clrLime : C'130,140,160');
 }
 
 void OnChartEvent(const int id, const long &lparam, const double &dparam, const string &sparam) {

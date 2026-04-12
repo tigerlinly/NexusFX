@@ -152,6 +152,27 @@ const storeBots = [
       trend_tf: 'D1',
       extra_details: 'ใช้หาจังหวะที่ราคาสะสมพลังก่อนยิงทำรอบ มีทิศทางที่ชัดเจนและโอกาส Breakout ปลอม (False Breakout) ต่ำกว่าระบบอื่น'
     }
+  },
+  {
+    id: 12, name: 'Nexus Price Action Bot', type: 'Price Action (Gold PA)', price: 0,
+    author: 'NexusFX Labs', roi: '+185%', drawdown: '7.5%', rating: 4.9, users: 150,
+    description: 'กลยุทธ์ Price Action จากเทคนิคเทรดทองคำ สแกนกราฟหาโครงสร้างแบบ W/M Pattern (ยกโล/ไฮต่ำ) โดยมีความสามารถมองย้อนหลังยาวถึง 3 เดือน (20,000 แท่ง) เพื่อหาตีกรอบ Demand/Supply Zone ตัวแข็งแรงข้ามสัปดาห์ ผสานเข้ากับ RSI Divergence, Fibonacci 61.8 เป็นเงื่อนไข Confluence ก่อนเข้าเทรด รวมถึงมีระบบนับ Swing (1-5 Delta Swing) เพื่อการตั้ง TP และซอยไม้ (Pyramiding) อย่างเป็นระบบ เหมาะสำหรับทุนน้อย $100-$500',
+    isHot: true,
+    config: { strategy: 'price_action', timeframe: '5m', sl_pct: 1.0, tp_pct: 2.0, symbols: ['XAUUSD', 'BTCUSD'], magic_number: 801 },
+    strategy_details: {
+      indicators: 'RSI(14) OVB/OVS + Divergence, MA(50) Trend Filter, Fibonacci 61.8 Retracement, Long-Term Demand/Supply Zone Detection (Lookback 3 Months), W/M Pattern Recognition',
+      entry_tf: 'M5 (หาจุดเข้า W CF ยกโล / M CF ไฮต่ำ จากโครงสร้างระดับ Seasonal)',
+      trend_tf: 'H1 (กรองเทรนด์หลักด้วย MA50)',
+      extra_details: 'ระบบ Confluence Based Entry: ต้องได้คะแนน ≥ 4/10 จาก Zone(2) + PA Candle(2) + RSI(2) + Fibo(1) + Trend(1) จึงจะเข้าเทรด\n' +
+        '• W CF ยกโล = Buy: Double Bottom + Higher Low + Neckline Break\n' +
+        '• M CF ไฮต่ำ = Sell: Double Top + Lower High + Neckline Break\n' +
+        '• Deep Structural Lookback: มองหาภาพรวมใหญ่ย้อนหลังไป 20,000 แท่งเพื่อตีเส้น Trendline แบบแม่นยำแม้อิงกับยอดเก่าข้ามเดือน\n' +
+        '• RSI Smart Exit: ปิดกำไรอัตโนมัติเมื่อ RSI ≥ 70 (Buy) หรือ ≤ 30 (Sell)\n' +
+        '• TP ก่อนถึง S/R: ตั้ง TP ก่อนถึงแนวต้าน/แนวรับ 10 pips (ป้องกันย้อนกลับจากแนวเก่าสะสม 3 เดือน)\n' +
+        '• SL หลังโครงสร้าง: วาง SL ใต้ฐาน W หรือเหนือยอด M + Buffer\n' +
+        '• Swing Counting (1-5): เติมไม้เมื่อ PA ยืนยัน ตัด Lot ลง 50% ทุกไม้',
+      visual_details: '🟢 ลูกศรสีเขียว (W CF): จุด BUY เมื่อเจอ W Pattern ยกโลที่ Demand Zone\n🔴 ลูกศรสีแดง (M CF): จุด SELL เมื่อเจอ M Pattern ไฮต่ำที่ Supply Zone\n* Dashboard แสดง RSI Realtime, Pattern State และ Confluence Score'
+    }
   }
 ];
 
@@ -203,11 +224,13 @@ router.post('/purchase', async (req, res) => {
     if (cfg.strategy === 'swing') strategyType = 'Swing';
     if (cfg.strategy === 'grid') strategyType = 'Grid';
     if (cfg.strategy === 'martingale') strategyType = 'Martingale';
+    if (cfg.strategy === 'price_action') strategyType = 'Price Action';
 
     const pTf = cfg.timeframe || 'M5';
     let aTfs = ['M5', 'M15'];
     if (cfg.strategy === 'swing') aTfs = ['H1', 'H4', 'D1'];
     if (cfg.strategy === 'grid') aTfs = ['M15', 'H1'];
+    if (cfg.strategy === 'price_action') aTfs = ['M5', 'H1'];
     
     // Convert indicators from string to array of objects
     let inds = [];
@@ -218,6 +241,7 @@ router.post('/purchase', async (req, res) => {
       if (cfg.strategy === 'swing') inds = [{ name: 'MACD', weight: 50 }, { name: 'EMA', weight: 50 }];
       if (cfg.strategy === 'grid') inds = [{ name: 'BollingerBands', weight: 100 }];
       if (cfg.strategy === 'martingale') inds = [{ name: 'RSI', weight: 100 }];
+      if (cfg.strategy === 'price_action') inds = [{ name: 'RSI', weight: 30 }, { name: 'W/M Pattern', weight: 30 }, { name: 'DemandZone', weight: 20 }, { name: 'Fibo618', weight: 20 }];
     }
 
     const insertBot = await client.query(

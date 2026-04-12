@@ -42,7 +42,7 @@ export default function AdminVncPage() {
   const nodes = [
     { id: 'node1', name: 'Node 1 (Primary Data)', url: '/vnc/node1/', status: 'online' },
     { id: 'node2', name: 'Node 2 (Standby Data)', url: '/vnc/node2/', status: 'offline' },
-    { id: 'node3', name: 'Node 3 (Strategy)', url: '/vnc/node3/', status: 'offline' }
+    { id: 'node3', name: 'Node 3 (Strategy)', url: '/vnc/node3/', status: 'online' }
   ];
 
   const handleRefresh = () => {
