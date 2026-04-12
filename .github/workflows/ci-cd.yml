@@ -102,12 +102,10 @@ jobs:
             cd /var/www/nexusfx
             git checkout -- .
             git pull origin main
-            docker compose build api web
-            docker compose stop api web
-            docker compose rm -f api web
-            docker compose up -d api web
-            docker compose up -d mt5-node-2 mt5-node-3
-            sleep 5
+            docker compose build api web mt5-node-2 mt5-node-3
+            docker compose stop api web mt5-node-2 mt5-node-3
+            docker compose rm -f api web mt5-node-2 mt5-node-3
+            docker compose up -d api web mt5-node-2 mt5-node-3
             echo "📦 Container Status:"
             docker ps --format 'table {{.Names}}\t{{.Status}}'
             echo "🏥 API Health:"
