@@ -330,6 +330,23 @@ export default function AdminDashboardPage() {
                     </div>
                   </div>
                 </div>
+
+                <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                  <div style={{
+                    width: 48, height: 48, borderRadius: 10,
+                    background: 'rgba(139, 92, 246, 0.1)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: '#8b5cf6', flexShrink: 0
+                  }}>
+                    <Server size={24} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 2 }}>Active Groups / Communities</div>
+                    <div style={{ fontSize: 20, fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
+                      {formatNumber(overview?.total_groups)} <span style={{ fontSize: 13, fontWeight: 400, color: 'var(--text-secondary)' }}>Groups</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
